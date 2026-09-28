@@ -17,7 +17,7 @@ export default function Tracks() {
 
   return (
     <>
-      <PageHeader title={t('nav.tracks')} subtitle={t('tracks.subtitle')} kicker={`${TRACKS.length} · MKW`}>
+      <PageHeader title={t('nav.tracks')} subtitle={t('tracks.subtitle')} kicker={t('tracks.kicker', { tracks: TRACKS.length, cups: CUPS.length })}>
         <input
           type="search"
           value={query}
@@ -54,7 +54,7 @@ export default function Tracks() {
                             src={image}
                             alt=""
                             loading="lazy"
-                            className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            className="thumb transition-transform duration-300 group-hover:scale-[1.18]"
                           />
                         )}
                         <span className="absolute top-2 left-2">

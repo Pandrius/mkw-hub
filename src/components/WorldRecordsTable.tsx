@@ -52,7 +52,7 @@ export default function WorldRecordsTable() {
                 <tr key={track.id} className="border-t border-line/60 hover:bg-surface-2/40">
                   <td className="px-4 py-2.5">
                     <Link to={`/pistas/${track.id}`} className="flex items-baseline gap-2 hover:underline">
-                      <span className="w-11 shrink-0 font-display font-black" style={{ color }}>
+                      <span className="w-12 shrink-0 font-display font-black normal-case" style={{ color }}>
                         {track.abbr}
                       </span>
                       <span className="whitespace-nowrap">{track.name}</span>

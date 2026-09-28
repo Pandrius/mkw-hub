@@ -58,6 +58,7 @@ export const es = {
   'home.manifesto': 'Apunta la war, cierra el evento y deja que los números hablen.',
   'home.manifestoText': 'Nada de hojas de cálculo: cada carrera que registras alimenta tus medias por pista, la tabla de la war y las estadísticas de tu equipo.',
 
+  'tracks.kicker': '{tracks} PISTAS · {cups} COPAS',
   'tracks.subtitle': 'Elige una pista para ver sus guías, el récord mundial, los rankings y tus estadísticas.',
   'tracks.search': 'Buscar pista o abreviatura…',
   'tracks.noMatch': 'No hay ninguna pista que coincida con “{query}”.',

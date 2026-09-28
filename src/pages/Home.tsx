@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <div className="space-y-16">
-      <section className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+      <section className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-start">
         <div>
           <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{t('home.kicker')}</p>
           <ol className="mt-4">
@@ -49,17 +49,17 @@ export default function Home() {
                   <span className="w-8 font-mono text-sm font-bold text-muted group-hover:text-kart-yellow">
                     0{i + 1}
                   </span>
-                  <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-8xl">
+                  <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-7xl xl:text-8xl">
                     {t(s.label)}
                   </span>
-                  <span className="ml-auto hidden max-w-48 text-right text-sm text-muted sm:block">{t(s.hint)}</span>
+                  <span className="ml-auto hidden w-44 shrink-0 text-right text-sm leading-snug text-muted xl:block">{t(s.hint)}</span>
                 </Link>
               </li>
             ))}
           </ol>
         </div>
 
-        {latest ? <LatestRecord record={latest} /> : <div className="hazard hidden h-64 lg:block" />}
+        <div className="lg:mt-9">{latest ? <LatestRecord record={latest} /> : <div className="hazard hidden h-64 lg:block" />}</div>
       </section>
 
       {records.length > 0 && <RecordTicker records={records} />}
@@ -87,7 +87,7 @@ function LatestRecord({ record }: { record: WorldRecord }) {
     <Link to={`/pistas/${record.track_id}`} className="group block bg-kart-yellow p-6 text-bg">
       <p className="font-mono text-xs font-bold tracking-widest">{t('home.latestWr')}</p>
       <p className="mt-4 flex items-center gap-2">
-        <span className="bg-bg px-2 py-0.5 font-display text-lg font-black text-kart-yellow">{track?.abbr}</span>
+        <span className="bg-bg px-2 py-0.5 font-display text-lg font-black text-kart-yellow normal-case">{track?.abbr}</span>
         <span className="font-display text-2xl font-extrabold">{track?.name}</span>
       </p>
       <p className="time mt-2 text-6xl sm:text-7xl">{formatTime(record.time_ms)}</p>

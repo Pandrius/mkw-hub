@@ -59,6 +59,7 @@ export const en: Record<MessageKey, string> = {
   'home.manifesto': 'Log the war, close the event and let the numbers talk.',
   'home.manifestoText': 'No spreadsheets: every race you log feeds your per-track averages, the war table and your team’s stats.',
 
+  'tracks.kicker': '{tracks} TRACKS · {cups} CUPS',
   'tracks.subtitle': 'Pick a track to see its guides, the world record, rankings and your stats.',
   'tracks.search': 'Search track or abbreviation…',
   'tracks.noMatch': 'No track matches “{query}”.',

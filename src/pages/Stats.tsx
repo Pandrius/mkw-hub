@@ -171,7 +171,7 @@ function TrackPodium({ title, tracks, color }: { title: string; tracks: TrackSta
             const track = getTrack(ts.trackId)
             return (
               <li key={ts.trackId} className="flex items-baseline gap-3">
-                <span className="w-12 font-display font-black" style={{ color: track && getCup(track.cupId)?.color }}>
+                <span className="w-12 font-display font-black normal-case" style={{ color: track && getCup(track.cupId)?.color }}>
                   {track?.abbr}
                 </span>
                 <Link to={`/pistas/${ts.trackId}`} className="flex-1 truncate hover:underline">
@@ -212,7 +212,7 @@ function TrackTable({ tracks }: { tracks: TrackStats[] }) {
                 <tr key={ts.trackId} className="border-t border-line/60">
                   <td className="px-4 py-2">
                     <Link to={`/pistas/${ts.trackId}`} className="flex items-baseline gap-2 hover:underline">
-                      <span className="w-12 shrink-0 font-display font-black" style={{ color }}>
+                      <span className="w-12 shrink-0 font-display font-black normal-case" style={{ color }}>
                         {track?.abbr}
                       </span>
                       <span className="truncate">{track?.name ?? ts.trackId}</span>

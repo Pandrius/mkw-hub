@@ -29,11 +29,11 @@ export default function TrackDetail() {
         {t('tracks.back')}
       </Link>
 
-      <header className="mt-4 mb-8 grid gap-6 border-b-2 border-line pb-8 md:grid-cols-[1fr_1fr] md:items-end">
+      <header className="mt-4 mb-8 grid gap-6 border-b-2 border-line pb-8 md:grid-cols-[1.5fr_1fr] md:items-end">
         <div>
           <p className="flex items-center gap-3">
             <span
-              className="font-display text-5xl leading-none font-black"
+              className="font-display text-5xl leading-none font-black normal-case"
               style={{ color: cup?.color }}
             >
               {track.abbr}
@@ -57,8 +57,8 @@ export default function TrackDetail() {
           </div>
         </div>
         {image && (
-          <div className="slant aspect-[16/9] overflow-hidden border-2 border-line bg-surface-2">
-            <img src={image} alt="" className="size-full object-cover" />
+          <div className="slant halftone aspect-[16/9] overflow-hidden bg-surface-2">
+            <img src={image} alt="" className="thumb" />
           </div>
         )}
       </header>

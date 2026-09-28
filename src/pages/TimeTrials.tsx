@@ -66,7 +66,7 @@ export default function TimeTrials() {
                   tr.id === track.id ? 'bg-kart-yellow font-semibold text-bg' : 'hover:bg-surface-2'
                 }`}
               >
-                <span className="w-12 shrink-0 font-display text-base font-black">{tr.abbr}</span>
+                <span className="w-12 shrink-0 font-display text-base font-black normal-case">{tr.abbr}</span>
                 <span className="truncate">{tr.name}</span>
               </button>
             ))}
@@ -75,14 +75,14 @@ export default function TimeTrials() {
           <section className="min-w-0 space-y-8">
             <div className="flex items-end justify-between gap-4 border-b-2 border-line pb-4">
               <div>
-                <p className="font-display text-3xl leading-none font-black" style={{ color: cupColor }}>
+                <p className="font-display text-3xl leading-none font-black normal-case" style={{ color: cupColor }}>
                   {track.abbr}
                 </p>
                 <h2 className="font-display text-4xl leading-none font-black sm:text-5xl">{track.name}</h2>
               </div>
               {image && (
-                <div className="slant hidden aspect-[16/9] w-48 shrink-0 overflow-hidden sm:block">
-                  <img src={image} alt="" className="size-full object-cover" />
+                <div className="slant halftone hidden aspect-[16/9] w-48 shrink-0 overflow-hidden sm:block">
+                  <img src={image} alt="" className="thumb" />
                 </div>
               )}
             </div>

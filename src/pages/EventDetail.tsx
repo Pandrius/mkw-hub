@@ -245,7 +245,7 @@ function RacesTable({
         return (
           <div key={race.id} className="flex flex-wrap items-center gap-3 panel px-4 py-3">
             <span className="w-8 font-display text-xl font-black text-muted">{race.race_no}</span>
-            <span className="w-14 font-display font-black" style={{ color: track && getCup(track.cupId)?.color }}>
+            <span className="w-14 font-display font-black normal-case" style={{ color: track && getCup(track.cupId)?.color }}>
               {track?.abbr}
             </span>
             <span className="min-w-32 flex-1 truncate text-sm">{track?.name ?? race.track_id}</span>
