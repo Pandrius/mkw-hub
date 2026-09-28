@@ -70,20 +70,31 @@ export const TRACKS: Track[] = [
   { id: 'mario-circuit', abbr: 'rMC', name: 'Mario Circuit', cupId: 'special' },
   { id: 'rainbow-road', abbr: 'RR', name: 'Rainbow Road', cupId: 'special' },
 
-  { id: 'snes-mario-circuit-1', name: 'SNES Mario Circuit 1', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
-  { id: 'snes-mario-circuit-2', name: 'SNES Mario Circuit 2', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
-  { id: 'snes-mario-circuit-3', name: 'SNES Mario Circuit 3', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
-  { id: 'snes-ghost-valley-1', name: 'SNES Ghost Valley 1', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
-  { id: 'snes-ghost-valley-2', name: 'SNES Ghost Valley 2', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
-  { id: 'snes-ghost-valley-3', name: 'SNES Ghost Valley 3', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
-  { id: 'snes-choco-island-1', name: 'SNES Choco Island 1', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
-  { id: 'snes-choco-island-2', name: 'SNES Choco Island 2', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
-  { id: 'snes-koopa-beach-1', name: 'SNES Koopa Beach 1', cupId: 'snes', origin: 'SNES', parentId: 'koopa-troopa-beach' },
-  { id: 'snes-vanilla-lake-1', name: 'SNES Vanilla Lake 1', cupId: 'snes', origin: 'SNES', parentId: 'sky-high-sundae' },
+  { id: 'snes-mario-circuit-1', abbr: 'rMC1', name: 'SNES Mario Circuit 1', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
+  { id: 'snes-mario-circuit-2', abbr: 'rMC2', name: 'SNES Mario Circuit 2', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
+  { id: 'snes-mario-circuit-3', abbr: 'rMC3', name: 'SNES Mario Circuit 3', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
+  { id: 'snes-ghost-valley-1', abbr: 'rGV1', name: 'SNES Ghost Valley 1', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
+  { id: 'snes-ghost-valley-2', abbr: 'rGV2', name: 'SNES Ghost Valley 2', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
+  { id: 'snes-ghost-valley-3', abbr: 'rGV3', name: 'SNES Ghost Valley 3', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
+  { id: 'snes-choco-island-1', abbr: 'rCM1', name: 'SNES Choco Island 1', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
+  { id: 'snes-choco-island-2', abbr: 'rCM2', name: 'SNES Choco Island 2', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
+  { id: 'snes-koopa-beach-1', abbr: 'rKB1', name: 'SNES Koopa Beach 1', cupId: 'snes', origin: 'SNES', parentId: 'koopa-troopa-beach' },
+  { id: 'snes-vanilla-lake-1', abbr: 'rVL', name: 'SNES Vanilla Lake 1', cupId: 'snes', origin: 'SNES', parentId: 'sky-high-sundae' },
 ]
 
 export function getTrack(id: string): Track | undefined {
   return TRACKS.find((t) => t.id === id)
+}
+
+// Pistas con captura propia en public/tracks/. Las variantes SNES sin captura usan la de su pista madre.
+const TRACK_IMAGES = new Set([
+  'MBC', 'CC', 'WS', 'DKS', 'rDH', 'rSGB', 'rWS', 'rAF', 'rDKP', 'SP', 'rSHS', 'rWSh', 'rKTB', 'FO', 'PS',
+  'rPB', 'SSS', 'rDDJ', 'GBR', 'CCF', 'DD', 'BCi', 'DBB', 'rMMM', 'rCM', 'rTF', 'BC', 'AH', 'rMC', 'RR',
+])
+
+export function getTrackImage(track: Track): string | undefined {
+  const source = track.abbr && TRACK_IMAGES.has(track.abbr) ? track : track.parentId ? getTrack(track.parentId) : undefined
+  return source?.abbr ? `${import.meta.env.BASE_URL}tracks/${source.abbr}.webp` : undefined
 }
 
 /** Busca una pista por su abreviatura, sin distinguir mayúsculas (p. ej. "rdkp" → DK Pass). */

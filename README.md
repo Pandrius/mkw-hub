@@ -30,4 +30,9 @@ Cada push a `main` se publica automáticamente en GitHub Pages (`.github/workflo
 Las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` se configuran como *Variables* del repo
 (Settings → Secrets and variables → Actions → Variables).
 
+## Créditos
+
+- Miniaturas de las pistas (`public/tracks/`): [Yumax-panda/MKWorld](https://github.com/Yumax-panda/MKWorld). Imágenes © Nintendo.
+- Abreviaturas de pistas: convención de la comunidad (Mario Kart Central / Lounge).
+
 Consulta [ROADMAP.md](ROADMAP.md) para ver las fases y funcionalidades.

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Badge, EmptyState, Tabs } from '../components/ui'
-import { getCup, getTrack, TRACKS } from '../data/tracks'
+import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
 import NotFound from './NotFound'
 
 type TabId = 'tt-guide' | 'race-guide' | 'times' | 'stats'
@@ -22,6 +22,7 @@ export default function TrackDetail() {
   const cup = getCup(track.cupId)
   const parent = track.parentId ? getTrack(track.parentId) : undefined
   const variants = TRACKS.filter((t) => t.parentId === track.id)
+  const image = getTrackImage(track)
 
   return (
     <>
@@ -30,19 +31,25 @@ export default function TrackDetail() {
       </Link>
 
       <header
-        className="relative mt-4 mb-6 overflow-hidden rounded-3xl border border-line bg-surface px-6 py-8"
+        className="relative mt-4 mb-6 overflow-hidden rounded-3xl border border-line bg-surface px-6 py-10 sm:py-14"
         style={{ borderColor: cup?.color }}
       >
-        <div
-          className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full opacity-25 blur-3xl"
-          style={{ background: cup?.color }}
-        />
-        <p className="text-sm font-semibold uppercase tracking-[0.15em]" style={{ color: cup?.color }}>
+        {image && (
+          <img
+            src={image}
+            alt=""
+            className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-60 sm:w-3/4"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/85 to-surface/10" />
+        <p className="relative text-sm font-semibold uppercase tracking-[0.15em]" style={{ color: cup?.color }}>
           {track.abbr && <span className="mr-2 font-display text-base font-black normal-case italic">{track.abbr}</span>}
           {cup?.name}
         </p>
-        <h1 className="mt-1 font-display text-4xl font-black italic tracking-tight">{track.name}</h1>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <h1 className="relative mt-1 font-display text-4xl font-black italic tracking-tight drop-shadow sm:text-5xl">
+          {track.name}
+        </h1>
+        <div className="relative mt-3 flex flex-wrap gap-2">
           {track.origin ? <Badge color={cup?.color}>{track.origin}</Badge> : <Badge>Nueva</Badge>}
           {parent && (
             <Link to={`/pistas/${parent.id}`}>
