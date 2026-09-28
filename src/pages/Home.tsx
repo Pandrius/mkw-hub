@@ -49,7 +49,7 @@ export default function Home() {
                   <span className="w-8 font-mono text-sm font-bold text-muted group-hover:text-kart-yellow">
                     0{i + 1}
                   </span>
-                  <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-7xl xl:text-8xl">
+                  <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-7xl">
                     {t(s.label)}
                   </span>
                   <span className="ml-auto hidden w-44 shrink-0 text-right text-sm leading-snug text-muted xl:block">{t(s.hint)}</span>
