@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useAuth } from '../lib/auth'
+import { ROLE_LABELS } from '../lib/roles'
 
 const NAV = [
   { to: '/pistas', label: 'Pistas' },
@@ -11,6 +12,8 @@ const NAV = [
 
 export default function Layout() {
   const [open, setOpen] = useState(false)
+  const { isModerator } = useAuth()
+  const nav = isModerator ? [...NAV, { to: '/admin', label: 'Admin' }] : NAV
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -24,7 +27,7 @@ export default function Layout() {
           </Link>
 
           <nav className="hidden flex-1 items-center gap-1 md:flex">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <NavItem key={item.to} {...item} />
             ))}
           </nav>
@@ -45,7 +48,7 @@ export default function Layout() {
 
         {open && (
           <nav className="flex flex-col gap-1 border-t border-line px-4 py-3 md:hidden">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <NavItem key={item.to} {...item} onClick={() => setOpen(false)} />
             ))}
             <div className="pt-2">
@@ -107,7 +110,7 @@ function AuthButton() {
         <span className="text-sm font-semibold">{name}</span>
         {profile && profile.role !== 'user' && (
           <span className="rounded-md bg-kart-yellow/15 px-1.5 py-0.5 text-[11px] font-bold uppercase text-kart-yellow">
-            {profile.role === 'admin' ? 'Admin' : 'Editor'}
+            {ROLE_LABELS[profile.role]}
           </span>
         )}
         <button onClick={signOut} className="text-sm text-muted hover:text-ink">

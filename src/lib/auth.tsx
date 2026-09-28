@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
 
-export type Role = 'user' | 'editor' | 'admin'
+export type Role = 'user' | 'editor' | 'moderator' | 'admin'
 
 export type Profile = {
   id: string
@@ -19,6 +19,8 @@ type AuthState = {
   /** false mientras Supabase no esté configurado */
   enabled: boolean
   isEditor: boolean
+  /** Moderador o admin: puede gestionar editores */
+  isModerator: boolean
   isAdmin: boolean
   signIn: () => Promise<void>
   signOut: () => Promise<void>
@@ -77,7 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         enabled: supabase !== null,
-        isEditor: role === 'editor' || role === 'admin',
+        isEditor: role === 'editor' || role === 'moderator' || role === 'admin',
+        isModerator: role === 'moderator' || role === 'admin',
         isAdmin: role === 'admin',
         signIn,
         signOut,

@@ -6,14 +6,15 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 
 - **Web:** React + Vite + TypeScript + Tailwind, publicada en Vercel.
 - **Datos, login y permisos:** Supabase (Postgres + Row Level Security). Login con Discord.
-- **Equipos:** sincronizados desde la API de Mario Kart Central con una tarea diaria de GitHub Actions
-  (la API de MKC no permite llamadas desde el navegador). Esa misma tarea mantiene Supabase activo.
+- **Mario Kart Central:** función de Vercel (pi/sync-mkc.ts) que se ejecuta cada día: copia el top 10 de contrarreloj
+  (y más adelante los equipos). La API de MKC no permite llamadas desde el navegador. Mantiene Supabase activo.
 
 ## Roles
 
 | Rol | Permisos |
 |---|---|
-| Admin | Todo; da y quita el rol de editor |
+| Admin | Todo; gestiona todos los roles |
+| Moderador | Todo lo de editor + dar y quitar el rol de editor |
 | Editor | Guías y strats de pistas, tiempos de contrarreloj |
 | Usuario | Registra y edita solo sus propias carreras |
 | Miembro de equipo | Registra y edita las wars de su equipo (verificado con MKC por Discord) |
@@ -28,8 +29,11 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Guías editables por editores (consejos con título, texto y vídeo de YouTube)
 
 ### 2. Contrarreloj
-- [ ] Tiempos por pista: **Carrera completa** y **FLAP** (vuelta rápida), con marca **NITA**
-- [ ] Rankings por pista y categoría, historial de récords personales, enlace a vídeo
+- [x] Tiempos por pista: **Carrera completa** y **FLAP** (vuelta rápida), con marca **NITA**
+- [x] Rankings por pista y categoría con enlace a la prueba
+- [x] Top 10 con items sincronizado cada día desde Mario Kart Central (cron de Vercel)
+- [x] Panel de administración de roles
+- [ ] Historial de récords personales
 
 ### 3. Estadísticas individuales
 - [ ] Eventos de 12 carreras: **Iniciar → editar → Finalizar** (con confirmación). Finalizado = bloqueado

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import TimeTrialBoard from '../components/TimeTrialBoard'
 import TrackTips from '../components/TrackTips'
 import { Badge, EmptyState, Tabs } from '../components/ui'
 import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
@@ -71,11 +72,7 @@ export default function TrackDetail() {
         {/* key: al cambiar de pista se reinicia el estado (lista y formulario) */}
         {tab === 'tt-guide' && <TrackTips key={`${track.id}-tt`} trackId={track.id} kind="time_trial" />}
         {tab === 'race-guide' && <TrackTips key={`${track.id}-race`} trackId={track.id} kind="race" />}
-        {tab === 'times' && (
-          <EmptyState title="Sin tiempos registrados">
-            Rankings de carrera completa y FLAP, con y sin items (NITA). Llegará en la fase de contrarreloj.
-          </EmptyState>
-        )}
+        {tab === 'times' && <TimeTrialBoard key={track.id} trackId={track.id} />}
         {tab === 'stats' && (
           <EmptyState title="Estadísticas de la pista">
             Tu posición media en esta pista, filtrable por War y Lounge. Inicia sesión con Discord para registrar tus
