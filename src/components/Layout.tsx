@@ -87,7 +87,7 @@ function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: 
 }
 
 function AuthButton() {
-  const { user, loading, enabled, signIn, signOut } = useAuth()
+  const { user, profile, loading, enabled, signIn, signOut } = useAuth()
 
   if (!enabled) {
     return (
@@ -99,13 +99,17 @@ function AuthButton() {
   if (loading) return <span className="text-sm text-muted">…</span>
 
   if (user) {
-    const name = user.user_metadata.full_name ?? user.user_metadata.name ?? 'Jugador'
+    const name = profile?.username ?? user.user_metadata.full_name ?? 'Jugador'
+    const avatar = profile?.avatar_url ?? user.user_metadata.avatar_url
     return (
       <div className="flex items-center gap-3">
-        {user.user_metadata.avatar_url && (
-          <img src={user.user_metadata.avatar_url} alt="" className="size-8 rounded-full" />
-        )}
+        {avatar && <img src={avatar} alt="" className="size-8 rounded-full" />}
         <span className="text-sm font-semibold">{name}</span>
+        {profile && profile.role !== 'user' && (
+          <span className="rounded-md bg-kart-yellow/15 px-1.5 py-0.5 text-[11px] font-bold uppercase text-kart-yellow">
+            {profile.role === 'admin' ? 'Admin' : 'Editor'}
+          </span>
+        )}
         <button onClick={signOut} className="text-sm text-muted hover:text-ink">
           Salir
         </button>

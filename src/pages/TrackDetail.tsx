@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import TrackTips from '../components/TrackTips'
 import { Badge, EmptyState, Tabs } from '../components/ui'
 import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
 import NotFound from './NotFound'
@@ -67,17 +68,9 @@ export default function TrackDetail() {
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
       <div className="mt-6">
-        {tab === 'tt-guide' && (
-          <EmptyState title="Todavía no hay guía de contrarreloj">
-            Aquí irán las strats, atajos y líneas de esta pista, con vídeos de ejemplo. Solo los editores pueden
-            escribirla.
-          </EmptyState>
-        )}
-        {tab === 'race-guide' && (
-          <EmptyState title="Todavía no hay guía de carreras">
-            Consejos de posicionamiento y de uso de items para carreras online. Solo los editores pueden escribirla.
-          </EmptyState>
-        )}
+        {/* key: al cambiar de pista se reinicia el estado (lista y formulario) */}
+        {tab === 'tt-guide' && <TrackTips key={`${track.id}-tt`} trackId={track.id} kind="time_trial" />}
+        {tab === 'race-guide' && <TrackTips key={`${track.id}-race`} trackId={track.id} kind="race" />}
         {tab === 'times' && (
           <EmptyState title="Sin tiempos registrados">
             Rankings de carrera completa y FLAP, con y sin items (NITA). Llegará en la fase de contrarreloj.

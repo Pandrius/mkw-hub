@@ -4,7 +4,7 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 
 ## Stack
 
-- **Web:** React + Vite + TypeScript + Tailwind, publicada en GitHub Pages.
+- **Web:** React + Vite + TypeScript + Tailwind, publicada en Vercel.
 - **Datos, login y permisos:** Supabase (Postgres + Row Level Security). Login con Discord.
 - **Equipos:** sincronizados desde la API de Mario Kart Central con una tarea diaria de GitHub Actions
   (la API de MKC no permite llamadas desde el navegador). Esa misma tarea mantiene Supabase activo.
@@ -24,8 +24,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Lista de pistas (30 + 10 variantes SNES de la 1.8.0)
 - [x] Página de pista con pestañas: guía de contrarreloj, guía de carreras, tiempos, estadísticas
 - [x] Cálculo de puntos de war (12/11/10 jugadores) con tests
-- [ ] Login con Discord
-- [ ] Guías editables por editores
+- [x] Login con Discord
+- [x] Guías editables por editores (consejos con título, texto y vídeo de YouTube)
 
 ### 2. Contrarreloj
 - [ ] Tiempos por pista: **Carrera completa** y **FLAP** (vuelta rápida), con marca **NITA**
