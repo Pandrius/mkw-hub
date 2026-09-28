@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <div className="space-y-16">
-      <section className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+      <section className="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
         <div>
           <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{t('home.kicker')}</p>
           <ol className="mt-4">
@@ -59,7 +59,7 @@ export default function Home() {
           </ol>
         </div>
 
-        <div className="lg:mt-9">{latest ? <LatestRecord record={latest} /> : <div className="hazard hidden h-64 lg:block" />}</div>
+        <div className="min-w-0 lg:mt-9">{latest ? <LatestRecord record={latest} /> : <div className="hazard hidden h-64 lg:block" />}</div>
       </section>
 
       {records.length > 0 && <RecordTicker records={records} />}
@@ -90,7 +90,7 @@ function LatestRecord({ record }: { record: WorldRecord }) {
         <span className="bg-bg px-2 py-0.5 font-display text-lg font-black text-kart-yellow normal-case">{track?.abbr}</span>
         <span className="font-display text-2xl font-extrabold">{track?.name}</span>
       </p>
-      <p className="time mt-2 text-6xl sm:text-7xl">{formatTime(record.time_ms)}</p>
+      <p className="time mt-2 text-5xl leading-none sm:text-6xl lg:text-5xl xl:text-6xl">{formatTime(record.time_ms)}</p>
       <p className="mt-3 flex items-center gap-2 text-lg font-bold">
         <Flag code={record.country_code} locale={locale} />
         {record.player_name}

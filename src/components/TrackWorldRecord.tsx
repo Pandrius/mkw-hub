@@ -41,7 +41,7 @@ export default function TrackWorldRecord({ trackId }: { trackId: string }) {
     <section className="overflow-hidden rounded-2xl border border-kart-yellow/50 bg-surface">
       <div className="grid gap-0 md:grid-cols-[1fr_1.2fr]">
         <div className="p-5">
-          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{t('wr.current')}</p>
+          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow uppercase">{t('wr.current')}</p>
           <p className="time mt-2 text-5xl">{formatTime(wr.time_ms)}</p>
           <p className="mt-2 flex items-center gap-2 text-lg font-semibold">
             <Flag code={wr.country_code} locale={locale} />
