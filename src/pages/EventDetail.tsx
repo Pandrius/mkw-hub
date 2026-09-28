@@ -263,7 +263,7 @@ function RacesTable({
               )}
             </span>
             {row && (
-              <span className="w-28 text-right font-display font-bold tabular-nums">
+              <span className="ml-auto w-28 text-right font-display font-bold tabular-nums">
                 {row.home}–{row.away}{' '}
                 <span className={row.diff > 0 ? 'text-kart-green' : row.diff < 0 ? 'text-kart-red' : 'text-muted'}>
                   ({row.diff > 0 ? '+' : ''}
