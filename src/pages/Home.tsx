@@ -46,7 +46,7 @@ export default function Home() {
             {SECTIONS.map((s, i) => (
               <li key={s.to} className="border-b-2 border-line first:border-t-2">
                 <Link to={s.to} className="group flex items-baseline gap-4 py-2">
-                  <span className="w-8 font-mono text-sm font-bold text-muted group-hover:text-kart-yellow">
+                  <span className="w-8 shrink-0 font-mono text-sm font-bold text-muted group-hover:text-kart-yellow">
                     0{i + 1}
                   </span>
                   <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-7xl">
