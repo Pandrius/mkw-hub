@@ -16,7 +16,7 @@ import {
   type EventRace,
 } from '../lib/events'
 import { formatDate } from '../lib/time'
-import { buildWarTable, tableText, type WarTable } from '../lib/warTable'
+import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
   const { t, locale } = useI18n()
@@ -291,10 +291,11 @@ function RacesTable({
 function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTag: string; opponentTag: string }) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
+  const text = lorenziText(teamTag, opponentTag, table)
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(tableText(teamTag, opponentTag, table))
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -304,13 +305,22 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
 
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <header className="flex items-center justify-between border-b border-line px-5 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="font-display text-xl font-bold">{t('event.table')}</h2>
-        <button onClick={copy} className="text-sm font-semibold text-kart-blue hover:underline">
-          {copied ? t('event.copied') : t('event.copyTable')}
-        </button>
+        <span className="flex gap-4 text-sm font-semibold">
+          <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="text-kart-blue hover:underline">
+            {t('event.openLorenzi')} ↗
+          </a>
+          <button onClick={copy} className="text-kart-blue hover:underline">
+            {copied ? t('event.copied') : t('event.copyTable')}
+          </button>
+        </span>
       </header>
-      <div className="grid md:grid-cols-2">
+      {/* Imagen generada por el Table Maker de Lorenzi con nuestros datos */}
+      <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="block bg-bg">
+        <img src={lorenziImageUrl(text)} alt={`${teamTag} ${table.home} – ${opponentTag} ${table.away}`} className="w-full" loading="lazy" />
+      </a>
+      <div className="grid border-t border-line md:grid-cols-2">
         <table className="w-full text-sm">
           <thead className="text-left text-xs text-muted">
             <tr>

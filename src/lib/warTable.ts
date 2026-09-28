@@ -68,11 +68,40 @@ export function buildWarTable(players: EventPlayer[], races: EventRace[]): WarTa
   }
 }
 
-/** Formato de texto de tabla (compatible con el generador de tablas de Lorenzi) */
-export function tableText(teamTag: string, opponentTag: string, table: WarTable): string {
-  const lines = [`#title ${teamTag} vs ${opponentTag}`, `${teamTag}`]
-  for (const p of table.players) lines.push(`${p.player.name} ${p.points}`)
-  if (table.missingPoints) lines.push(`Ausentes ${table.missingPoints}`)
-  lines.push('', `${opponentTag}`, `${opponentTag} ${table.away}`)
+const LORENZI = 'https://gb2.hlorenzi.com'
+
+/** Nombre apto para una línea de Lorenzi: sin saltos de línea ni [ ] (se usan para la bandera) */
+const cleanName = (s: string) => s.replace(/[\r\n[\]]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/**
+ * Tabla en el formato de texto del Table Maker de Lorenzi (gb2.hlorenzi.com/table):
+ *
+ *   #title MKH vs ABC
+ *   MKH
+ *   tortelini 15+12+10+…      ← puntos de cada carrera, Lorenzi los suma
+ *   DC 1                      ← puntos de jugadores ausentes (carreras de 11/10)
+ *
+ *   ABC
+ *   ABC 334                   ← del rival solo se conoce el total
+ */
+export function lorenziText(teamTag: string, opponentTag: string, table: WarTable): string {
+  const home = cleanName(teamTag) || 'Home'
+  const away = cleanName(opponentTag) || 'Away'
+  const lines = [`#title ${home} vs ${away}`, home]
+  for (const p of table.players) {
+    const perRace = Object.keys(p.positions)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((raceNo) => pointsForPosition(p.positions[raceNo]))
+    lines.push(`${cleanName(p.player.name)} ${perRace.join('+')}`)
+  }
+  if (table.missingPoints) lines.push(`DC ${table.missingPoints}`)
+  lines.push('', away, `${away} ${table.away}`)
   return lines.join('\n')
 }
+
+/** Imagen PNG de la tabla generada por Lorenzi */
+export const lorenziImageUrl = (text: string) => `${LORENZI}/table.png?data=${encodeURIComponent(text)}`
+
+/** La misma tabla abierta en el editor de Lorenzi */
+export const lorenziEditorUrl = (text: string) => `${LORENZI}/table?data=${encodeURIComponent(text)}`

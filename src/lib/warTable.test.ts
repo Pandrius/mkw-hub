@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EventPlayer, EventRace } from './events'
-import { buildWarTable, tableText } from './warTable'
+import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziText } from './warTable'
 
 const players: EventPlayer[] = ['A', 'B', 'C', 'D', 'E', 'F', 'Sub'].map((name, i) => ({
   id: i + 1,
@@ -51,10 +51,33 @@ describe('buildWarTable', () => {
     expect(table.missingPoints).toBe(1)
   })
 
-  it('genera texto de tabla', () => {
-    const text = tableText('MKH', 'ABC', table)
-    expect(text).toContain('#title MKH vs ABC')
-    expect(text).toContain('A 30')
-    expect(text).toContain(`ABC ${table.away}`)
+  it('genera el texto de Lorenzi con los puntos de cada carrera', () => {
+    const text = lorenziText('MKH', 'ABC', table)
+    expect(text.split('\n')).toEqual([
+      '#title MKH vs ABC',
+      'MKH',
+      'A 15+15',
+      'B 10+12',
+      'C 8+9',
+      'D 6+7',
+      'Sub 5',
+      'E 4',
+      'F 2',
+      'DC 1',
+      '',
+      'ABC',
+      `ABC ${table.away}`,
+    ])
+  })
+
+  it('limpia nombres que romperían el formato', () => {
+    const t2 = buildWarTable([{ id: 1, event_id: 'ev', name: 'Pe[ck]\nmat', profile_id: null }], [])
+    t2.players.push({ player: { id: 1, event_id: 'ev', name: 'Pe[ck]\nmat', profile_id: null }, points: 15, races: 1, positions: { 1: 1 } })
+    expect(lorenziText('A', 'B', t2)).toContain('Pe ck mat 15')
+  })
+
+  it('URLs de Lorenzi con el texto codificado', () => {
+    expect(lorenziImageUrl('#title A vs B\nA')).toBe('https://gb2.hlorenzi.com/table.png?data=%23title%20A%20vs%20B%0AA')
+    expect(lorenziEditorUrl('x')).toBe('https://gb2.hlorenzi.com/table?data=x')
   })
 })
