@@ -39,16 +39,24 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [ ] Historial de récords personales
 
 ### 3. Estadísticas individuales
-- [ ] Eventos de 12 carreras: **Iniciar → editar → Finalizar** (con confirmación). Finalizado = bloqueado
-- [ ] Cada carrera es **War** o **Lounge**; filtros War / Lounge / Todo
-- [ ] Posición media por pista y general, mejores y peores pistas, evolución, aviso de pocos datos
+- [x] Eventos de 12 carreras: **Iniciar → editar → Finalizar** (con confirmación). Finalizado = bloqueado
+- [x] Cada carrera es **War** o **Lounge**; filtros War / Lounge / Todo
+- [x] Posición media por pista y general, mejores y peores pistas, aviso de pocos datos
+- [x] Al iniciar una war se indican los **6 jugadores** (alias `Usuario = nombre en el juego`)
+- [x] **Sustituciones** en cualquier carrera del evento
+- [x] Carreras de 11 o 10 jugadores indicando de qué equipo faltan
+- [x] Tabla automática de la war (puntos por jugador, marcador, texto para copiar)
+- [x] Las posiciones de la war cuentan en las estadísticas War de cada jugador
+- [ ] Gráfico de evolución
 
-### 4. Equipos y wars
+### 3b. Bot de Discord
+- [ ] Comandos `/evento iniciar`, `/carrera`, `/sub`, `/corregir`, `/evento ver`, `/evento finalizar`
+- [ ] Marcador tras cada carrera y tabla en imagen al finalizar
+- [ ] Funciona por HTTP en Vercel (sin servidor aparte), mismas funciones de la base de datos que la web
+
+### 4. Equipos
 - [ ] Equipos y tags importados de MKC; miembros verificados por Discord ID; líder/manager administra
-- [ ] Al iniciar una war se indican los **6 jugadores** que van a jugar
-- [ ] **Sustituciones** en cualquier carrera del evento
-- [ ] Carreras de 11 o 10 jugadores indicando de qué equipo faltan
-- [ ] Las posiciones de la war cuentan en las estadísticas War de cada jugador
+- [ ] Wars vinculadas al equipo: solo sus miembros las editan
 - [ ] Rendimiento del equipo por pista, historial contra rivales
 
 ### 5. Extras
