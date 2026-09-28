@@ -4,11 +4,13 @@
  * - Copia el top 10 de contrarreloj (carrera completa, con items) de cada pista.
  * - Al escribir en la base de datos cada día, evita que Supabase pause el proyecto.
  *
+ * Los imports llevan .js porque Vercel compila cada archivo por separado como ESM.
+ *
  * Protegida con CRON_SECRET: Vercel la envía automáticamente en la cabecera Authorization.
  */
 import { createClient } from '@supabase/supabase-js'
-import { TRACKS } from '../src/data/tracks'
-import { bestProof, MKC_API, pickTop, type MkcTimeTrial } from '../src/lib/mkc'
+import { TRACKS } from '../src/data/tracks.js'
+import { bestProof, MKC_API, pickTop, type MkcTimeTrial } from '../src/lib/mkc.js'
 
 const TOP_N = 10
 
