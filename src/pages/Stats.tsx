@@ -43,12 +43,12 @@ export default function Stats() {
                 setNotFound(false)
               }}
               placeholder={t('stats.searchPlayer')}
-              className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-kart-yellow"
+              className="field"
             />
             {notFound && <p className="mt-1 text-xs text-kart-red">{t('stats.userNotFound')}</p>}
           </form>
           {profile && (
-            <Link to="/eventos/nuevo" className="rounded-xl bg-kart-yellow px-4 py-2.5 text-sm font-bold text-bg hover:brightness-105">
+            <Link to="/eventos/nuevo" className="btn-yellow text-base">
               + {t('stats.newEvent')}
             </Link>
           )}
@@ -149,8 +149,8 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
 
 function Metric({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
-      <p className={`font-display text-3xl font-black tabular-nums ${highlight ? 'text-kart-yellow' : ''}`}>{value}</p>
+    <div className="panel p-4">
+      <p className={`time text-4xl ${highlight ? 'text-kart-yellow' : ''}`}>{value}</p>
       <p className="text-sm text-muted">{label}</p>
     </div>
   )
@@ -159,7 +159,7 @@ function Metric({ label, value, highlight }: { label: string; value: string | nu
 function TrackPodium({ title, tracks, color }: { title: string; tracks: TrackStats[]; color: string }) {
   const { t } = useI18n()
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5">
+    <div className="panel p-5">
       <h3 className="font-display text-lg font-bold" style={{ color }}>
         {title}
       </h3>
@@ -171,13 +171,13 @@ function TrackPodium({ title, tracks, color }: { title: string; tracks: TrackSta
             const track = getTrack(ts.trackId)
             return (
               <li key={ts.trackId} className="flex items-baseline gap-3">
-                <span className="w-12 font-display font-black italic" style={{ color: track && getCup(track.cupId)?.color }}>
+                <span className="w-12 font-display font-black" style={{ color: track && getCup(track.cupId)?.color }}>
                   {track?.abbr}
                 </span>
                 <Link to={`/pistas/${ts.trackId}`} className="flex-1 truncate hover:underline">
                   {track?.name ?? ts.trackId}
                 </Link>
-                <span className="font-display text-lg font-bold tabular-nums">{ts.average.toFixed(2)}</span>
+                <span className="time text-lg">{ts.average.toFixed(2)}</span>
               </li>
             )
           })}
@@ -192,15 +192,15 @@ function TrackTable({ tracks }: { tracks: TrackStats[] }) {
   return (
     <section>
       <h3 className="mb-3 font-display text-xl font-bold">{t('stats.byTrack')}</h3>
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+      <div className="overflow-hidden panel">
         <table className="w-full text-sm">
-          <thead className="bg-surface-2/60 text-left text-xs text-muted">
+          <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
             <tr>
-              <th className="px-4 py-2.5 font-semibold">{t('stats.colTrack')}</th>
-              <th className="px-4 py-2.5 text-right font-semibold">{t('stats.colAvg')}</th>
+              <th className="px-4 py-2.5 font-extrabold">{t('stats.colTrack')}</th>
+              <th className="px-4 py-2.5 text-right font-extrabold">{t('stats.colAvg')}</th>
               <th className="hidden w-1/3 px-4 py-2.5 sm:table-cell" />
-              <th className="px-4 py-2.5 text-right font-semibold">{t('stats.colRaces')}</th>
-              <th className="px-4 py-2.5 text-right font-semibold">{t('stats.colBest')}</th>
+              <th className="px-4 py-2.5 text-right font-extrabold">{t('stats.colRaces')}</th>
+              <th className="px-4 py-2.5 text-right font-extrabold">{t('stats.colBest')}</th>
             </tr>
           </thead>
           <tbody>
@@ -212,13 +212,13 @@ function TrackTable({ tracks }: { tracks: TrackStats[] }) {
                 <tr key={ts.trackId} className="border-t border-line/60">
                   <td className="px-4 py-2">
                     <Link to={`/pistas/${ts.trackId}`} className="flex items-baseline gap-2 hover:underline">
-                      <span className="w-12 shrink-0 font-display font-black italic" style={{ color }}>
+                      <span className="w-12 shrink-0 font-display font-black" style={{ color }}>
                         {track?.abbr}
                       </span>
                       <span className="truncate">{track?.name ?? ts.trackId}</span>
                     </Link>
                   </td>
-                  <td className="px-4 py-2 text-right font-display text-base font-bold tabular-nums">
+                  <td className="time px-4 py-2 text-right text-base">
                     {ts.average.toFixed(2)}
                     {low && (
                       <span title={t('stats.lowSample')} className="ml-1 text-xs text-muted">

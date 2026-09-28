@@ -42,9 +42,9 @@ export default function TrackStats({ trackId }: { trackId: string }) {
         {filters.map((f) => {
           const s = computeStats(results, f.id)
           return (
-            <div key={f.id} className="rounded-2xl border border-line bg-surface p-4">
+            <div key={f.id} className="panel p-4">
               <p className="text-sm font-semibold text-muted">{f.label}</p>
-              <p className="mt-1 font-display text-3xl font-black tabular-nums text-kart-yellow">
+              <p className="time mt-1 text-3xl text-kart-yellow">
                 {s.average?.toFixed(2) ?? '—'}
               </p>
               <p className="text-xs text-muted">

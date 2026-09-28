@@ -30,17 +30,17 @@ export default function WorldRecordsTable() {
   if (!records) return <p className="text-muted">{t('common.loading')}</p>
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <div className="overflow-hidden panel">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-2/60 text-left text-xs text-muted">
+          <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
             <tr>
-              <th className="px-4 py-2.5 font-semibold">{t('wr.colTrack')}</th>
-              <th className="px-4 py-2.5 font-semibold">{t('wr.colTime')}</th>
-              <th className="px-4 py-2.5 font-semibold">{t('wr.colPlayer')}</th>
-              <th className="hidden px-4 py-2.5 font-semibold md:table-cell">{t('wr.colDate')}</th>
-              <th className="hidden px-4 py-2.5 text-right font-semibold md:table-cell">{t('wr.colDays')}</th>
-              <th className="hidden px-4 py-2.5 font-semibold lg:table-cell">{t('wr.colCombo')}</th>
+              <th className="px-4 py-2.5 font-extrabold">{t('wr.colTrack')}</th>
+              <th className="px-4 py-2.5 font-extrabold">{t('wr.colTime')}</th>
+              <th className="px-4 py-2.5 font-extrabold">{t('wr.colPlayer')}</th>
+              <th className="hidden px-4 py-2.5 font-extrabold md:table-cell">{t('wr.colDate')}</th>
+              <th className="hidden px-4 py-2.5 text-right font-extrabold md:table-cell">{t('wr.colDays')}</th>
+              <th className="hidden px-4 py-2.5 font-extrabold lg:table-cell">{t('wr.colCombo')}</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
@@ -52,7 +52,7 @@ export default function WorldRecordsTable() {
                 <tr key={track.id} className="border-t border-line/60 hover:bg-surface-2/40">
                   <td className="px-4 py-2.5">
                     <Link to={`/pistas/${track.id}`} className="flex items-baseline gap-2 hover:underline">
-                      <span className="w-11 shrink-0 font-display font-black italic" style={{ color }}>
+                      <span className="w-11 shrink-0 font-display font-black" style={{ color }}>
                         {track.abbr}
                       </span>
                       <span className="whitespace-nowrap">{track.name}</span>
@@ -60,7 +60,7 @@ export default function WorldRecordsTable() {
                   </td>
                   {r ? (
                     <>
-                      <td className="px-4 py-2.5 font-display text-base font-bold tabular-nums">{formatTime(r.time_ms)}</td>
+                      <td className="time px-4 py-2.5 text-base">{formatTime(r.time_ms)}</td>
                       <td className="px-4 py-2.5">
                         <span className="flex items-center gap-2 whitespace-nowrap">
                           <Flag code={r.country_code} locale={locale} />

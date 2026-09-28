@@ -20,59 +20,75 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b border-line bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-          <Link to="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-            <img src="/favicon.svg" alt="" className="size-8" />
-            <span className="font-display text-xl font-black italic tracking-tight">
-              MKW <span className="text-kart-yellow">Hub</span>
-            </span>
-          </Link>
+      <div className="hazard h-1.5" />
+      <header className="sticky top-0 z-20 border-b-2 border-line bg-bg">
+        <div className="mx-auto flex h-16 max-w-6xl items-stretch gap-6 px-4">
+          <Logo onClick={() => setOpen(false)} />
 
-          <nav className="hidden flex-1 items-center gap-1 md:flex">
+          <nav className="hidden flex-1 items-stretch gap-1 md:flex">
             {nav.map((item) => (
               <NavItem key={item.to} to={item.to} label={t(item.label)} />
             ))}
           </nav>
 
-          <div className="ml-auto hidden items-center gap-4 md:flex">
+          <div className="ml-auto hidden items-center gap-5 md:flex">
             <LanguageSwitch />
             <AuthButton />
           </div>
 
           <button
-            className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm md:hidden"
+            className="my-auto ml-auto font-display text-lg font-extrabold md:hidden"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
           >
-            {open ? t('nav.close') : t('nav.menu')}
+            {open ? `✕ ${t('nav.close')}` : `≡ ${t('nav.menu')}`}
           </button>
         </div>
 
         {open && (
-          <nav className="flex flex-col gap-1 border-t border-line px-4 py-3 md:hidden">
+          <nav className="flex flex-col border-t-2 border-line px-4 pb-4 md:hidden">
             {nav.map((item) => (
               <NavItem key={item.to} to={item.to} label={t(item.label)} onClick={() => setOpen(false)} />
             ))}
-            <div className="flex items-center justify-between gap-4 pt-2">
+            <div className="mt-4 flex items-center justify-between gap-4">
               <AuthButton />
               <LanguageSwitch />
             </div>
           </nav>
         )}
-        <div className="checker h-1.5 opacity-20" />
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
         <Outlet />
       </main>
 
-      <footer className="border-t border-line py-6 text-center text-xs text-muted">
-        <p>{t('footer.line1')}</p>
-        <p className="mt-1">{t('footer.line2')}</p>
-        <p className="mt-1">{t('footer.wrSource')}</p>
+      <footer className="mt-10">
+        <div className="checker h-4 opacity-90" />
+        <div className="bg-kart-yellow text-bg">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-6 px-4 py-8">
+            <p className="font-display text-6xl leading-[0.8] font-black sm:text-8xl">
+              MKW
+              <br />
+              HUB
+            </p>
+            <div className="max-w-md space-y-1 text-sm font-medium">
+              <p>{t('footer.line1')}</p>
+              <p>{t('footer.line2')}</p>
+              <p>{t('footer.wrSource')}</p>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
+  )
+}
+
+function Logo({ onClick }: { onClick: () => void }) {
+  return (
+    <Link to="/" onClick={onClick} className="flex items-center gap-1.5 font-display text-2xl font-black" aria-label="MKW Hub">
+      <span className="slant bg-kart-yellow px-3 py-0.5 text-bg">MKW</span>
+      <span>HUB</span>
+    </Link>
   )
 }
 
@@ -82,12 +98,17 @@ function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: 
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-          isActive ? 'bg-surface-2 text-kart-yellow' : 'text-muted hover:bg-surface hover:text-ink'
+        `relative flex items-center px-3 py-3 font-display text-lg font-extrabold transition-colors md:py-0 ${
+          isActive ? 'text-kart-yellow' : 'text-muted hover:text-ink'
         }`
       }
     >
-      {label}
+      {({ isActive }) => (
+        <>
+          {label}
+          {isActive && <span className="absolute inset-x-3 bottom-0 h-1 bg-kart-yellow max-md:hidden" />}
+        </>
+      )}
     </NavLink>
   )
 }
@@ -96,16 +117,18 @@ function LanguageSwitch() {
   const { lang, setLang, t } = useI18n()
   const langs: Lang[] = ['es', 'en']
   return (
-    <div role="group" aria-label={t('nav.language')} className="flex rounded-lg border border-line p-0.5 text-xs font-bold">
-      {langs.map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          aria-pressed={lang === l}
-          className={`rounded-md px-2 py-1 uppercase ${lang === l ? 'bg-surface-2 text-kart-yellow' : 'text-muted hover:text-ink'}`}
-        >
-          {l}
-        </button>
+    <div role="group" aria-label={t('nav.language')} className="flex font-mono text-xs font-bold">
+      {langs.map((l, i) => (
+        <span key={l} className="flex items-center">
+          {i > 0 && <span className="px-1 text-line">/</span>}
+          <button
+            onClick={() => setLang(l)}
+            aria-pressed={lang === l}
+            className={`uppercase ${lang === l ? 'text-kart-yellow' : 'text-muted hover:text-ink'}`}
+          >
+            {l}
+          </button>
+        </span>
       ))}
     </div>
   )
@@ -116,7 +139,7 @@ function AuthButton() {
   const { t } = useI18n()
 
   if (!enabled) return <span className="text-xs text-muted">{t('auth.soon')}</span>
-  if (loading) return <span className="text-sm text-muted">…</span>
+  if (loading) return <span className="font-mono text-sm text-muted">…</span>
 
   if (user) {
     const name = profile?.username ?? user.user_metadata.full_name ?? t('auth.player')
@@ -124,14 +147,14 @@ function AuthButton() {
     const role = profile?.role === 'moderator' || profile?.role === 'admin' ? profile.role : null
     return (
       <div className="flex items-center gap-3">
-        {avatar && <img src={avatar} alt="" className="size-8 rounded-full" />}
+        {avatar && <img src={avatar} alt="" className="size-8 border-2 border-kart-yellow" />}
         <span className="text-sm font-semibold">{name}</span>
         {role && (
-          <span className="rounded-md bg-kart-yellow/15 px-1.5 py-0.5 text-[11px] font-bold uppercase text-kart-yellow">
+          <span className="bg-kart-yellow px-1.5 py-0.5 font-mono text-[10px] font-bold text-bg uppercase">
             {t(ROLE_LABEL[role])}
           </span>
         )}
-        <button onClick={signOut} className="text-sm text-muted hover:text-ink">
+        <button onClick={signOut} className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
           {t('auth.signOut')}
         </button>
       </div>
@@ -139,10 +162,7 @@ function AuthButton() {
   }
 
   return (
-    <button
-      onClick={signIn}
-      className="rounded-lg bg-[#5865F2] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
-    >
+    <button onClick={signIn} className="btn-yellow text-base">
       {t('auth.signIn')}
     </button>
   )

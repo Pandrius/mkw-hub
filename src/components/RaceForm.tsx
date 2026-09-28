@@ -16,7 +16,7 @@ type Props = {
 }
 
 const input =
-  'w-full rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-kart-yellow'
+  'field'
 
 /** Formulario de una carrera: pista y posición de cada jugador. */
 export default function RaceForm({ eventId, kind, raceNo, players, initial, onSaved, onCancel }: Props) {
@@ -87,7 +87,7 @@ export default function RaceForm({ eventId, kind, raceNo, players, initial, onSa
 
       <div className="grid gap-2 sm:grid-cols-2">
         {players.map((p) => (
-          <label key={p.id} className="flex items-center gap-3 rounded-xl border border-line bg-bg px-3 py-1.5">
+          <label key={p.id} className="flex items-center gap-3 border-2 border-line bg-bg px-3 py-1.5">
             <span className="flex-1 truncate text-sm font-semibold">{p.name}</span>
             <input
               type="number"
@@ -128,12 +128,12 @@ export default function RaceForm({ eventId, kind, raceNo, players, initial, onSa
         <button
           type="submit"
           disabled={saving || !!error}
-          className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-50"
+          className="btn-yellow text-base"
         >
           {saving ? t('common.saving') : t('event.saveRace')}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold">
+          <button type="button" onClick={onCancel} className="btn-line text-base">
             {t('common.cancel')}
           </button>
         )}
@@ -149,7 +149,7 @@ function MissingSelect({ label, value, onChange }: { label: string; value: numbe
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="rounded-lg border border-line bg-bg px-3 py-1.5"
+        className="border-2 border-line bg-bg px-3 py-1.5"
       >
         {[0, 1, 2].map((n) => (
           <option key={n} value={n}>

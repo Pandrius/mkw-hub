@@ -102,13 +102,13 @@ export default function Admin() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('admin.search')}
-          className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-kart-yellow sm:w-64"
+          className="field sm:w-64"
         />
       </PageHeader>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-line bg-surface p-4">
+          <div key={c.label} className="panel p-4">
             <p className="font-display text-2xl font-black" style={{ color: c.color }}>
               {c.n}
             </p>
@@ -120,7 +120,7 @@ export default function Admin() {
 
       {message && (
         <p
-          className={`mb-4 rounded-xl px-4 py-2 text-sm ${message.ok ? 'bg-kart-green/15 text-kart-green' : 'bg-kart-red/15 text-kart-red'}`}
+          className={`mb-4 border-l-4 bg-surface px-4 py-2 text-sm ${message.ok ? 'border-kart-green' : 'border-kart-red'}`}
         >
           {message.text}
         </p>
@@ -129,7 +129,7 @@ export default function Admin() {
       {!rows ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : (
-        <ul className="overflow-hidden rounded-2xl border border-line bg-surface">
+        <ul className="overflow-hidden panel">
           {filtered.map((row) => {
             const isSelf = row.id === profile.id
             const roleEditable = canChangeRole(profile.role, isSelf)
@@ -175,7 +175,7 @@ export default function Admin() {
                   <select
                     value={role}
                     onChange={(e) => changeRole(row, e.target.value as AssignableRole)}
-                    className="rounded-lg border border-line bg-bg px-3 py-1.5 text-sm font-semibold"
+                    className="border-2 border-line bg-bg px-3 py-1.5 text-sm font-semibold"
                     style={{ color: ROLE_COLORS[role] }}
                   >
                     {ASSIGNABLE_ROLES.map((r) => (

@@ -91,8 +91,8 @@ export default function EventDetail() {
         <div>
           <p className="flex items-center gap-2 text-sm">
             <span
-              className={`rounded-md px-2 py-0.5 text-xs font-bold uppercase ${
-                isWar ? 'bg-kart-blue/15 text-kart-blue' : 'bg-kart-green/15 text-kart-green'
+              className={`px-2 py-0.5 font-mono text-[11px] font-bold uppercase ${
+                isWar ? 'bg-kart-yellow text-bg' : 'bg-ink text-bg'
               }`}
             >
               {t(isWar ? 'event.war' : 'event.lounge')}
@@ -102,15 +102,15 @@ export default function EventDetail() {
             </span>
             <span className="text-muted">{formatDate(event.created_at, locale)}</span>
           </p>
-          <h1 className="mt-1 font-display text-3xl font-black italic sm:text-4xl">
+          <h1 className="mt-1 font-display text-3xl font-black sm:text-4xl">
             {isWar ? `${event.team_tag ?? '?'} ${t('event.vs')} ${event.opponent_tag ?? '?'}` : players[0]?.name}
           </h1>
         </div>
         {table && <Scoreboard table={table} teamTag={event.team_tag} opponentTag={event.opponent_tag} racesDone={races.length} />}
       </header>
 
-      {!isOpen && <p className="rounded-xl bg-surface-2 px-4 py-2 text-sm text-muted">🔒 {t('event.locked')}</p>}
-      {isOpen && !canEdit && <p className="rounded-xl bg-surface-2 px-4 py-2 text-sm text-muted">{t('event.readOnly')}</p>}
+      {!isOpen && <p className="border-l-4 border-kart-yellow bg-surface px-4 py-2 text-sm">{t('event.locked')}</p>}
+      {isOpen && !canEdit && <p className="border-l-4 border-line bg-surface px-4 py-2 text-sm text-muted">{t('event.readOnly')}</p>}
 
       {canEdit && editing === null && nextRaceNo <= RACES_PER_EVENT && (
         <RaceForm
@@ -123,7 +123,7 @@ export default function EventDetail() {
         />
       )}
       {canEdit && races.length >= RACES_PER_EVENT && editing === null && (
-        <p className="rounded-xl bg-kart-green/15 px-4 py-2 text-sm text-kart-green">{t('event.done')}</p>
+        <p className="border-l-4 border-kart-green bg-surface px-4 py-2 text-sm">{t('event.done')}</p>
       )}
 
       <RacesTable
@@ -151,13 +151,13 @@ export default function EventDetail() {
         <div className="flex flex-wrap items-start gap-3 border-t border-line pt-6">
           {isWar && <AddSub onAdd={(entry) => act(() => addEventPlayer(event.id, entry))} />}
           <div className="ml-auto flex gap-2">
-            <button onClick={remove} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold text-muted hover:text-kart-red">
+            <button onClick={remove} className="btn-line text-base">
               {t('event.delete')}
             </button>
             <button
               onClick={finish}
               disabled={races.length === 0}
-              className="rounded-xl bg-kart-green px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-50"
+              className="btn-yellow text-base"
             >
               {t('event.finish')}
             </button>
@@ -182,8 +182,8 @@ function Scoreboard({
   const { t } = useI18n()
   const diffColor = table.diff > 0 ? 'text-kart-green' : table.diff < 0 ? 'text-kart-red' : 'text-muted'
   return (
-    <div className="rounded-2xl border border-line bg-surface px-5 py-3 text-center">
-      <div className="flex items-baseline gap-4 font-display font-black italic">
+    <div className="panel px-5 py-3 text-center">
+      <div className="flex items-baseline gap-4 font-display font-black">
         <span className="text-sm text-muted">{teamTag}</span>
         <span className="text-3xl tabular-nums">{table.home}</span>
         <span className="text-muted">–</span>
@@ -243,9 +243,9 @@ function RacesTable({
         const row = rowFor(race.race_no)
         const results = [...race.race_results].sort((a, b) => a.position - b.position)
         return (
-          <div key={race.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-            <span className="w-8 font-display text-xl font-black italic text-muted">{race.race_no}</span>
-            <span className="w-14 font-display font-black italic" style={{ color: track && getCup(track.cupId)?.color }}>
+          <div key={race.id} className="flex flex-wrap items-center gap-3 panel px-4 py-3">
+            <span className="w-8 font-display text-xl font-black text-muted">{race.race_no}</span>
+            <span className="w-14 font-display font-black" style={{ color: track && getCup(track.cupId)?.color }}>
               {track?.abbr}
             </span>
             <span className="min-w-32 flex-1 truncate text-sm">{track?.name ?? race.track_id}</span>
@@ -304,7 +304,7 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <section className="overflow-hidden panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="font-display text-xl font-bold">{t('event.table')}</h2>
         <span className="flex gap-4 text-sm font-semibold">
@@ -322,11 +322,11 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
       </a>
       <div className="grid border-t border-line md:grid-cols-2">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs text-muted">
+          <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
             <tr>
-              <th className="px-5 py-2 font-semibold">{t('event.player')}</th>
-              <th className="px-3 py-2 text-right font-semibold">{t('event.avgPos')}</th>
-              <th className="px-5 py-2 text-right font-semibold">{t('event.points')}</th>
+              <th className="px-5 py-2 font-extrabold">{t('event.player')}</th>
+              <th className="px-3 py-2 text-right font-extrabold">{t('event.avgPos')}</th>
+              <th className="px-5 py-2 text-right font-extrabold">{t('event.points')}</th>
             </tr>
           </thead>
           <tbody>
@@ -339,7 +339,7 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
                     {p.player.name}
                     {p.races < table.races.length && <span className="ml-2 text-xs text-muted">({p.races})</span>}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-muted">{avg.toFixed(1)}</td>
+                  <td className="time px-3 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
                   <td className="px-5 py-2 text-right font-display text-base font-bold tabular-nums">{p.points}</td>
                 </tr>
               )
@@ -354,11 +354,11 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
           </tbody>
         </table>
         <div className="flex flex-col items-center justify-center gap-1 border-t border-line p-6 md:border-l md:border-t-0">
-          <div className="flex items-baseline gap-4 font-display font-black italic">
+          <div className="flex items-baseline gap-4 font-display font-black">
             <span className="text-lg text-kart-yellow">{teamTag}</span>
             <span className="text-5xl tabular-nums">{table.home}</span>
           </div>
-          <div className="flex items-baseline gap-4 font-display font-black italic text-muted">
+          <div className="flex items-baseline gap-4 font-display font-black text-muted">
             <span className="text-lg">{opponentTag}</span>
             <span className="text-5xl tabular-nums">{table.away}</span>
           </div>
@@ -383,7 +383,7 @@ function AddSub({ onAdd }: { onAdd: (entry: string) => Promise<void> }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2">
+      <button onClick={() => setOpen(true)} className="btn-line text-base">
         + {t('event.addSub')}
       </button>
     )

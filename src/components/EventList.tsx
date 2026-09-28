@@ -29,13 +29,13 @@ export default function EventList({ profileId }: { profileId: string }) {
   const sorted = [...events].sort((a, b) => (a.status === b.status ? 0 : a.status === 'open' ? -1 : 1))
 
   return (
-    <ul className="overflow-hidden rounded-2xl border border-line bg-surface">
+    <ul className="overflow-hidden panel">
       {sorted.map((e) => (
         <li key={e.id} className="border-b border-line last:border-b-0">
           <Link to={`/eventos/${e.id}`} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-surface-2/50">
             <span
-              className={`rounded-md px-2 py-0.5 text-xs font-bold uppercase ${
-                e.kind === 'war' ? 'bg-kart-blue/15 text-kart-blue' : 'bg-kart-green/15 text-kart-green'
+              className={`px-2 py-0.5 font-mono text-[11px] font-bold uppercase ${
+                e.kind === 'war' ? 'bg-kart-yellow text-bg' : 'bg-ink text-bg'
               }`}
             >
               {t(e.kind === 'war' ? 'event.war' : 'event.lounge')}

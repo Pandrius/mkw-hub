@@ -62,7 +62,7 @@ export default function Leaderboard({ trackId, category, nita }: { trackId: stri
         ) : (
           <button
             onClick={() => setAdding(true)}
-            className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105"
+            className="btn-yellow text-base"
           >
             + {t('tt.add')}
           </button>
@@ -71,11 +71,11 @@ export default function Leaderboard({ trackId, category, nita }: { trackId: stri
       {times.length === 0 ? (
         <EmptyState title={t('tt.empty')}>{t('tt.emptyText')}</EmptyState>
       ) : (
-        <ol className="overflow-hidden rounded-2xl border border-line bg-surface">
+        <ol className="overflow-hidden panel">
           {times.map((tt, i) => (
             <li key={tt.id} className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 sm:gap-4">
               <span
-                className="w-7 text-center font-display text-lg font-black italic"
+                className="w-7 text-center font-display text-lg font-black"
                 style={{ color: MEDALS[i] ?? 'var(--color-muted)' }}
               >
                 {i + 1}
@@ -87,7 +87,7 @@ export default function Leaderboard({ trackId, category, nita }: { trackId: stri
                 </span>
                 {tt.achieved_on && <span className="text-xs text-muted">{formatDate(tt.achieved_on, locale)}</span>}
               </span>
-              <span className="font-display text-lg font-bold tabular-nums">{formatTime(tt.time_ms)}</span>
+              <span className="time text-lg">{formatTime(tt.time_ms)}</span>
               {tt.proof_url ? (
                 <a href={tt.proof_url} target="_blank" rel="noreferrer" className="w-14 text-right text-sm text-kart-blue hover:underline">
                   {t('common.proof')}
@@ -165,7 +165,7 @@ function TimeForm({
   }
 
   const input =
-    'w-full rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-kart-yellow'
+    'field'
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
@@ -193,11 +193,11 @@ function TimeForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-60"
+          className="btn-yellow text-base"
         >
           {saving ? t('common.saving') : t('common.save')}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={onCancel} className="btn-line text-base">
           {t('common.cancel')}
         </button>
       </div>

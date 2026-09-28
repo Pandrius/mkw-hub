@@ -65,7 +65,7 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
       {isStratEditor && editing !== 'new' && (
         <button
           onClick={() => setEditing('new')}
-          className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105"
+          className="btn-yellow text-base"
         >
           + {t(copy.add)}
         </button>
@@ -114,9 +114,9 @@ function TipCard({
   const videoId = tip.video_url ? youtubeId(tip.video_url) : null
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-5">
+    <article className="panel p-5">
       <header className="flex items-start gap-3">
-        <span className="font-display text-2xl font-black italic leading-none text-kart-yellow">{index}</span>
+        <span className="font-display text-2xl font-black leading-none text-kart-yellow">{index}</span>
         <h3 className="flex-1 font-display text-lg font-bold leading-tight">{tip.title}</h3>
         {canEdit && (
           <div className="flex gap-2 text-sm">
@@ -186,7 +186,7 @@ function TipForm({
   }
 
   const input =
-    'w-full rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-kart-yellow'
+    'field'
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
@@ -212,11 +212,11 @@ function TipForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-60"
+          className="btn-yellow text-base"
         >
           {saving ? t('common.saving') : t('common.save')}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={onCancel} className="btn-line text-base">
           {t('common.cancel')}
         </button>
       </div>

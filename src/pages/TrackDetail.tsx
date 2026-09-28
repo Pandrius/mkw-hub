@@ -25,26 +25,24 @@ export default function TrackDetail() {
 
   return (
     <>
-      <Link to="/pistas" className="text-sm text-muted hover:text-ink">
+      <Link to="/pistas" className="font-mono text-xs font-bold text-muted hover:text-kart-yellow">
         {t('tracks.back')}
       </Link>
 
-      <header
-        className="relative mt-4 mb-6 overflow-hidden rounded-3xl border border-line bg-surface px-6 py-10 sm:py-14"
-        style={{ borderColor: cup?.color }}
-      >
-        {image && (
-          <img src={image} alt="" className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-60 sm:w-3/4" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/85 to-surface/10" />
-        <p className="relative text-sm font-semibold uppercase tracking-[0.15em]" style={{ color: cup?.color }}>
-          {track.abbr && <span className="mr-2 font-display text-base font-black normal-case italic">{track.abbr}</span>}
-          {cup && t(`cup.${cup.id}`)}
-        </p>
-        <h1 className="relative mt-1 font-display text-4xl font-black italic tracking-tight drop-shadow sm:text-5xl">
-          {track.name}
-        </h1>
-        <div className="relative mt-3 flex flex-wrap gap-2">
+      <header className="mt-4 mb-8 grid gap-6 border-b-2 border-line pb-8 md:grid-cols-[1fr_1fr] md:items-end">
+        <div>
+          <p className="flex items-center gap-3">
+            <span
+              className="font-display text-5xl leading-none font-black"
+              style={{ color: cup?.color }}
+            >
+              {track.abbr}
+            </span>
+            <span className="font-mono text-xs font-bold tracking-widest text-muted">{cup && t(`cup.${cup.id}`)}</span>
+          </p>
+          <h1 className="mt-2 font-display text-6xl leading-[0.85] font-black sm:text-7xl">{track.name}</h1>
+          <div className="mt-3 h-2 w-24" style={{ background: cup?.color }} />
+          <div className="mt-4 flex flex-wrap gap-2">
           {track.origin ? <Badge color={cup?.color}>{track.origin}</Badge> : <Badge>{t('common.new')}</Badge>}
           {parent && (
             <Link to={`/pistas/${parent.id}`}>
@@ -56,7 +54,13 @@ export default function TrackDetail() {
               <Badge>{v.name}</Badge>
             </Link>
           ))}
+          </div>
         </div>
+        {image && (
+          <div className="slant aspect-[16/9] overflow-hidden border-2 border-line bg-surface-2">
+            <img src={image} alt="" className="size-full object-cover" />
+          </div>
+        )}
       </header>
 
       <Tabs

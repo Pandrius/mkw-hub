@@ -1,76 +1,142 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { TRACKS } from '../data/tracks'
+import { Flag, Plate } from '../components/ui'
+import { getCup, getTrack, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
+import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabase'
+import { formatDate, formatTime } from '../lib/time'
+import { daysSince, listCurrentWorldRecords, type WorldRecord } from '../lib/worldRecords'
 
-const SECTIONS: { to: string; title: MessageKey; text: MessageKey; color: string }[] = [
-  { to: '/pistas', title: 'nav.tracks', text: 'home.sectionTracks', color: 'var(--color-kart-red)' },
-  { to: '/contrarreloj', title: 'nav.timeTrials', text: 'home.sectionTT', color: 'var(--color-kart-yellow)' },
-  { to: '/estadisticas', title: 'nav.stats', text: 'home.sectionStats', color: 'var(--color-kart-green)' },
-  { to: '/equipos', title: 'home.sectionTeamsTitle', text: 'home.sectionTeams', color: 'var(--color-kart-blue)' },
+const SECTIONS: { to: string; label: MessageKey; hint: MessageKey }[] = [
+  { to: '/pistas', label: 'nav.tracks', hint: 'home.hintTracks' },
+  { to: '/contrarreloj', label: 'nav.timeTrials', hint: 'home.hintTT' },
+  { to: '/estadisticas', label: 'nav.stats', hint: 'home.hintStats' },
+  { to: '/equipos', label: 'nav.teams', hint: 'home.hintTeams' },
 ]
 
 export default function Home() {
   const { t } = useI18n()
-  const mainTracks = TRACKS.filter((tr) => !tr.parentId).length
-  const snesTracks = TRACKS.length - mainTracks
+  const { enabled } = useAuth()
+  const [records, setRecords] = useState<WorldRecord[]>([])
+  const [historyCount, setHistoryCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!enabled || !supabase) return
+    let cancelled = false
+    listCurrentWorldRecords().then((data) => !cancelled && setRecords(data), () => {})
+    supabase
+      .from('world_records')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count }) => !cancelled && setHistoryCount(count))
+    return () => {
+      cancelled = true
+    }
+  }, [enabled])
+
+  const latest = [...records].sort((a, b) => b.achieved_on.localeCompare(a.achieved_on) || a.time_ms - b.time_ms)[0]
 
   return (
-    <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl border border-line bg-surface px-6 py-12 sm:px-10 sm:py-16">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full opacity-30 blur-3xl"
-          style={{ background: 'radial-gradient(circle, var(--color-kart-red), transparent 70%)' }}
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 right-24 size-72 rounded-full opacity-25 blur-3xl"
-          style={{ background: 'radial-gradient(circle, var(--color-kart-blue), transparent 70%)' }}
-        />
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-kart-yellow">{t('home.kicker')}</p>
-        <h1 className="mt-3 max-w-3xl font-display text-4xl font-black italic leading-[1.05] tracking-tight sm:text-6xl">
-          {t('home.title')}
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-muted">{t('home.subtitle')}</p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/pistas" className="rounded-xl bg-kart-yellow px-5 py-3 font-bold text-bg hover:brightness-105">
-            {t('home.ctaTracks')}
-          </Link>
-          <Link to="/estadisticas" className="rounded-xl border border-line px-5 py-3 font-bold hover:bg-surface-2">
-            {t('home.ctaStats')}
-          </Link>
+    <div className="space-y-16">
+      <section className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+        <div>
+          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{t('home.kicker')}</p>
+          <ol className="mt-4">
+            {SECTIONS.map((s, i) => (
+              <li key={s.to} className="border-b-2 border-line first:border-t-2">
+                <Link to={s.to} className="group flex items-baseline gap-4 py-2">
+                  <span className="w-8 font-mono text-sm font-bold text-muted group-hover:text-kart-yellow">
+                    0{i + 1}
+                  </span>
+                  <span className="font-display text-6xl leading-none font-black transition-colors group-hover:text-kart-yellow sm:text-8xl">
+                    {t(s.label)}
+                  </span>
+                  <span className="ml-auto hidden max-w-48 text-right text-sm text-muted sm:block">{t(s.hint)}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
         </div>
-        <dl className="mt-10 flex flex-wrap gap-8 text-sm">
-          <Stat value={mainTracks} label={t('home.statTracks')} />
-          <Stat value={snesTracks} label={t('home.statSnes')} />
-          <Stat value="6v6" label={t('home.statWars')} />
-        </dl>
+
+        {latest ? <LatestRecord record={latest} /> : <div className="hazard hidden h-64 lg:block" />}
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        {SECTIONS.map((s) => (
-          <Link
-            key={s.to}
-            to={s.to}
-            className="group rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-[color:var(--c)]"
-            style={{ '--c': s.color } as React.CSSProperties}
-          >
-            <div className="mb-3 h-1 w-10 rounded-full" style={{ background: s.color }} />
-            <h2 className="font-display text-xl font-bold">{t(s.title)}</h2>
-            <p className="mt-1 text-sm text-muted">{t(s.text)}</p>
-          </Link>
-        ))}
+      {records.length > 0 && <RecordTicker records={records} />}
+
+      <section className="grid gap-8 border-y-2 border-line py-8 sm:grid-cols-3">
+        <BigNumber value={TRACKS.length} label={t('home.statTracks')} />
+        <BigNumber value={historyCount ?? '—'} label={t('home.statRecords')} />
+        <BigNumber value="6v6" label={t('home.statWars')} />
+      </section>
+
+      <section className="max-w-2xl">
+        <p className="font-display text-3xl leading-tight font-extrabold sm:text-4xl">{t('home.manifesto')}</p>
+        <p className="mt-4 text-muted">{t('home.manifestoText')}</p>
       </section>
     </div>
   )
 }
 
-function Stat({ value, label }: { value: number | string; label: string }) {
+function LatestRecord({ record }: { record: WorldRecord }) {
+  const { t, locale } = useI18n()
+  const track = getTrack(record.track_id)
+  const days = daysSince(record.achieved_on)
+
+  return (
+    <Link to={`/pistas/${record.track_id}`} className="group block bg-kart-yellow p-6 text-bg">
+      <p className="font-mono text-xs font-bold tracking-widest">{t('home.latestWr')}</p>
+      <p className="mt-4 flex items-center gap-2">
+        <span className="bg-bg px-2 py-0.5 font-display text-lg font-black text-kart-yellow">{track?.abbr}</span>
+        <span className="font-display text-2xl font-extrabold">{track?.name}</span>
+      </p>
+      <p className="time mt-2 text-6xl sm:text-7xl">{formatTime(record.time_ms)}</p>
+      <p className="mt-3 flex items-center gap-2 text-lg font-bold">
+        <Flag code={record.country_code} locale={locale} />
+        {record.player_name}
+      </p>
+      <p className="mt-1 text-sm font-medium">
+        {formatDate(record.achieved_on, locale)} ·{' '}
+        {days === 0 ? t('wr.today') : days === 1 ? t('wr.heldFor1') : t('wr.heldFor', { days })}
+      </p>
+      <p className="mt-6 font-display text-lg font-black underline-offset-4 group-hover:underline">{t('home.seeTrack')} →</p>
+    </Link>
+  )
+}
+
+function RecordTicker({ records }: { records: WorldRecord[] }) {
+  const { t } = useI18n()
+  const byTrack = new Map(records.map((r) => [r.track_id, r]))
+  const items = TRACKS.map((tr) => ({ track: tr, record: byTrack.get(tr.id) })).filter((x) => x.record)
+
+  // Se duplica la lista para que la animación sea continua
+  const row = (hidden: boolean) => (
+    <div className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
+      {items.map(({ track, record }) => (
+        <span key={track.id} className="flex items-center gap-2 px-5 whitespace-nowrap">
+          <Plate color={getCup(track.cupId)?.color}>{track.abbr}</Plate>
+          <span className="time text-kart-yellow">{formatTime(record!.time_ms)}</span>
+          <span className="font-semibold">{record!.player_name}</span>
+        </span>
+      ))}
+    </div>
+  )
+
+  return (
+    <section aria-label={t('home.tickerLabel')} className="ticker -mx-4 overflow-hidden border-y-2 border-kart-yellow bg-surface py-3">
+      <div className="ticker-track flex w-max">
+        {row(false)}
+        {row(true)}
+      </div>
+    </section>
+  )
+}
+
+function BigNumber({ value, label }: { value: number | string; label: string }) {
   return (
     <div>
-      <dt className="sr-only">{label}</dt>
-      <dd>
-        <span className="font-display text-3xl font-black">{value}</span> <span className="text-muted">{label}</span>
-      </dd>
+      <p className="time text-5xl text-kart-yellow">{value}</p>
+      <p className="mt-1 font-display text-lg font-extrabold">{label}</p>
     </div>
   )
 }

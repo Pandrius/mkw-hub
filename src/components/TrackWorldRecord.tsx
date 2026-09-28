@@ -28,10 +28,10 @@ export default function TrackWorldRecord({ trackId }: { trackId: string }) {
 
   if (!enabled) return null
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
-  if (!history) return <div className="h-40 animate-pulse rounded-2xl border border-line bg-surface" />
+  if (!history) return <div className="h-40 animate-pulse panel" />
 
   const wr = currentRecord(history)
-  if (!wr) return <p className="rounded-2xl border border-line bg-surface p-5 text-muted">{t('wr.none')}</p>
+  if (!wr) return <p className="panel p-5 text-muted">{t('wr.none')}</p>
 
   const days = daysSince(wr.achieved_on)
   const videoId = wr.video_url ? youtubeId(wr.video_url) : null
@@ -41,8 +41,8 @@ export default function TrackWorldRecord({ trackId }: { trackId: string }) {
     <section className="overflow-hidden rounded-2xl border border-kart-yellow/50 bg-surface">
       <div className="grid gap-0 md:grid-cols-[1fr_1.2fr]">
         <div className="p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-kart-yellow">🏆 {t('wr.current')}</p>
-          <p className="mt-2 font-display text-4xl font-black italic tabular-nums">{formatTime(wr.time_ms)}</p>
+          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{t('wr.current')}</p>
+          <p className="time mt-2 text-5xl">{formatTime(wr.time_ms)}</p>
           <p className="mt-2 flex items-center gap-2 text-lg font-semibold">
             <Flag code={wr.country_code} locale={locale} />
             {wr.player_name}
@@ -99,12 +99,12 @@ export default function TrackWorldRecord({ trackId }: { trackId: string }) {
         {showHistory && (
           <div className="max-h-96 overflow-auto border-t border-line">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface text-left text-xs text-muted">
+              <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
                 <tr>
-                  <th className="px-4 py-2 font-semibold">{t('wr.colDate')}</th>
-                  <th className="px-4 py-2 font-semibold">{t('wr.colTime')}</th>
-                  <th className="px-4 py-2 font-semibold">{t('wr.colPlayer')}</th>
-                  <th className="hidden px-4 py-2 text-right font-semibold sm:table-cell">{t('wr.colDays')}</th>
+                  <th className="px-4 py-2 font-extrabold">{t('wr.colDate')}</th>
+                  <th className="px-4 py-2 font-extrabold">{t('wr.colTime')}</th>
+                  <th className="px-4 py-2 font-extrabold">{t('wr.colPlayer')}</th>
+                  <th className="hidden px-4 py-2 text-right font-extrabold sm:table-cell">{t('wr.colDays')}</th>
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
@@ -112,7 +112,7 @@ export default function TrackWorldRecord({ trackId }: { trackId: string }) {
                 {history.map((r) => (
                   <tr key={r.id} className="border-t border-line/60">
                     <td className="whitespace-nowrap px-4 py-2 text-muted">{date(r.achieved_on)}</td>
-                    <td className="px-4 py-2 font-semibold tabular-nums">{formatTime(r.time_ms)}</td>
+                    <td className="time px-4 py-2">{formatTime(r.time_ms)}</td>
                     <td className="px-4 py-2">
                       <span className="flex items-center gap-2">
                         <Flag code={r.country_code} locale={locale} />

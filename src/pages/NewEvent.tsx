@@ -39,12 +39,12 @@ export default function NewEvent() {
   }
 
   const input =
-    'w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-sm outline-none placeholder:text-muted focus:border-kart-yellow'
+    'field'
 
   return (
     <>
       <PageHeader title={t('event.newTitle')} subtitle={t('event.newSubtitle')} />
-      <form onSubmit={submit} className="max-w-2xl space-y-6 rounded-2xl border border-line bg-surface p-6">
+      <form onSubmit={submit} className="max-w-2xl space-y-6 panel p-6">
         <div>
           <p className="mb-2 text-sm text-muted">{t('event.kind')}</p>
           <Tabs
@@ -98,7 +98,7 @@ export default function NewEvent() {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-kart-yellow px-5 py-2.5 font-bold text-bg hover:brightness-105 disabled:opacity-60"
+          className="btn-yellow text-base"
         >
           {saving ? t('event.starting') : t('event.start')}
         </button>
