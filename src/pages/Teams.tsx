@@ -1,16 +1,12 @@
 import { EmptyState, PageHeader } from '../components/ui'
+import { useI18n } from '../i18n'
 
 export default function Teams() {
+  const { t } = useI18n()
   return (
     <>
-      <PageHeader
-        title="Equipos"
-        subtitle="Equipos de Mario Kart World registrados y aprobados en Mario Kart Central."
-      />
-      <EmptyState title="Los equipos se sincronizarán con Mario Kart Central">
-        Al entrar con Discord, la web te unirá automáticamente a tu equipo si apareces en su roster de MKC. Los
-        líderes y managers podrán gestionar las wars del equipo.
-      </EmptyState>
+      <PageHeader title={t('nav.teams')} subtitle={t('teams.subtitle')} />
+      <EmptyState title={t('teams.soonTitle')}>{t('teams.soonText')}</EmptyState>
     </>
   )
 }

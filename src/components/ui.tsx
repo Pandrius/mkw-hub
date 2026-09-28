@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { countryName } from '../lib/countries'
 
 export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
   return (
@@ -57,5 +58,22 @@ export function Badge({ children, color }: { children: ReactNode; color?: string
     >
       {children}
     </span>
+  )
+}
+
+/** Bandera de un país a partir de su código ISO (ES, US…) */
+export function Flag({ code, locale }: { code: string | null; locale: string }) {
+  if (!code) return null
+  const name = countryName(code, locale)
+  return (
+    <img
+      src={`https://flagcdn.com/20x15/${code.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/40x30/${code.toLowerCase()}.png 2x`}
+      alt={name}
+      title={name}
+      width={20}
+      height={15}
+      className="inline-block shrink-0 rounded-[2px]"
+    />
   )
 }

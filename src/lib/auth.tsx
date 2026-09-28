@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
 
+/** 'editor' es un valor antiguo que ya no se asigna: ahora hay permisos separados. */
 export type Role = 'user' | 'editor' | 'moderator' | 'admin'
 
 export type Profile = {
@@ -10,6 +11,8 @@ export type Profile = {
   username: string
   avatar_url: string | null
   role: Role
+  tt_editor: boolean
+  strat_editor: boolean
 }
 
 type AuthState = {
@@ -18,8 +21,11 @@ type AuthState = {
   loading: boolean
   /** false mientras Supabase no esté configurado */
   enabled: boolean
-  isEditor: boolean
-  /** Moderador o admin: puede gestionar editores */
+  /** Puede añadir y borrar tiempos de contrarreloj */
+  isTtEditor: boolean
+  /** Puede escribir guías y consejos */
+  isStratEditor: boolean
+  /** Moderador o admin: gestiona permisos de editor */
   isModerator: boolean
   isAdmin: boolean
   signIn: () => Promise<void>
@@ -71,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const role = profile?.role
+  const isModerator = profile?.role === 'moderator' || profile?.role === 'admin'
   return (
     <AuthContext.Provider
       value={{
@@ -79,9 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         enabled: supabase !== null,
-        isEditor: role === 'editor' || role === 'moderator' || role === 'admin',
-        isModerator: role === 'moderator' || role === 'admin',
-        isAdmin: role === 'admin',
+        isTtEditor: isModerator || !!profile?.tt_editor,
+        isStratEditor: isModerator || !!profile?.strat_editor,
+        isModerator,
+        isAdmin: profile?.role === 'admin',
         signIn,
         signOut,
       }}

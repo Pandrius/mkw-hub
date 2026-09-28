@@ -2,20 +2,16 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import TimeTrialBoard from '../components/TimeTrialBoard'
 import TrackTips from '../components/TrackTips'
+import TrackWorldRecord from '../components/TrackWorldRecord'
 import { Badge, EmptyState, Tabs } from '../components/ui'
 import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
+import { useI18n } from '../i18n'
 import NotFound from './NotFound'
 
 type TabId = 'tt-guide' | 'race-guide' | 'times' | 'stats'
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'tt-guide', label: 'Guía de contrarreloj' },
-  { id: 'race-guide', label: 'Guía de carreras' },
-  { id: 'times', label: 'Tiempos' },
-  { id: 'stats', label: 'Estadísticas' },
-]
-
 export default function TrackDetail() {
+  const { t } = useI18n()
   const { trackId = '' } = useParams()
   const [tab, setTab] = useState<TabId>('tt-guide')
   const track = getTrack(trackId)
@@ -23,13 +19,13 @@ export default function TrackDetail() {
 
   const cup = getCup(track.cupId)
   const parent = track.parentId ? getTrack(track.parentId) : undefined
-  const variants = TRACKS.filter((t) => t.parentId === track.id)
+  const variants = TRACKS.filter((v) => v.parentId === track.id)
   const image = getTrackImage(track)
 
   return (
     <>
       <Link to="/pistas" className="text-sm text-muted hover:text-ink">
-        ← Todas las pistas
+        {t('tracks.back')}
       </Link>
 
       <header
@@ -37,25 +33,21 @@ export default function TrackDetail() {
         style={{ borderColor: cup?.color }}
       >
         {image && (
-          <img
-            src={image}
-            alt=""
-            className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-60 sm:w-3/4"
-          />
+          <img src={image} alt="" className="absolute inset-y-0 right-0 h-full w-full object-cover opacity-60 sm:w-3/4" />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-surface via-surface/85 to-surface/10" />
         <p className="relative text-sm font-semibold uppercase tracking-[0.15em]" style={{ color: cup?.color }}>
           {track.abbr && <span className="mr-2 font-display text-base font-black normal-case italic">{track.abbr}</span>}
-          {cup?.name}
+          {cup && t(`cup.${cup.id}`)}
         </p>
         <h1 className="relative mt-1 font-display text-4xl font-black italic tracking-tight drop-shadow sm:text-5xl">
           {track.name}
         </h1>
         <div className="relative mt-3 flex flex-wrap gap-2">
-          {track.origin ? <Badge color={cup?.color}>{track.origin}</Badge> : <Badge>Nueva</Badge>}
+          {track.origin ? <Badge color={cup?.color}>{track.origin}</Badge> : <Badge>{t('common.new')}</Badge>}
           {parent && (
             <Link to={`/pistas/${parent.id}`}>
-              <Badge>Anidada en {parent.name}</Badge>
+              <Badge>{t('tracks.nestedIn', { track: parent.name })}</Badge>
             </Link>
           )}
           {variants.map((v) => (
@@ -66,19 +58,28 @@ export default function TrackDetail() {
         </div>
       </header>
 
-      <Tabs tabs={TABS} value={tab} onChange={setTab} />
+      <Tabs
+        tabs={[
+          { id: 'tt-guide', label: t('tracks.tabTTGuide') },
+          { id: 'race-guide', label: t('tracks.tabRaceGuide') },
+          { id: 'times', label: t('tracks.tabTimes') },
+          { id: 'stats', label: t('tracks.tabStats') },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       <div className="mt-6">
         {/* key: al cambiar de pista se reinicia el estado (lista y formulario) */}
         {tab === 'tt-guide' && <TrackTips key={`${track.id}-tt`} trackId={track.id} kind="time_trial" />}
         {tab === 'race-guide' && <TrackTips key={`${track.id}-race`} trackId={track.id} kind="race" />}
-        {tab === 'times' && <TimeTrialBoard key={track.id} trackId={track.id} />}
-        {tab === 'stats' && (
-          <EmptyState title="Estadísticas de la pista">
-            Tu posición media en esta pista, filtrable por War y Lounge. Inicia sesión con Discord para registrar tus
-            carreras.
-          </EmptyState>
+        {tab === 'times' && (
+          <div className="space-y-8">
+            <TrackWorldRecord key={track.id} trackId={track.id} />
+            <TimeTrialBoard key={`${track.id}-board`} trackId={track.id} />
+          </div>
         )}
+        {tab === 'stats' && <EmptyState title={t('tracks.statsTitle')}>{t('tracks.statsText')}</EmptyState>}
       </div>
     </>
   )

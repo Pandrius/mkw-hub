@@ -6,6 +6,11 @@ export function formatTime(ms: number): string {
   return `${minutes}'${String(seconds).padStart(2, '0')}"${String(millis).padStart(3, '0')}`
 }
 
+/** Fecha AAAA-MM-DD en el formato del idioma, sin que la zona horaria la mueva de día. */
+export function formatDate(date: string, locale: string): string {
+  return new Date(`${date.slice(0, 10)}T00:00:00Z`).toLocaleDateString(locale, { timeZone: 'UTC' })
+}
+
 /**
  * Convierte lo que escribe un editor en milisegundos. Acepta:
  * 2:19.361 · 2'19"361 · 2 19 361 · 0:45.2 (→ 45.200) · 45.123 (solo segundos)

@@ -1,6 +1,6 @@
 export type Cup = {
-  id: string
-  name: string
+  /** El nombre se traduce con la clave cup.<id> */
+  id: 'mushroom' | 'flower' | 'star' | 'shell' | 'banana' | 'leaf' | 'lightning' | 'special' | 'snes'
   /** Color de acento de la copa en la interfaz */
   color: string
 }
@@ -10,7 +10,7 @@ export type Track = {
   /** Abreviatura usada por la comunidad (Lounge, MKC). La "r" inicial indica pista retro. */
   abbr?: string
   name: string
-  cupId: string
+  cupId: Cup['id']
   /** Juego original si es una pista retro */
   origin?: string
   /** Pista "madre" en la que está anidada (variantes SNES de la 1.8.0) */
@@ -18,15 +18,15 @@ export type Track = {
 }
 
 export const CUPS: Cup[] = [
-  { id: 'mushroom', name: 'Copa Champiñón', color: '#ff3b3b' },
-  { id: 'flower', name: 'Copa Flor', color: '#ff9a1f' },
-  { id: 'star', name: 'Copa Estrella', color: '#ffcc1f' },
-  { id: 'shell', name: 'Copa Caparazón', color: '#2fd07a' },
-  { id: 'banana', name: 'Copa Plátano', color: '#f5e050' },
-  { id: 'leaf', name: 'Copa Hoja', color: '#7ad13b' },
-  { id: 'lightning', name: 'Copa Rayo', color: '#b07bff' },
-  { id: 'special', name: 'Copa Especial', color: '#3b8bff' },
-  { id: 'snes', name: 'Pistas SNES (1.8.0)', color: '#c0c6dc' },
+  { id: 'mushroom', color: '#ff3b3b' },
+  { id: 'flower', color: '#ff9a1f' },
+  { id: 'star', color: '#ffcc1f' },
+  { id: 'shell', color: '#2fd07a' },
+  { id: 'banana', color: '#f5e050' },
+  { id: 'leaf', color: '#7ad13b' },
+  { id: 'lightning', color: '#b07bff' },
+  { id: 'special', color: '#3b8bff' },
+  { id: 'snes', color: '#c0c6dc' },
 ]
 
 // En la copa Caparazón y Especial se repiten Crown City y Peach Stadium,

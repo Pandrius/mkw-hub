@@ -1,27 +1,30 @@
+import type { MessageKey } from '../i18n/es'
 import type { Role } from './auth'
 
-export const ROLE_LABELS: Record<Role, string> = {
-  user: 'Usuario',
-  editor: 'Editor',
-  moderator: 'Moderador',
-  admin: 'Admin',
+/** Roles que se pueden asignar (el valor 'editor' antiguo ya no se usa: ahora son permisos). */
+export const ASSIGNABLE_ROLES = ['user', 'moderator', 'admin'] as const
+export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number]
+
+export const ROLE_LABEL: Record<AssignableRole, MessageKey> = {
+  user: 'role.user',
+  moderator: 'role.moderator',
+  admin: 'role.admin',
 }
 
-export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  user: 'Registra sus propias carreras',
-  editor: 'Guías, strats y tiempos de contrarreloj',
-  moderator: 'Editor que además puede dar y quitar el rol de editor',
-  admin: 'Control total',
+export const ROLE_DESCRIPTION: Record<AssignableRole, MessageKey> = {
+  user: 'role.userDesc',
+  moderator: 'role.moderatorDesc',
+  admin: 'role.adminDesc',
 }
 
 /**
- * Roles que `actor` puede asignar a un usuario con rol `target`.
- * Debe coincidir con las reglas de set_user_role() en la base de datos,
- * que es quien realmente las hace cumplir.
+ * Estas reglas deben coincidir con set_user_role() y set_editor_permissions()
+ * en la base de datos, que es quien realmente las hace cumplir.
  */
-export function assignableRoles(actor: Role, target: Role, isSelf: boolean): Role[] {
-  if (isSelf) return []
-  if (actor === 'admin') return ['user', 'editor', 'moderator', 'admin']
-  if (actor === 'moderator' && (target === 'user' || target === 'editor')) return ['user', 'editor']
-  return []
+export function canChangeRole(actor: Role, isSelf: boolean): boolean {
+  return actor === 'admin' && !isSelf
+}
+
+export function canEditPermissions(actor: Role, target: Role, isSelf: boolean): boolean {
+  return (actor === 'admin' || actor === 'moderator') && target === 'user' && !isSelf
 }

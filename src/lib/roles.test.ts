@@ -1,24 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { assignableRoles } from './roles'
+import { canChangeRole, canEditPermissions } from './roles'
 
-describe('assignableRoles', () => {
-  it('el admin puede asignar cualquier rol a otros', () => {
-    expect(assignableRoles('admin', 'moderator', false)).toEqual(['user', 'editor', 'moderator', 'admin'])
+describe('canChangeRole', () => {
+  it('solo el admin, y nunca sobre sí mismo', () => {
+    expect(canChangeRole('admin', false)).toBe(true)
+    expect(canChangeRole('admin', true)).toBe(false)
+    expect(canChangeRole('moderator', false)).toBe(false)
+    expect(canChangeRole('user', false)).toBe(false)
+  })
+})
+
+describe('canEditPermissions', () => {
+  it('moderadores y admins sobre usuarios normales', () => {
+    expect(canEditPermissions('moderator', 'user', false)).toBe(true)
+    expect(canEditPermissions('admin', 'user', false)).toBe(true)
   })
 
-  it('nadie puede cambiarse su propio rol', () => {
-    expect(assignableRoles('admin', 'admin', true)).toEqual([])
+  it('no sobre moderadores o admins (ya tienen todos los permisos)', () => {
+    expect(canEditPermissions('admin', 'moderator', false)).toBe(false)
+    expect(canEditPermissions('moderator', 'admin', false)).toBe(false)
   })
 
-  it('el moderador solo alterna entre usuario y editor', () => {
-    expect(assignableRoles('moderator', 'user', false)).toEqual(['user', 'editor'])
-    expect(assignableRoles('moderator', 'editor', false)).toEqual(['user', 'editor'])
-    expect(assignableRoles('moderator', 'moderator', false)).toEqual([])
-    expect(assignableRoles('moderator', 'admin', false)).toEqual([])
-  })
-
-  it('editores y usuarios no pueden cambiar roles', () => {
-    expect(assignableRoles('editor', 'user', false)).toEqual([])
-    expect(assignableRoles('user', 'user', false)).toEqual([])
+  it('ni sobre uno mismo, ni por parte de usuarios', () => {
+    expect(canEditPermissions('moderator', 'user', true)).toBe(false)
+    expect(canEditPermissions('user', 'user', false)).toBe(false)
   })
 })

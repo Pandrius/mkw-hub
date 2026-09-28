@@ -1,41 +1,38 @@
 import { useState } from 'react'
 import { EmptyState, PageHeader, Tabs } from '../components/ui'
+import { useI18n } from '../i18n'
 
 type Mode = 'all' | 'war' | 'lounge'
 
 export default function Stats() {
+  const { t } = useI18n()
   const [mode, setMode] = useState<Mode>('all')
 
   return (
     <>
-      <PageHeader
-        title="Estadísticas"
-        subtitle="Registra tus eventos de 12 carreras y descubre tu posición media en cada pista."
-      />
+      <PageHeader title={t('nav.stats')} subtitle={t('stats.subtitle')} />
       <Tabs
         tabs={[
-          { id: 'all', label: 'Todo' },
-          { id: 'war', label: 'War' },
-          { id: 'lounge', label: 'Lounge' },
+          { id: 'all', label: t('stats.all') },
+          { id: 'war', label: t('stats.war') },
+          { id: 'lounge', label: t('stats.lounge') },
         ]}
         value={mode}
         onChange={setMode}
       />
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Step n={1} title="Inicia un evento">
-          Elige si es War o Lounge. Un evento son 12 carreras.
+        <Step n={1} title={t('stats.step1')}>
+          {t('stats.step1Text')}
         </Step>
-        <Step n={2} title="Apunta cada carrera">
-          Pista y posición. Puedes corregir cualquier carrera mientras el evento siga abierto.
+        <Step n={2} title={t('stats.step2')}>
+          {t('stats.step2Text')}
         </Step>
-        <Step n={3} title="Finaliza">
-          Tras confirmar, el evento queda bloqueado y cuenta para tus estadísticas.
+        <Step n={3} title={t('stats.step3')}>
+          {t('stats.step3Text')}
         </Step>
       </div>
       <div className="mt-6">
-        <EmptyState title="Inicia sesión para ver tus estadísticas">
-          El registro de carreras llegará en la fase de estadísticas individuales.
-        </EmptyState>
+        <EmptyState title={t('stats.soonTitle')}>{t('stats.soonText')}</EmptyState>
       </div>
     </>
   )

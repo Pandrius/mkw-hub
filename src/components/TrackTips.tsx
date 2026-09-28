@@ -1,25 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useI18n } from '../i18n'
+import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { createTip, deleteTip, listTips, updateTip, youtubeId, type Tip, type TipInput, type TipKind } from '../lib/tips'
 import { EmptyState } from './ui'
 
-const COPY: Record<TipKind, { empty: string; emptyText: string; add: string }> = {
-  time_trial: {
-    empty: 'Todavía no hay guía de contrarreloj',
-    emptyText: 'Strats, atajos y líneas de esta pista, con vídeos de ejemplo.',
-    add: 'Añadir strat',
-  },
-  race: {
-    empty: 'Todavía no hay guía de carreras',
-    emptyText: 'Consejos de posicionamiento y de uso de items para carreras online.',
-    add: 'Añadir consejo',
-  },
+const COPY: Record<TipKind, { empty: MessageKey; emptyText: MessageKey; add: MessageKey }> = {
+  time_trial: { empty: 'tips.ttEmpty', emptyText: 'tips.ttEmptyText', add: 'tips.ttAdd' },
+  race: { empty: 'tips.raceEmpty', emptyText: 'tips.raceEmptyText', add: 'tips.raceAdd' },
 }
 
 export default function TrackTips({ trackId, kind }: { trackId: string; kind: TipKind }) {
-  const { enabled, isEditor } = useAuth()
+  const { t } = useI18n()
+  const { enabled, isStratEditor } = useAuth()
   const [tips, setTips] = useState<Tip[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const [editing, setEditing] = useState<number | 'new' | null>(null)
 
   const reload = useCallback(
@@ -27,9 +22,9 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
       listTips(trackId, kind).then(
         (data) => {
           setTips(data)
-          setError(null)
+          setError(false)
         },
-        () => setError('No se han podido cargar los consejos.'),
+        () => setError(true),
       ),
     [trackId, kind],
   )
@@ -39,7 +34,7 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
     let cancelled = false
     listTips(trackId, kind).then(
       (data) => !cancelled && setTips(data),
-      () => !cancelled && setError('No se han podido cargar los consejos.'),
+      () => !cancelled && setError(true),
     )
     return () => {
       cancelled = true
@@ -48,9 +43,9 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
 
   const copy = COPY[kind]
 
-  if (!enabled) return <EmptyState title={copy.empty}>{copy.emptyText}</EmptyState>
-  if (error) return <p className="text-kart-red">{error}</p>
-  if (!tips) return <p className="text-muted">Cargando…</p>
+  if (!enabled) return <EmptyState title={t(copy.empty)}>{t(copy.emptyText)}</EmptyState>
+  if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
+  if (!tips) return <p className="text-muted">{t('common.loading')}</p>
 
   const save = async (input: TipInput, id?: number) => {
     if (id) await updateTip(id, input)
@@ -60,27 +55,27 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
   }
 
   const remove = async (tip: Tip) => {
-    if (!confirm(`¿Seguro que quieres borrar “${tip.title}”?`)) return
+    if (!confirm(t('tips.confirmDelete', { title: tip.title }))) return
     await deleteTip(tip.id)
     await reload()
   }
 
   return (
     <div className="space-y-4">
-      {isEditor && editing !== 'new' && (
+      {isStratEditor && editing !== 'new' && (
         <button
           onClick={() => setEditing('new')}
           className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105"
         >
-          + {copy.add}
+          + {t(copy.add)}
         </button>
       )}
       {editing === 'new' && <TipForm onSave={(input) => save(input)} onCancel={() => setEditing(null)} />}
 
       {tips.length === 0 && editing !== 'new' && (
-        <EmptyState title={copy.empty}>
-          {copy.emptyText}
-          {!isEditor && ' Solo los editores pueden añadirlos.'}
+        <EmptyState title={t(copy.empty)}>
+          {t(copy.emptyText)}
+          {!isStratEditor && ` ${t('tips.onlyEditors')}`}
         </EmptyState>
       )}
 
@@ -92,7 +87,7 @@ export default function TrackTips({ trackId, kind }: { trackId: string; kind: Ti
             key={tip.id}
             tip={tip}
             index={i + 1}
-            canEdit={isEditor}
+            canEdit={isStratEditor}
             onEdit={() => setEditing(tip.id)}
             onDelete={() => remove(tip)}
           />
@@ -115,6 +110,7 @@ function TipCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
   const videoId = tip.video_url ? youtubeId(tip.video_url) : null
 
   return (
@@ -125,10 +121,10 @@ function TipCard({
         {canEdit && (
           <div className="flex gap-2 text-sm">
             <button onClick={onEdit} className="text-muted hover:text-ink">
-              Editar
+              {t('common.edit')}
             </button>
             <button onClick={onDelete} className="text-muted hover:text-kart-red">
-              Borrar
+              {t('common.delete')}
             </button>
           </div>
         )}
@@ -148,7 +144,7 @@ function TipCard({
       ) : (
         tip.video_url && (
           <a href={tip.video_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm text-kart-blue hover:underline">
-            Ver vídeo ↗
+            {t('common.watchVideo')}
           </a>
         )
       )}
@@ -165,6 +161,7 @@ function TipForm({
   onSave: (input: TipInput) => Promise<void>
   onCancel: () => void
 }) {
+  const { t } = useI18n()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
   const [video, setVideo] = useState(initial?.video_url ?? '')
@@ -175,7 +172,7 @@ function TipForm({
     e.preventDefault()
     const videoUrl = video.trim() || null
     if (videoUrl && !videoUrl.startsWith('https://')) {
-      setError('El enlace del vídeo debe empezar por https://')
+      setError(t('tips.videoHttps'))
       return
     }
     setSaving(true)
@@ -183,7 +180,7 @@ function TipForm({
     try {
       await onSave({ title: title.trim(), content: content.trim(), video_url: videoUrl })
     } catch {
-      setError('No se ha podido guardar. ¿Sigues teniendo permisos de editor?')
+      setError(t('common.saveError'))
       setSaving(false)
     }
   }
@@ -198,7 +195,7 @@ function TipForm({
         maxLength={120}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Título (p. ej. «Atajo del segundo túnel»)"
+        placeholder={t('tips.titlePlaceholder')}
         className={input}
       />
       <textarea
@@ -206,16 +203,10 @@ function TipForm({
         rows={5}
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Explicación de la strat o el consejo…"
+        placeholder={t('tips.contentPlaceholder')}
         className={input}
       />
-      <input
-        type="url"
-        value={video}
-        onChange={(e) => setVideo(e.target.value)}
-        placeholder="Enlace a vídeo de YouTube (opcional)"
-        className={input}
-      />
+      <input type="url" value={video} onChange={(e) => setVideo(e.target.value)} placeholder={t('tips.videoPlaceholder')} className={input} />
       {error && <p className="text-sm text-kart-red">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -223,10 +214,10 @@ function TipForm({
           disabled={saving}
           className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-60"
         >
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
         <button type="button" onClick={onCancel} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold">
-          Cancelar
+          {t('common.cancel')}
         </button>
       </div>
     </form>
