@@ -8,7 +8,9 @@ export default function Tracks() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return q ? TRACKS.filter((t) => t.name.toLowerCase().includes(q)) : TRACKS
+    return q
+      ? TRACKS.filter((t) => t.name.toLowerCase().includes(q) || t.abbr?.toLowerCase().startsWith(q))
+      : TRACKS
   }, [query])
 
   return (
@@ -18,7 +20,7 @@ export default function Tracks() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar pista…"
+          placeholder="Buscar pista o abreviatura…"
           className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-kart-yellow sm:w-64"
         />
       </PageHeader>
@@ -45,6 +47,11 @@ export default function Tracks() {
                       className="absolute inset-y-0 left-0 w-1"
                       style={{ background: cup.color }}
                     />
+                    {track.abbr && (
+                      <p className="font-display text-sm font-black italic" style={{ color: cup.color }}>
+                        {track.abbr}
+                      </p>
+                    )}
                     <p className="font-display text-lg font-bold leading-tight">{track.name}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {track.origin ? <Badge color={cup.color}>{track.origin}</Badge> : <Badge>Nueva</Badge>}

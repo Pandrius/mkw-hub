@@ -38,6 +38,7 @@ export default function TrackDetail() {
           style={{ background: cup?.color }}
         />
         <p className="text-sm font-semibold uppercase tracking-[0.15em]" style={{ color: cup?.color }}>
+          {track.abbr && <span className="mr-2 font-display text-base font-black normal-case italic">{track.abbr}</span>}
           {cup?.name}
         </p>
         <h1 className="mt-1 font-display text-4xl font-black italic tracking-tight">{track.name}</h1>

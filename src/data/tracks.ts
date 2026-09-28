@@ -7,6 +7,8 @@ export type Cup = {
 
 export type Track = {
   id: string
+  /** Abreviatura usada por la comunidad (Lounge, MKC). La "r" inicial indica pista retro. */
+  abbr?: string
   name: string
   cupId: string
   /** Juego original si es una pista retro */
@@ -30,43 +32,43 @@ export const CUPS: Cup[] = [
 // En la copa Caparazón y Especial se repiten Crown City y Peach Stadium,
 // así que solo se listan una vez (en su primera aparición).
 export const TRACKS: Track[] = [
-  { id: 'mario-bros-circuit', name: 'Mario Bros. Circuit', cupId: 'mushroom' },
-  { id: 'crown-city', name: 'Crown City', cupId: 'mushroom' },
-  { id: 'whistlestop-summit', name: 'Whistlestop Summit', cupId: 'mushroom' },
-  { id: 'dk-spaceport', name: 'DK Spaceport', cupId: 'mushroom' },
+  { id: 'mario-bros-circuit', abbr: 'MBC', name: 'Mario Bros. Circuit', cupId: 'mushroom' },
+  { id: 'crown-city', abbr: 'CC', name: 'Crown City', cupId: 'mushroom' },
+  { id: 'whistlestop-summit', abbr: 'WS', name: 'Whistlestop Summit', cupId: 'mushroom' },
+  { id: 'dk-spaceport', abbr: 'DKS', name: 'DK Spaceport', cupId: 'mushroom' },
 
-  { id: 'desert-hills', name: 'Desert Hills', cupId: 'flower', origin: 'DS' },
-  { id: 'shy-guy-bazaar', name: 'Shy Guy Bazaar', cupId: 'flower', origin: '3DS' },
-  { id: 'wario-stadium', name: 'Wario Stadium', cupId: 'flower', origin: 'N64' },
-  { id: 'airship-fortress', name: 'Airship Fortress', cupId: 'flower', origin: 'DS' },
+  { id: 'desert-hills', abbr: 'rDH', name: 'Desert Hills', cupId: 'flower', origin: 'DS' },
+  { id: 'shy-guy-bazaar', abbr: 'rSGB', name: 'Shy Guy Bazaar', cupId: 'flower', origin: '3DS' },
+  { id: 'wario-stadium', abbr: 'rWS', name: 'Wario Stadium', cupId: 'flower', origin: 'N64' },
+  { id: 'airship-fortress', abbr: 'rAF', name: 'Airship Fortress', cupId: 'flower', origin: 'DS' },
 
-  { id: 'dk-pass', name: 'DK Pass', cupId: 'star', origin: 'DS' },
-  { id: 'starview-peak', name: 'Starview Peak', cupId: 'star' },
-  { id: 'sky-high-sundae', name: 'Sky-High Sundae', cupId: 'star', origin: 'Tour' },
-  { id: 'wario-shipyard', name: 'Wario Shipyard', cupId: 'star', origin: '3DS' },
+  { id: 'dk-pass', abbr: 'rDKP', name: 'DK Pass', cupId: 'star', origin: 'DS' },
+  { id: 'starview-peak', abbr: 'SP', name: 'Starview Peak', cupId: 'star' },
+  { id: 'sky-high-sundae', abbr: 'rSHS', name: 'Sky-High Sundae', cupId: 'star', origin: 'Tour' },
+  { id: 'wario-shipyard', abbr: 'rWSh', name: 'Wario Shipyard', cupId: 'star', origin: '3DS' },
 
-  { id: 'koopa-troopa-beach', name: 'Koopa Troopa Beach', cupId: 'shell', origin: 'SNES' },
-  { id: 'faraway-oasis', name: 'Faraway Oasis', cupId: 'shell' },
-  { id: 'peach-stadium', name: 'Peach Stadium', cupId: 'shell' },
+  { id: 'koopa-troopa-beach', abbr: 'rKTB', name: 'Koopa Troopa Beach', cupId: 'shell', origin: 'SNES' },
+  { id: 'faraway-oasis', abbr: 'FO', name: 'Faraway Oasis', cupId: 'shell' },
+  { id: 'peach-stadium', abbr: 'PS', name: 'Peach Stadium', cupId: 'shell' },
 
-  { id: 'peach-beach', name: 'Peach Beach', cupId: 'banana', origin: 'GCN' },
-  { id: 'salty-salty-speedway', name: 'Salty Salty Speedway', cupId: 'banana' },
-  { id: 'dino-dino-jungle', name: 'Dino Dino Jungle', cupId: 'banana', origin: 'GCN' },
-  { id: 'great-block-ruins', name: 'Great ? Block Ruins', cupId: 'banana' },
+  { id: 'peach-beach', abbr: 'rPB', name: 'Peach Beach', cupId: 'banana', origin: 'GCN' },
+  { id: 'salty-salty-speedway', abbr: 'SSS', name: 'Salty Salty Speedway', cupId: 'banana' },
+  { id: 'dino-dino-jungle', abbr: 'rDDJ', name: 'Dino Dino Jungle', cupId: 'banana', origin: 'GCN' },
+  { id: 'great-block-ruins', abbr: 'GBR', name: 'Great ? Block Ruins', cupId: 'banana' },
 
-  { id: 'cheep-cheep-falls', name: 'Cheep Cheep Falls', cupId: 'leaf' },
-  { id: 'dandelion-depths', name: 'Dandelion Depths', cupId: 'leaf' },
-  { id: 'boo-cinema', name: 'Boo Cinema', cupId: 'leaf' },
-  { id: 'dry-bones-burnout', name: 'Dry Bones Burnout', cupId: 'leaf' },
+  { id: 'cheep-cheep-falls', abbr: 'CCF', name: 'Cheep Cheep Falls', cupId: 'leaf' },
+  { id: 'dandelion-depths', abbr: 'DD', name: 'Dandelion Depths', cupId: 'leaf' },
+  { id: 'boo-cinema', abbr: 'BCi', name: 'Boo Cinema', cupId: 'leaf' },
+  { id: 'dry-bones-burnout', abbr: 'DBB', name: 'Dry Bones Burnout', cupId: 'leaf' },
 
-  { id: 'moo-moo-meadows', name: 'Moo Moo Meadows', cupId: 'lightning', origin: 'Wii' },
-  { id: 'choco-mountain', name: 'Choco Mountain', cupId: 'lightning', origin: 'N64' },
-  { id: 'toads-factory', name: "Toad's Factory", cupId: 'lightning', origin: 'Wii' },
-  { id: 'bowsers-castle', name: "Bowser's Castle", cupId: 'lightning' },
+  { id: 'moo-moo-meadows', abbr: 'rMMM', name: 'Moo Moo Meadows', cupId: 'lightning', origin: 'Wii' },
+  { id: 'choco-mountain', abbr: 'rCM', name: 'Choco Mountain', cupId: 'lightning', origin: 'N64' },
+  { id: 'toads-factory', abbr: 'rTF', name: "Toad's Factory", cupId: 'lightning', origin: 'Wii' },
+  { id: 'bowsers-castle', abbr: 'BC', name: "Bowser's Castle", cupId: 'lightning' },
 
-  { id: 'acorn-heights', name: 'Acorn Heights', cupId: 'special' },
-  { id: 'mario-circuit', name: 'Mario Circuit', cupId: 'special' },
-  { id: 'rainbow-road', name: 'Rainbow Road', cupId: 'special' },
+  { id: 'acorn-heights', abbr: 'AH', name: 'Acorn Heights', cupId: 'special' },
+  { id: 'mario-circuit', abbr: 'rMC', name: 'Mario Circuit', cupId: 'special' },
+  { id: 'rainbow-road', abbr: 'RR', name: 'Rainbow Road', cupId: 'special' },
 
   { id: 'snes-mario-circuit-1', name: 'SNES Mario Circuit 1', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
   { id: 'snes-mario-circuit-2', name: 'SNES Mario Circuit 2', cupId: 'snes', origin: 'SNES', parentId: 'mario-circuit' },
@@ -82,6 +84,12 @@ export const TRACKS: Track[] = [
 
 export function getTrack(id: string): Track | undefined {
   return TRACKS.find((t) => t.id === id)
+}
+
+/** Busca una pista por su abreviatura, sin distinguir mayúsculas (p. ej. "rdkp" → DK Pass). */
+export function getTrackByAbbr(abbr: string): Track | undefined {
+  const a = abbr.trim().toLowerCase()
+  return TRACKS.find((t) => t.abbr?.toLowerCase() === a)
 }
 
 export function getCup(id: string): Cup | undefined {
