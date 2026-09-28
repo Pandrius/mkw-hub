@@ -61,6 +61,8 @@ describe('countryCodeFromName', () => {
     ['Puerto Rico', 'PR'],
     ['Spain', 'ES'],
     ['New Zealand', 'NZ'],
+    ['Germany', 'DE'],
+    ['France', 'FR'],
   ])('%s → %s', (name, code) => {
     expect(countryCodeFromName(name)).toBe(code)
   })

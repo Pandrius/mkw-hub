@@ -24,6 +24,8 @@ function buildIndex(): Map<string, string> {
     for (let j = 0; j < 26; j++) {
       const code = String.fromCharCode(A + i, A + j)
       try {
+        // Ignora códigos obsoletos que apuntan a otro (DD → DE, YU → RS…): si no, "Germany" acabaría como DD
+        if (Intl.getCanonicalLocales(`und-${code}`)[0] !== `und-${code}`) continue
         const name = names.of(code)
         if (name && name !== code && !map.has(name.toLowerCase())) map.set(name.toLowerCase(), code)
       } catch {
