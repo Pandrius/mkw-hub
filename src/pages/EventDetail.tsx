@@ -249,7 +249,8 @@ function RacesTable({
               {track?.abbr}
             </span>
             <span className="min-w-32 flex-1 truncate text-sm">{track?.name ?? race.track_id}</span>
-            <span className="flex flex-wrap gap-1.5">
+            {/* max-w-full: en móvil las posiciones bajan de línea en vez de desbordar */}
+            <span className="flex max-w-full flex-wrap gap-1.5">
               {results.map((r) => (
                 <span key={r.player_id} className="rounded-md bg-surface-2 px-2 py-0.5 text-xs">
                   <b className="tabular-nums">{r.position}</b> {nameOf(r.player_id)}
