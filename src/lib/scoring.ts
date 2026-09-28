@@ -73,3 +73,25 @@ export function scoreRace(race: RaceResult): RaceScore {
   for (const side of race.missing ?? []) score[side] += MISSING_PLAYER_POINTS
   return score
 }
+
+/**
+ * Puntos de una carrera de war conociendo solo las posiciones del equipo propio
+ * (las del rival son las restantes). Es como se guardan las carreras en la base de datos.
+ */
+export function scoreTeamRace(
+  teamPositions: number[],
+  missingHome = 0,
+  missingAway = 0,
+): { home: number; away: number } {
+  const racers = PLAYERS_PER_TEAM * 2 - missingHome - missingAway
+  const taken = new Set(teamPositions)
+  const awayPositions = Array.from({ length: racers }, (_, i) => i + 1).filter((p) => !taken.has(p))
+  const score = scoreRace({
+    placements: [
+      ...teamPositions.map((position) => ({ side: 'red' as const, position })),
+      ...awayPositions.map((position) => ({ side: 'blue' as const, position })),
+    ],
+    missing: [...Array<TeamSide>(missingHome).fill('red'), ...Array<TeamSide>(missingAway).fill('blue')],
+  })
+  return { home: score.red, away: score.blue }
+}

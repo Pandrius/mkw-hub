@@ -1,0 +1,162 @@
+import { useState } from 'react'
+import { CUPS, TRACKS } from '../data/tracks'
+import { useI18n } from '../i18n'
+import { saveRace, type EventKind, type EventPlayer, type EventRace } from '../lib/events'
+import { scoreTeamRace } from '../lib/scoring'
+
+type Props = {
+  eventId: string
+  kind: EventKind
+  raceNo: number
+  players: EventPlayer[]
+  /** Carrera existente si se está corrigiendo */
+  initial?: EventRace
+  onSaved: () => Promise<void>
+  onCancel?: () => void
+}
+
+const input =
+  'w-full rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-kart-yellow'
+
+/** Formulario de una carrera: pista y posición de cada jugador. */
+export default function RaceForm({ eventId, kind, raceNo, players, initial, onSaved, onCancel }: Props) {
+  const { t } = useI18n()
+  const [trackId, setTrackId] = useState(initial?.track_id ?? '')
+  const [positions, setPositions] = useState<Record<number, string>>(() =>
+    Object.fromEntries((initial?.race_results ?? []).map((r) => [r.player_id, String(r.position)])),
+  )
+  const [missingHome, setMissingHome] = useState(initial?.missing_home ?? 0)
+  const [missingAway, setMissingAway] = useState(initial?.missing_away ?? 0)
+  const [saving, setSaving] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
+
+  const filled = players
+    .map((p) => ({ player_id: p.id, position: Number(positions[p.id]) }))
+    .filter((r) => positions[r.player_id]?.trim() && Number.isInteger(r.position))
+
+  const racers = 12 - missingHome - missingAway
+  const nums = filled.map((r) => r.position)
+
+  // Mismas reglas que save_race() en la base de datos
+  let error: string | null = null
+  if (!trackId) error = t('event.errTrack')
+  else if (kind === 'lounge') {
+    if (filled.length !== 1 || nums[0] < 1 || nums[0] > 24) error = t('event.errLounge')
+  } else if (missingHome + missingAway > 2) error = t('event.errMissing')
+  else if (new Set(nums).size !== nums.length) error = t('event.errDup')
+  else if (nums.some((n) => n < 1 || n > racers)) error = t('event.errRange', { n: racers })
+  else if (filled.length + missingHome !== 6) error = t('event.errCount', { n: filled.length, m: missingHome })
+
+  const preview = kind === 'war' && !error ? scoreTeamRace(nums, missingHome, missingAway) : null
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (error) return
+    setSaving(true)
+    setServerError(null)
+    try {
+      await saveRace(eventId, raceNo, trackId, filled, kind === 'war' ? missingHome : 0, kind === 'war' ? missingAway : 0)
+      await onSaved()
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : t('common.saveError'))
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
+      <p className="font-display text-lg font-bold">
+        {initial ? t('event.editRace', { n: raceNo }) : t('event.addRace', { n: raceNo })}
+      </p>
+
+      <label className="block">
+        <span className="mb-1 block text-sm text-muted">{t('event.track')}</span>
+        <select value={trackId} onChange={(e) => setTrackId(e.target.value)} className={input} autoFocus={!initial}>
+          <option value="">{t('event.chooseTrack')}</option>
+          {CUPS.map((cup) => (
+            <optgroup key={cup.id} label={t(`cup.${cup.id}`)}>
+              {TRACKS.filter((tr) => tr.cupId === cup.id).map((tr) => (
+                <option key={tr.id} value={tr.id}>
+                  {tr.abbr} · {tr.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {players.map((p) => (
+          <label key={p.id} className="flex items-center gap-3 rounded-xl border border-line bg-bg px-3 py-1.5">
+            <span className="flex-1 truncate text-sm font-semibold">{p.name}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={kind === 'war' ? racers : 24}
+              value={positions[p.id] ?? ''}
+              onChange={(e) => setPositions((ps) => ({ ...ps, [p.id]: e.target.value }))}
+              placeholder={kind === 'war' ? '—' : t('event.position')}
+              title={kind === 'war' ? t('event.didNotRace') : undefined}
+              className="w-20 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-lg font-bold tabular-nums outline-none focus:border-kart-yellow"
+            />
+          </label>
+        ))}
+      </div>
+
+      {kind === 'war' && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MissingSelect label={t('event.missingHome')} value={missingHome} onChange={setMissingHome} />
+          <MissingSelect label={t('event.missingAway')} value={missingAway} onChange={setMissingAway} />
+        </div>
+      )}
+
+      {preview && (
+        <p className="text-sm">
+          {t('event.racePreview', {
+            home: preview.home,
+            away: preview.away,
+            diff: (preview.home - preview.away > 0 ? '+' : '') + (preview.home - preview.away),
+          })}
+        </p>
+      )}
+      {(serverError || (error && Object.keys(positions).length > 0)) && (
+        <p className="text-sm text-kart-red">{serverError ?? error}</p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving || !!error}
+          className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg hover:brightness-105 disabled:opacity-50"
+        >
+          {saving ? t('common.saving') : t('event.saveRace')}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="rounded-xl border border-line px-4 py-2 text-sm font-semibold">
+            {t('common.cancel')}
+          </button>
+        )}
+      </div>
+    </form>
+  )
+}
+
+function MissingSelect({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+  return (
+    <label className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="rounded-lg border border-line bg-bg px-3 py-1.5"
+      >
+        {[0, 1, 2].map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}

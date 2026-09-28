@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import TimeTrialBoard from '../components/TimeTrialBoard'
+import TrackStats from '../components/TrackStats'
 import TrackTips from '../components/TrackTips'
 import TrackWorldRecord from '../components/TrackWorldRecord'
-import { Badge, EmptyState, Tabs } from '../components/ui'
+import { Badge, Tabs } from '../components/ui'
 import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import NotFound from './NotFound'
@@ -79,7 +80,7 @@ export default function TrackDetail() {
             <TimeTrialBoard key={`${track.id}-board`} trackId={track.id} />
           </div>
         )}
-        {tab === 'stats' && <EmptyState title={t('tracks.statsTitle')}>{t('tracks.statsText')}</EmptyState>}
+        {tab === 'stats' && <TrackStats key={track.id} trackId={track.id} />}
       </div>
     </>
   )
