@@ -79,7 +79,7 @@ export const TRACKS: Track[] = [
   { id: 'snes-choco-island-1', abbr: 'rCM1', name: 'SNES Choco Island 1', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
   { id: 'snes-choco-island-2', abbr: 'rCM2', name: 'SNES Choco Island 2', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
   { id: 'snes-koopa-beach-1', abbr: 'rKB1', name: 'SNES Koopa Beach 1', cupId: 'snes', origin: 'SNES', parentId: 'koopa-troopa-beach' },
-  { id: 'snes-vanilla-lake-1', abbr: 'rVL', name: 'SNES Vanilla Lake 1', cupId: 'snes', origin: 'SNES', parentId: 'sky-high-sundae' },
+  { id: 'snes-vanilla-lake-1', abbr: 'rVL1', name: 'SNES Vanilla Lake 1', cupId: 'snes', origin: 'SNES', parentId: 'sky-high-sundae' },
 ]
 
 export function getTrack(id: string): Track | undefined {
