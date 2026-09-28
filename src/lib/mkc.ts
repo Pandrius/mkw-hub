@@ -12,7 +12,7 @@ export type MkcTimeTrial = {
   proofs: MkcProof[]
   created_at: string
   validation_status: string
-  player_name: string
+  player_name: string | null
   player_country_code: string | null
 }
 
