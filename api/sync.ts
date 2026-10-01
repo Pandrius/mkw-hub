@@ -107,28 +107,15 @@ export async function GET(request: Request): Promise<Response> {
           ? t.logo.startsWith('http')
             ? t.logo
             : `https://mkcentral.com${t.logo.startsWith('/') ? '' : '/'}${t.logo}`
-          : `https://mkcentral.com/img/team_logos/${t.id}.png`
+          : null
 
         const mkworldRosters = (t.rosters ?? []).filter((r) => r.game === 'mkworld')
-        if (mkworldRosters.length > 0) {
-          for (const r of mkworldRosters) {
-            allMap.set(r.id, {
-              id: r.id,
-              name: r.name || t.name,
-              tag: r.tag || t.tag || '',
-              color: r.color ?? t.color ?? null,
-              parent_team_id: t.id,
-              parent_name: t.name,
-              logo_url: logoUrl,
-              updated_at: startedAt,
-            })
-          }
-        } else {
-          allMap.set(t.id, {
-            id: t.id,
-            name: t.name,
-            tag: t.tag || '',
-            color: t.color ?? null,
+        for (const r of mkworldRosters) {
+          allMap.set(r.id, {
+            id: r.id,
+            name: r.name || t.name,
+            tag: r.tag || t.tag || '',
+            color: r.color ?? t.color ?? null,
             parent_team_id: t.id,
             parent_name: t.name,
             logo_url: logoUrl,

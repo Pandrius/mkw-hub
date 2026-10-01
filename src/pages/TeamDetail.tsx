@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
+import { TeamLogo } from '../components/TeamLogo'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
@@ -69,7 +70,10 @@ export default function TeamDetail() {
   const siblingRosters = useMemo(() => {
     if (!team) return []
     const parentId = team.parent_team_id || team.id
-    return allTeams.filter((tm) => tm.parent_team_id === parentId || tm.id === parentId)
+    // Filtra solo los rosters/escuadras pertenecientes a este club
+    const list = allTeams.filter((tm) => tm.parent_team_id === parentId)
+    if (list.length > 0) return list
+    return allTeams.filter((tm) => tm.id === parentId)
   }, [team, allTeams])
 
   if (loading) return <p className="text-muted">{t('common.loading')}</p>
@@ -95,14 +99,7 @@ export default function TeamDetail() {
         <header className="mt-4 border-b-2 border-line pb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img
-                src={team.logo_url || `https://mkcentral.com/img/team_logos/${team.parent_team_id || team.id}.png`}
-                alt=""
-                className="size-16 sm:size-20 shrink-0 rounded-lg border-2 border-line bg-surface object-contain p-1 shadow-sm"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
+              <TeamLogo logoUrl={team.logo_url} tag={team.tag} name={team.name} size="xl" />
               <Plate color="var(--color-kart-yellow)">{team.tag}</Plate>
               <div>
                 <h1 className="font-display text-4xl font-black sm:text-5xl">{team.name}</h1>

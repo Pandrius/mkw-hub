@@ -35,7 +35,12 @@ describe('syncPlayerRoster', () => {
 
     const adminMock = {
       from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'teams') return { upsert: upsertTeamsMock }
+        if (table === 'teams') {
+          return {
+            upsert: upsertTeamsMock,
+            select: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ data: [] }) }),
+          }
+        }
         if (table === 'team_members') return { delete: deleteMembersMock, insert: insertMembersMock }
         if (table === 'profiles') return { update: updateProfileMock }
         return {}
@@ -113,7 +118,12 @@ describe('syncPlayerRoster', () => {
 
     const adminMock = {
       from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'teams') return { upsert: upsertTeamsMock }
+        if (table === 'teams') {
+          return {
+            upsert: upsertTeamsMock,
+            select: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ data: [] }) }),
+          }
+        }
         if (table === 'team_members') return { delete: deleteMembersMock, insert: insertMembersMock }
         if (table === 'profiles') return { update: updateProfileMock }
         return {}
@@ -173,7 +183,12 @@ describe('syncPlayerRoster', () => {
 
     const adminMock = {
       from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'teams') return { upsert: upsertTeamsMock }
+        if (table === 'teams') {
+          return {
+            upsert: upsertTeamsMock,
+            select: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ data: [] }) }),
+          }
+        }
         if (table === 'team_members') return { delete: deleteMembersMock, insert: insertMembersMock }
         if (table === 'profiles') return { update: updateProfileMock }
         return {}
@@ -243,7 +258,12 @@ describe('syncAllRegisteredUsersMkc', () => {
     const adminMock = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === 'profiles') return { select: selectMock, update: updateProfileMock }
-        if (table === 'teams') return { upsert: vi.fn().mockResolvedValue({ error: null }) }
+        if (table === 'teams') {
+          return {
+            upsert: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ data: [] }) }),
+          }
+        }
         if (table === 'team_members') {
           return {
             delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),

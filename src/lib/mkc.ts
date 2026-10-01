@@ -87,9 +87,17 @@ export async function syncPlayerRoster(
   }
 
   // 3. Mapear rosters únicos de Mario Kart World (incluyendo sub-equipos del mismo club)
-  const teams = [...new Map(rosters.map((r) => [r.roster_id || r.team_id, r])).values()].map((r) => {
+  const uniqueRosters = [...new Map(rosters.map((r) => [r.roster_id || r.team_id, r])).values()]
+  const rosterIds = uniqueRosters.map((r) => r.roster_id || r.team_id)
+
+  // Consulta los equipos existentes en DB para no sobreescribir sus logos oficiales si ya los tienen
+  const { data: existingRows } = await admin.from('teams').select('id, logo_url').in('id', rosterIds)
+  const existingLogoMap = new Map((existingRows ?? []).map((t) => [t.id, t.logo_url as string | null]))
+
+  const teams = uniqueRosters.map((r) => {
     const rosterId = r.roster_id || r.team_id
-    const logoUrl = `https://mkcentral.com/img/team_logos/${r.team_id}.png`
+    const existingLogo = existingLogoMap.get(rosterId)
+    const logoUrl = existingLogo !== undefined ? existingLogo : null
     return {
       id: rosterId,
       name: r.roster_name || r.team_name,

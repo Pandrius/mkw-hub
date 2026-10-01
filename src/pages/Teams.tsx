@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
+import { TeamLogo } from '../components/TeamLogo'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
@@ -163,14 +164,7 @@ export default function Teams() {
                 className="flex items-center justify-between gap-3 rounded border border-line/60 bg-bg p-3.5 transition-colors hover:border-kart-yellow"
               >
                 <Link to={`/equipos/${tm.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
-                  <img
-                    src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
-                    alt=""
-                    className="size-11 shrink-0 rounded border border-line bg-surface object-contain p-0.5 shadow-sm"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
+                  <TeamLogo logoUrl={tm.logo_url} tag={tm.tag} name={tm.name} size="lg" />
                   <Plate color="var(--color-kart-yellow)">{tm.tag}</Plate>
                   <div className="min-w-0">
                     <h3 className="truncate font-display text-lg font-bold group-hover:text-kart-yellow">
@@ -249,14 +243,7 @@ export default function Teams() {
                     onMouseDown={(e) => e.preventDefault()}
                     className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors border-b border-line/40 last:border-b-0"
                   >
-                    <img
-                      src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
-                      alt=""
-                      className="size-7 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
+                    <TeamLogo logoUrl={tm.logo_url} tag={tm.tag} name={tm.name} size="sm" />
                     <Plate>{tm.tag}</Plate>
                     <div className="flex flex-col min-w-0">
                       <span className="truncate font-semibold">{tm.name}</span>
@@ -294,14 +281,7 @@ export default function Teams() {
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <img
-                      src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
-                      alt=""
-                      className="size-9 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
+                    <TeamLogo logoUrl={tm.logo_url} tag={tm.tag} name={tm.name} size="md" />
                     <Plate>{tm.tag}</Plate>
                   </div>
                   <span className="font-mono text-xs font-bold text-muted">
