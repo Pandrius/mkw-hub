@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
@@ -20,6 +20,21 @@ export default function TeamDetail() {
   const [stats, setStats] = useState<TeamStats | null>(null)
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('tracks')
+  const [trackSearch, setTrackSearch] = useState('')
+
+  const filteredTeamTracks = useMemo(() => {
+    if (!stats) return []
+    const q = trackSearch.trim().toLowerCase()
+    if (!q) return stats.tracks
+    return stats.tracks.filter((tr) => {
+      const trackObj = getTrack(tr.trackId)
+      return (
+        tr.trackId.toLowerCase().includes(q) ||
+        (trackObj?.abbr && trackObj.abbr.toLowerCase().includes(q)) ||
+        (trackObj?.name && trackObj.name.toLowerCase().includes(q))
+      )
+    })
+  }, [stats, trackSearch])
 
   useEffect(() => {
     if (!isValidId) return
@@ -196,52 +211,71 @@ export default function TeamDetail() {
           {stats?.tracks.length === 0 ? (
             <EmptyState title={t('teamStats.noWars')} />
           ) : (
-            <div className="panel overflow-x-auto">
-              <table className="w-full min-w-max text-sm">
-                <thead className="bg-bg text-left font-display text-sm text-kart-yellow">
-                  <tr>
-                    <th className="px-4 py-2 font-extrabold">{t('wr.colTrack')}</th>
-                    <th className="px-4 py-2 font-extrabold">{t('teamStats.races')}</th>
-                    <th className="px-4 py-2 font-extrabold">{t('teamStats.avgScore')}</th>
-                    <th className="px-4 py-2 font-extrabold">{t('teamStats.diff')}</th>
-                    <th className="px-4 py-2 font-extrabold">{t('event.avgPos')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats?.tracks.map((tr) => {
-                    const trackObj = getTrack(tr.trackId)
-                    const isPositive = tr.diff > 0
-                    const isNegative = tr.diff < 0
-                    return (
-                      <tr key={tr.trackId} className="border-t border-line/60">
-                        <td className="px-4 py-2">
-                          <Link to={`/pistas/${tr.trackId}`} className="flex items-center gap-2 hover:text-kart-yellow">
-                            <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>
-                              {trackObj?.abbr ?? tr.trackId}
-                            </Plate>
-                            <span className="font-semibold">{trackObj?.name ?? tr.trackId}</span>
-                          </Link>
-                        </td>
-                        <td className="px-4 py-2 font-mono">{tr.races}</td>
-                        <td className="px-4 py-2 font-mono">
-                          {tr.avgHome} <span className="text-muted">vs</span> {tr.avgAway}
-                        </td>
-                        <td
-                          className={`px-4 py-2 font-mono font-bold ${
-                            isPositive ? 'text-kart-green' : isNegative ? 'text-kart-red' : 'text-muted'
-                          }`}
-                        >
-                          {isPositive ? `+${tr.diff}` : tr.diff}
-                        </td>
-                        <td className="px-4 py-2 font-mono text-xs text-muted">
-                          {tr.avgPosHome} (equipo) vs {tr.avgPosAway} (rival)
+            <>
+              <div className="flex justify-end">
+                <input
+                  type="search"
+                  value={trackSearch}
+                  onChange={(e) => setTrackSearch(e.target.value)}
+                  placeholder={t('stats.searchTrack')}
+                  className="field w-full sm:w-72 text-sm"
+                />
+              </div>
+              <div className="panel overflow-x-auto">
+                <table className="w-full min-w-max text-sm">
+                  <thead className="bg-bg text-left font-display text-sm text-kart-yellow">
+                    <tr>
+                      <th className="px-4 py-2 font-extrabold">{t('wr.colTrack')}</th>
+                      <th className="px-4 py-2 font-extrabold">{t('teamStats.races')}</th>
+                      <th className="px-4 py-2 font-extrabold">{t('teamStats.avgScore')}</th>
+                      <th className="px-4 py-2 font-extrabold">{t('teamStats.diff')}</th>
+                      <th className="px-4 py-2 font-extrabold">{t('event.avgPos')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTeamTracks.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-sm text-muted">
+                          {t('stats.noTracksFound')}
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      filteredTeamTracks.map((tr) => {
+                        const trackObj = getTrack(tr.trackId)
+                        const isPositive = tr.diff > 0
+                        const isNegative = tr.diff < 0
+                        return (
+                          <tr key={tr.trackId} className="border-t border-line/60">
+                            <td className="px-4 py-2">
+                              <Link to={`/pistas/${tr.trackId}`} className="flex items-center gap-2 hover:text-kart-yellow">
+                                <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>
+                                  {trackObj?.abbr ?? tr.trackId}
+                                </Plate>
+                                <span className="font-semibold">{trackObj?.name ?? tr.trackId}</span>
+                              </Link>
+                            </td>
+                            <td className="px-4 py-2 font-mono">{tr.races}</td>
+                            <td className="px-4 py-2 font-mono">
+                              {tr.avgHome} <span className="text-muted">vs</span> {tr.avgAway}
+                            </td>
+                            <td
+                              className={`px-4 py-2 font-mono font-bold ${
+                                isPositive ? 'text-kart-green' : isNegative ? 'text-kart-red' : 'text-muted'
+                              }`}
+                            >
+                              {isPositive ? `+${tr.diff}` : tr.diff}
+                            </td>
+                            <td className="px-4 py-2 font-mono text-xs text-muted">
+                              {tr.avgPosHome} (equipo) vs {tr.avgPosAway} (rival)
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       )}

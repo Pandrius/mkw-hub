@@ -24,8 +24,20 @@ describe('computeStats', () => {
     expect(s.races).toBe(10)
     expect(s.events).toBe(1)
     expect(s.average).toBe(5.2)
-    expect(s.tracks[0]).toEqual({ trackId: 'ws', races: 1, average: 1, best: 1 })
-    expect(s.tracks.find((t) => t.trackId === 'rr')).toEqual({ trackId: 'rr', races: 3, average: 2, best: 1 })
+    expect(s.tracks[0]).toEqual({ trackId: 'ws', races: 1, average: 1, avgPoints: 15, best: 1 })
+    expect(s.tracks.find((t) => t.trackId === 'rr')).toEqual({ trackId: 'rr', races: 3, average: 2, avgPoints: 12.33, best: 1 })
+  })
+
+  it('diferencia entre mismo avg pos pero distintos puntos (ej. 4 y 4 vs 1 y 7)', () => {
+    // 4 y 4: avg pos = 4, pts = 9 + 9 = 18 -> avgPoints = 9
+    const s1 = computeStats([r('trackA', 4), r('trackA', 4)], 'war')
+    // 1 y 7: avg pos = 4, pts = 15 + 6 = 21 -> avgPoints = 10.5
+    const s2 = computeStats([r('trackB', 1), r('trackB', 7)], 'war')
+
+    expect(s1.tracks[0].average).toBe(4)
+    expect(s2.tracks[0].average).toBe(4)
+    expect(s1.tracks[0].avgPoints).toBe(9)
+    expect(s2.tracks[0].avgPoints).toBe(10.5)
   })
 
   it('filtra por tipo o junta todo', () => {
@@ -35,7 +47,7 @@ describe('computeStats', () => {
   })
 
   it('sin datos', () => {
-    expect(computeStats([], 'all')).toEqual({ races: 0, events: 0, average: null, tracks: [] })
+    expect(computeStats([], 'all')).toEqual({ races: 0, events: 0, average: null, avgPoints: null, tracks: [] })
   })
 })
 
