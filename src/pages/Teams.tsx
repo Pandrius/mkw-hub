@@ -13,6 +13,7 @@ export default function Teams() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'with_members'>('all')
   const [search, setSearch] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [notFoundQuery, setNotFoundQuery] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<string | null>(null)
@@ -55,14 +56,25 @@ export default function Teams() {
     return teams.filter((tm) => tm.members.some((m) => m.id === profile.id))
   }, [teams, profile])
 
+  // Lista ordenada alfabéticamente
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return teams.filter((tm) => {
+    const list = teams.filter((tm) => {
       const matchQuery = !q || tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q)
       const matchFilter = filter === 'all' || tm.members.length > 0
       return matchQuery && matchFilter
     })
+    return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
   }, [teams, search, filter])
+
+  // Resultados rápidos en el desplegable del buscador
+  const quickSearchMatches = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    return teams
+      .filter((tm) => tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [teams, search])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,20 +126,56 @@ export default function Teams() {
         )}
       </PageHeader>
 
+      {/* Tu equipo: acceso directo y enlace a su perfil */}
       {profile && myTeams.length > 0 && (
         <section className="mb-8 border-2 border-kart-yellow/60 bg-surface p-5">
-          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow uppercase">{t('teams.myTeam')}</p>
-          <div className="mt-3 flex flex-wrap gap-4">
+          <div className="flex items-center justify-between">
+            <Link
+              to={`/equipos/${myTeams[0].id}`}
+              className="group inline-flex items-center gap-2 font-mono text-xs font-bold tracking-widest text-kart-yellow uppercase hover:underline"
+            >
+              ★ {t('teams.myTeam')}
+              <span className="text-[10px] text-muted group-hover:text-kart-yellow">→</span>
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {myTeams.map((tm) => (
-              <div key={tm.id} className="flex items-center gap-3">
-                <Plate color="var(--color-kart-yellow)">{tm.tag}</Plate>
-                <div>
-                  <h3 className="font-display text-lg font-bold">{tm.name}</h3>
+              <div
+                key={tm.id}
+                className="flex items-center justify-between gap-3 rounded border border-line/60 bg-bg p-3.5 transition-colors hover:border-kart-yellow"
+              >
+                <Link to={`/equipos/${tm.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                  <img
+                    src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                    alt=""
+                    className="size-11 shrink-0 rounded border border-line bg-surface object-contain p-0.5 shadow-sm"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                  <Plate color="var(--color-kart-yellow)">{tm.tag}</Plate>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-display text-lg font-bold group-hover:text-kart-yellow">
+                      {tm.name}
+                    </h3>
+                    <p className="font-mono text-xs text-muted">
+                      {t('teams.membersRegistered', { n: tm.members.length })}
+                    </p>
+                  </div>
+                </Link>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link
+                    to={`/equipos/${tm.id}`}
+                    className="btn-yellow text-xs font-bold"
+                  >
+                    {t('teams.viewProfile')}
+                  </Link>
                   <Link
                     to={`/tiempos?con=team:${tm.id}`}
-                    className="font-mono text-xs font-bold text-kart-yellow hover:underline"
+                    className="btn-line text-xs font-bold"
                   >
-                    → {t('teams.compare')}
+                    ⏱ {t('teams.compare')}
                   </Link>
                 </div>
               </div>
@@ -145,27 +193,57 @@ export default function Teams() {
           value={filter}
           onChange={setFilter}
         />
-        <form onSubmit={handleSearchSubmit} className="flex w-full items-center gap-2 sm:w-80">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              if (notFoundQuery) setNotFoundQuery(null)
-            }}
-            placeholder={t('teams.search')}
-            className="field w-full"
-            autoComplete="off"
-          />
-          <button
-            type="submit"
-            disabled={!search.trim()}
-            className="btn-yellow shrink-0 px-4 py-2 text-sm font-bold disabled:opacity-50"
-            title="Enter para abrir equipo"
-          >
-            {t('teams.searchBtn')}
-          </button>
-        </form>
+        <div className="relative w-full sm:w-80">
+          <form onSubmit={handleSearchSubmit} className="flex w-full items-center gap-2">
+            <input
+              type="search"
+              value={search}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                if (notFoundQuery) setNotFoundQuery(null)
+              }}
+              placeholder={t('teams.search')}
+              className="field w-full"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              disabled={!search.trim()}
+              className="btn-yellow shrink-0 px-4 py-2 text-sm font-bold disabled:opacity-50"
+              title="Enter para abrir equipo"
+            >
+              {t('teams.searchBtn')}
+            </button>
+          </form>
+
+          {/* Autocompletado del buscador con logo y tag */}
+          {searchFocused && quickSearchMatches.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border-2 border-line bg-surface shadow-xl">
+              {quickSearchMatches.map((tm) => (
+                <li key={tm.id}>
+                  <Link
+                    to={`/equipos/${tm.id}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors border-b border-line/40 last:border-b-0"
+                  >
+                    <img
+                      src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                      alt=""
+                      className="size-7 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                    <Plate>{tm.tag}</Plate>
+                    <span className="truncate font-semibold">{tm.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       {notFoundQuery && (
@@ -188,8 +266,18 @@ export default function Teams() {
               className="flex flex-col justify-between border-2 border-line bg-surface p-5 transition-colors hover:border-line/90"
             >
               <div>
-                <div className="flex items-start justify-between gap-2">
-                  <Plate>{tm.tag}</Plate>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                      alt=""
+                      className="size-9 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                    <Plate>{tm.tag}</Plate>
+                  </div>
                   <span className="font-mono text-xs font-bold text-muted">
                     {tm.members.length > 0
                       ? t('teams.membersRegistered', { n: tm.members.length })

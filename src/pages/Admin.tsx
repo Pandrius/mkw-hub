@@ -2,21 +2,39 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
-import { ASSIGNABLE_ROLES, canChangeRole, canEditPermissions, ROLE_LABEL, type AssignableRole } from '../lib/roles'
+import {
+  canAssignFullRole,
+  canEditPermissions,
+  FULL_ROLES,
+  FULL_ROLE_LABEL,
+  getUserFullRole,
+  type FullRole,
+} from '../lib/roles'
 import { supabase } from '../lib/supabase'
 import { formatDate } from '../lib/time'
 
 type Row = Profile & { created_at: string }
 
-const ROLE_ORDER = ['admin', 'moderator', 'user', 'editor']
-const ROLE_COLORS: Record<string, string> = {
+const FULL_ROLE_COLORS: Record<FullRole, string> = {
   admin: 'var(--color-kart-red)',
   moderator: 'var(--color-kart-blue)',
+  all_editor: 'var(--color-kart-yellow)',
+  strat_editor: 'var(--color-kart-green)',
+  tt_editor: 'var(--color-kart-yellow)',
   user: 'var(--color-muted)',
 }
 
-/** Orden: admins, moderadores, editores y, al final, usuarios sin permisos */
-const rank = (r: Row) => ROLE_ORDER.indexOf(r.role) * 3 + (r.tt_editor || r.strat_editor ? 0 : 1)
+const ROLE_RANK: Record<FullRole, number> = {
+  admin: 0,
+  moderator: 1,
+  all_editor: 2,
+  tt_editor: 3,
+  strat_editor: 4,
+  user: 5,
+}
+
+/** Orden: admins, moderadores, editores y usuarios */
+const rank = (r: Row) => ROLE_RANK[getUserFullRole(r)]
 
 export default function Admin() {
   const { t, locale } = useI18n()
@@ -103,13 +121,32 @@ export default function Admin() {
     setRows(await fetchRows())
   }
 
-  const changeRole = (row: Row, role: AssignableRole) => {
-    if (role === row.role) return
-    if (role === 'admin' && !confirm(t('admin.confirmAdmin', { user: row.username }))) return
-    run(
-      () => supabase!.rpc('set_user_role', { target: row.id, new_role: role }),
-      t('admin.roleChanged', { user: row.username, role: t(ROLE_LABEL[role]) }),
-    )
+  const changeFullRole = async (row: Row, newRole: FullRole) => {
+    const current = getUserFullRole(row)
+    if (newRole === current) return
+    if (newRole === 'admin' && !confirm(t('admin.confirmAdmin', { user: row.username }))) return
+
+    if (newRole === 'admin' || newRole === 'moderator') {
+      await run(
+        () => supabase!.rpc('set_user_role', { target: row.id, new_role: newRole }),
+        t('admin.roleChanged', { user: row.username, role: t(FULL_ROLE_LABEL[newRole]) }),
+      )
+    } else {
+      // Si el usuario era admin o moderator, primero se cambia su rol en BD a 'user'
+      if (row.role !== 'user') {
+        const { error: roleErr } = await supabase!.rpc('set_user_role', { target: row.id, new_role: 'user' })
+        if (roleErr) {
+          setMessage({ ok: false, text: t('admin.error', { message: roleErr.message }) })
+          return
+        }
+      }
+      const tt = newRole === 'tt_editor' || newRole === 'all_editor'
+      const strat = newRole === 'strat_editor' || newRole === 'all_editor'
+      await run(
+        () => supabase!.rpc('set_editor_permissions', { target: row.id, tt, strat }),
+        t('admin.roleChanged', { user: row.username, role: t(FULL_ROLE_LABEL[newRole]) }),
+      )
+    }
   }
 
   const togglePermission = (row: Row, perm: 'tt' | 'strat') => {
@@ -123,10 +160,10 @@ export default function Admin() {
 
   const count = (pred: (r: Row) => boolean) => rows?.filter(pred).length ?? 0
   const cards = [
-    { label: t('role.admin'), desc: t('role.adminDesc'), n: count((r) => r.role === 'admin'), color: ROLE_COLORS.admin },
-    { label: t('role.moderator'), desc: t('role.moderatorDesc'), n: count((r) => r.role === 'moderator'), color: ROLE_COLORS.moderator },
-    { label: t('perm.ttEditors'), desc: t('perm.ttDesc'), n: count((r) => r.role === 'user' && r.tt_editor), color: 'var(--color-kart-yellow)' },
-    { label: t('perm.stratEditors'), desc: t('perm.stratDesc'), n: count((r) => r.role === 'user' && r.strat_editor), color: 'var(--color-kart-green)' },
+    { label: t('role.admin'), desc: t('role.adminDesc'), n: count((r) => r.role === 'admin'), color: FULL_ROLE_COLORS.admin },
+    { label: t('role.moderator'), desc: t('role.moderatorDesc'), n: count((r) => r.role === 'moderator'), color: FULL_ROLE_COLORS.moderator },
+    { label: t('perm.ttEditors'), desc: t('perm.ttDesc'), n: count((r) => (r.role === 'user' && r.tt_editor) || r.role !== 'user'), color: FULL_ROLE_COLORS.tt_editor },
+    { label: t('perm.stratEditors'), desc: t('perm.stratDesc'), n: count((r) => (r.role === 'user' && r.strat_editor) || r.role !== 'user'), color: FULL_ROLE_COLORS.strat_editor },
   ]
 
   return (
@@ -180,9 +217,11 @@ export default function Admin() {
         <ul className="overflow-hidden panel">
           {filtered.map((row) => {
             const isSelf = row.id === profile.id
-            const roleEditable = canChangeRole(profile.role, isSelf)
+            const fullRole = getUserFullRole(row)
             const permsEditable = canEditPermissions(profile.role, row.role, isSelf)
-            const role = (ASSIGNABLE_ROLES as readonly string[]).includes(row.role) ? (row.role as AssignableRole) : 'user'
+            const availableOptions = FULL_ROLES.filter((r) => canAssignFullRole(profile.role, row.role, r, isSelf))
+            const canModifyRole = availableOptions.length > 0
+
             return (
               <li key={row.id} className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
                 {row.avatar_url ? (
@@ -198,7 +237,7 @@ export default function Admin() {
                   <span className="text-xs text-muted">{t('admin.since', { date: formatDate(row.created_at, locale) })}</span>
                 </span>
 
-                {role === 'user' ? (
+                {row.role === 'user' ? (
                   <span className="flex gap-2">
                     <PermissionToggle
                       label={t('perm.tt')}
@@ -219,22 +258,22 @@ export default function Admin() {
                   <span className="text-xs text-muted">{t('admin.allPerms')}</span>
                 )}
 
-                {roleEditable ? (
+                {canModifyRole ? (
                   <select
-                    value={role}
-                    onChange={(e) => changeRole(row, e.target.value as AssignableRole)}
+                    value={fullRole}
+                    onChange={(e) => changeFullRole(row, e.target.value as FullRole)}
                     className="border-2 border-line bg-bg px-3 py-1.5 text-sm font-semibold"
-                    style={{ color: ROLE_COLORS[role] }}
+                    style={{ color: FULL_ROLE_COLORS[fullRole] }}
                   >
-                    {ASSIGNABLE_ROLES.map((r) => (
+                    {availableOptions.map((r) => (
                       <option key={r} value={r}>
-                        {t(ROLE_LABEL[r])}
+                        {t(FULL_ROLE_LABEL[r])}
                       </option>
                     ))}
                   </select>
                 ) : (
-                  <span className="w-24 px-3 text-right text-sm font-semibold" style={{ color: ROLE_COLORS[role] }}>
-                    {t(ROLE_LABEL[role])}
+                  <span className="w-32 px-3 text-right text-sm font-semibold" style={{ color: FULL_ROLE_COLORS[fullRole] }}>
+                    {t(FULL_ROLE_LABEL[fullRole])}
                   </span>
                 )}
               </li>

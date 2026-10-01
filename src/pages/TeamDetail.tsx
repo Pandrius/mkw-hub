@@ -80,6 +80,14 @@ export default function TeamDetail() {
         <header className="mt-4 border-b-2 border-line pb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
+              <img
+                src={`https://mkcentral.com/img/team_logos/${team.id}.png`}
+                alt=""
+                className="size-16 sm:size-20 shrink-0 rounded-lg border-2 border-line bg-surface object-contain p-1 shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
               <Plate color="var(--color-kart-yellow)">{team.tag}</Plate>
               <div>
                 <h1 className="font-display text-4xl font-black sm:text-5xl">{team.name}</h1>

@@ -167,9 +167,9 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
   const { data, error } = await client()
     .from('teams')
     .select('id, name, tag, color, team_members(profile_id, profiles(id, username, avatar_url, country_code))')
-    .order('tag', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
-  return (data ?? []).map((t) => {
+  const list = (data ?? []).map((t) => {
     const rawMembers =
       (t.team_members as unknown as {
         profile_id: string
@@ -189,6 +189,7 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
       members,
     }
   })
+  return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 }
 
 export async function getBestTimes(profileIds: string[], category: TtCategory, nita: boolean): Promise<BestTime[]> {
