@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTrackByAbbr, getTrackImage, TRACKS } from './tracks'
+import { getTrackByAbbr, getTrackImage, type Track, TRACKS } from './tracks'
 
 describe('tracks', () => {
   it('las 30 pistas principales tienen abreviatura única', () => {
@@ -16,13 +16,17 @@ describe('tracks', () => {
     expect(new Set(abbrs).size).toBe(40)
   })
 
-  it('todas las pistas tienen imagen (las SNES usan la de su pista madre)', () => {
+  it('todas las 40 pistas tienen imagen dedicada y las que no tuvieran recurren a su pista madre', () => {
     for (const t of TRACKS) {
       expect(getTrackImage(t), t.name).toBeTruthy()
       expect(getTrackImage(t, true), `${t.name} HD`).toBeTruthy()
+      expect(getTrackImage(t)).toMatch(new RegExp(`tracks/${t.abbr}\\.webp$`))
+      expect(getTrackImage(t, true)).toMatch(new RegExp(`tracks/hd/${t.abbr}\\.webp$`))
     }
-    expect(getTrackImage(getTrackByAbbr('rGV2')!)).toMatch(/tracks\/BCi\.webp$/)
-    expect(getTrackImage(getTrackByAbbr('rGV2')!, true)).toMatch(/tracks\/hd\/BCi\.webp$/)
+    // Comprobar fallback a pista madre si una pista carece de captura propia
+    const dummySnesTrack: Track = { id: 'dummy-gv', abbr: 'dummy', name: 'Dummy Ghost Valley', cupId: 'snes', parentId: 'boo-cinema' }
+    expect(getTrackImage(dummySnesTrack)).toMatch(/tracks\/BCi\.webp$/)
+    expect(getTrackImage(dummySnesTrack, true)).toMatch(/tracks\/hd\/BCi\.webp$/)
   })
 
   it('busca por abreviatura sin distinguir mayúsculas', () => {

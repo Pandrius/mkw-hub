@@ -86,10 +86,12 @@ export function getTrack(id: string): Track | undefined {
   return TRACKS.find((t) => t.id === id)
 }
 
-// Pistas con captura propia en public/tracks/. Las variantes SNES sin captura usan la de su pista madre.
+// Pistas con captura propia en public/tracks/ (las 30 principales + 10 variantes SNES).
+// Si alguna pista no tuviera captura propia, recurre a su pista madre (track.parentId).
 const TRACK_IMAGES = new Set([
   'MBC', 'CC', 'WS', 'DKS', 'rDH', 'rSGB', 'rWS', 'rAF', 'rDKP', 'SP', 'rSHS', 'rWSh', 'rKTB', 'FO', 'PS',
   'rPB', 'SSS', 'rDDJ', 'GBR', 'CCF', 'DD', 'BCi', 'DBB', 'rMMM', 'rCM', 'rTF', 'BC', 'AH', 'rMC', 'RR',
+  'rMC1', 'rMC2', 'rMC3', 'rGV1', 'rGV2', 'rGV3', 'rKB1', 'rCM1', 'rCM2', 'rVL1',
 ])
 
 export function getTrackImage(track: Track, hd = false): string | undefined {

@@ -32,7 +32,7 @@ GitHub Actions (`.github/workflows/ci.yml`) pasa lint, tests y build en cada pus
 
 ## Créditos
 
-- Miniaturas de las pistas (`public/tracks/`): [Yumax-panda/MKWorld](https://github.com/Yumax-panda/MKWorld). Imágenes © Nintendo.
+- Miniaturas de las pistas (`public/tracks/` y `public/tracks/hd/`): [Super Mario Wiki](https://www.mariowiki.com/Gallery:Mario_Kart_World#Course_selection_icons) (iconos oficiales de selección de circuito en *Mario Kart World*). Imágenes © Nintendo.
 - Abreviaturas de pistas: convención de la comunidad (Mario Kart Central / Lounge).
 - Récords mundiales: [mkwrs.com](https://mkwrs.com/mkworld/) y el canal [@MKWorldRecords](https://www.youtube.com/@MKWorldRecords), sincronizados a diario desde su CSV público.
 - Banderas: [flagcdn.com](https://flagcdn.com).
