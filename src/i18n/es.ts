@@ -274,6 +274,8 @@ export const es = {
   'teams.soonTitle': 'Los equipos se sincronizarán con Mario Kart Central',
   'teams.soonText': 'Al entrar con Discord, la web te unirá automáticamente a tu equipo si apareces en su roster de MKC. Los líderes y managers podrán gestionar las wars del equipo.',
   'teams.search': 'Buscar equipo por nombre o etiqueta…',
+  'teams.searchBtn': 'Buscar',
+  'teams.notFoundQuery': 'No se encontró ningún equipo que coincida con "{q}".',
   'teams.all': 'Todos ({n})',
   'teams.withMembers': 'Con jugadores ({n})',
   'teams.compare': 'Comparar en contrarreloj',

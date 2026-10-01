@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
@@ -8,10 +8,12 @@ import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 export default function Teams() {
   const { t, locale } = useI18n()
   const { profile, syncMkc, enabled } = useAuth()
+  const navigate = useNavigate()
   const [teams, setTeams] = useState<TeamWithMembers[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'with_members'>('all')
   const [search, setSearch] = useState('')
+  const [notFoundQuery, setNotFoundQuery] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<string | null>(null)
 
@@ -61,6 +63,36 @@ export default function Teams() {
       return matchQuery && matchFilter
     })
   }, [teams, search, filter])
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = search.trim().toLowerCase()
+    if (!q) return
+
+    // 1. Coincidencia exacta de nombre o tag
+    let match = teams.find(
+      (tm) => tm.name.toLowerCase() === q || tm.tag.toLowerCase() === q,
+    )
+    // 2. Coincidencia que empiece por la búsqueda
+    if (!match) {
+      match = teams.find(
+        (tm) => tm.name.toLowerCase().startsWith(q) || tm.tag.toLowerCase().startsWith(q),
+      )
+    }
+    // 3. Primer resultado que contenga la búsqueda
+    if (!match) {
+      match = teams.find(
+        (tm) => tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q),
+      )
+    }
+
+    if (match) {
+      navigate(`/equipos/${match.id}`)
+    } else {
+      setNotFoundQuery(search.trim())
+      setTimeout(() => setNotFoundQuery(null), 3500)
+    }
+  }
 
   const countAll = teams.length
   const countWithMembers = teams.filter((t) => t.members.length > 0).length
@@ -113,14 +145,34 @@ export default function Teams() {
           value={filter}
           onChange={setFilter}
         />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('teams.search')}
-          className="field w-full sm:w-64"
-        />
+        <form onSubmit={handleSearchSubmit} className="flex w-full items-center gap-2 sm:w-80">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              if (notFoundQuery) setNotFoundQuery(null)
+            }}
+            placeholder={t('teams.search')}
+            className="field w-full"
+            autoComplete="off"
+          />
+          <button
+            type="submit"
+            disabled={!search.trim()}
+            className="btn-yellow shrink-0 px-4 py-2 text-sm font-bold disabled:opacity-50"
+            title="Enter para abrir equipo"
+          >
+            {t('teams.searchBtn')}
+          </button>
+        </form>
       </div>
+
+      {notFoundQuery && (
+        <p className="mb-4 border-l-4 border-kart-red bg-surface px-4 py-2 text-sm text-kart-red">
+          {t('teams.notFoundQuery', { q: notFoundQuery })}
+        </p>
+      )}
 
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>

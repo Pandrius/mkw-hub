@@ -275,6 +275,8 @@ export const en: Record<MessageKey, string> = {
   'teams.soonTitle': 'Teams will sync with Mario Kart Central',
   'teams.soonText': 'When you sign in with Discord, you’ll be added to your team automatically if you’re on its MKC roster. Leaders and managers will manage the team’s wars.',
   'teams.search': 'Search team by name or tag…',
+  'teams.searchBtn': 'Search',
+  'teams.notFoundQuery': 'No team found matching "{q}".',
   'teams.all': 'All ({n})',
   'teams.withMembers': 'With members ({n})',
   'teams.compare': 'Compare in Time Trials',
