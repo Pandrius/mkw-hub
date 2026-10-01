@@ -92,9 +92,11 @@ const TRACK_IMAGES = new Set([
   'rPB', 'SSS', 'rDDJ', 'GBR', 'CCF', 'DD', 'BCi', 'DBB', 'rMMM', 'rCM', 'rTF', 'BC', 'AH', 'rMC', 'RR',
 ])
 
-export function getTrackImage(track: Track): string | undefined {
+export function getTrackImage(track: Track, hd = false): string | undefined {
   const source = track.abbr && TRACK_IMAGES.has(track.abbr) ? track : track.parentId ? getTrack(track.parentId) : undefined
-  return source?.abbr ? `${import.meta.env.BASE_URL}tracks/${source.abbr}.webp` : undefined
+  if (!source?.abbr) return undefined
+  const prefix = hd ? 'tracks/hd/' : 'tracks/'
+  return `${import.meta.env.BASE_URL}${prefix}${source.abbr}.webp`
 }
 
 /** Busca una pista por su abreviatura, sin distinguir mayúsculas (p. ej. "rdkp" → DK Pass). */

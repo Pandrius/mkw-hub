@@ -8,7 +8,12 @@ export type GameEvent = {
   kind: EventKind
   status: EventStatus
   team_tag: string | null
+  team_name: string | null
+  team_id: number | null
   opponent_tag: string | null
+  opponent_name: string | null
+  opponent_team_id: number | null
+  opponent_players: string[] | null
   created_by: string
   created_at: string
   finished_at: string | null
@@ -17,6 +22,7 @@ export type GameEvent = {
 export type EventPlayer = { id: number; event_id: string; name: string; profile_id: string | null }
 
 export type RaceResult = { player_id: number; position: number }
+export type OpponentResult = { name: string; position: number }
 
 export type EventRace = {
   id: number
@@ -25,6 +31,7 @@ export type EventRace = {
   missing_home: number
   missing_away: number
   race_results: RaceResult[]
+  opponent_results?: OpponentResult[] | null
 }
 
 export type EventDetail = { event: GameEvent; players: EventPlayer[]; races: EventRace[] }
@@ -42,8 +49,30 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T
 }
 
-export function createEvent(kind: EventKind, teamTag: string, opponentTag: string, players: string[]): Promise<string> {
-  return rpc<string>('create_event', { kind, team_tag: teamTag, opponent_tag: opponentTag, players })
+export type CreateEventInput = {
+  kind: EventKind
+  teamTag: string
+  opponentTag: string
+  players: string[]
+  teamId?: number | null
+  teamName?: string | null
+  opponentTeamId?: number | null
+  opponentName?: string | null
+  opponentPlayers?: string[] | null
+}
+
+export function createEvent(input: CreateEventInput): Promise<string> {
+  return rpc<string>('create_event', {
+    kind: input.kind,
+    team_tag: input.teamTag,
+    opponent_tag: input.opponentTag,
+    players: input.players,
+    team_id: input.teamId ?? null,
+    team_name: input.teamName ?? null,
+    opponent_team_id: input.opponentTeamId ?? null,
+    opponent_name: input.opponentName ?? null,
+    opponent_players: input.opponentPlayers ?? null,
+  })
 }
 
 export function addEventPlayer(eventId: string, entry: string): Promise<number> {
@@ -57,6 +86,7 @@ export function saveRace(
   results: RaceResult[],
   missingHome = 0,
   missingAway = 0,
+  opponentResults?: OpponentResult[] | null,
 ): Promise<void> {
   return rpc<void>('save_race', {
     target: eventId,
@@ -65,6 +95,7 @@ export function saveRace(
     results,
     missing_home: missingHome,
     missing_away: missingAway,
+    opponent_results: opponentResults ?? null,
   })
 }
 
@@ -79,7 +110,7 @@ export async function getEvent(eventId: string): Promise<EventDetail | null> {
     db.from('event_players').select('id, event_id, name, profile_id').eq('event_id', eventId).order('id'),
     db
       .from('event_races')
-      .select('id, race_no, track_id, missing_home, missing_away, race_results(player_id, position)')
+      .select('id, race_no, track_id, missing_home, missing_away, opponent_results, race_results(player_id, position)')
       .eq('event_id', eventId)
       .order('race_no'),
   ])
@@ -115,4 +146,21 @@ export async function getPlayerResults(profileId: string): Promise<PlayerResult[
     .limit(10000)
   if (error) throw error
   return data as PlayerResult[]
+}
+
+/** Wars de un equipo ordenadas de la más reciente a la más antigua */
+export async function listTeamEvents(teamId: number): Promise<(GameEvent & { races: number })[]> {
+  const db = client()
+  const { data, error } = await db
+    .from('events')
+    .select('*, event_races(count)')
+    .eq('team_id', teamId)
+    .eq('kind', 'war')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) throw error
+  return (data ?? []).map((e) => {
+    const { event_races, ...rest } = e as GameEvent & { event_races: { count: number }[] }
+    return { ...rest, races: event_races?.[0]?.count ?? 0 }
+  })
 }

@@ -17,8 +17,12 @@ describe('tracks', () => {
   })
 
   it('todas las pistas tienen imagen (las SNES usan la de su pista madre)', () => {
-    for (const t of TRACKS) expect(getTrackImage(t), t.name).toBeTruthy()
-    expect(getTrackImage(getTrackByAbbr('rGV2')!)).toMatch(/BCi\.webp$/)
+    for (const t of TRACKS) {
+      expect(getTrackImage(t), t.name).toBeTruthy()
+      expect(getTrackImage(t, true), `${t.name} HD`).toBeTruthy()
+    }
+    expect(getTrackImage(getTrackByAbbr('rGV2')!)).toMatch(/tracks\/BCi\.webp$/)
+    expect(getTrackImage(getTrackByAbbr('rGV2')!, true)).toMatch(/tracks\/hd\/BCi\.webp$/)
   })
 
   it('busca por abreviatura sin distinguir mayúsculas', () => {

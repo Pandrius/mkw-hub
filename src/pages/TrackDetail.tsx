@@ -14,7 +14,7 @@ type TabId = 'tt-guide' | 'race-guide' | 'times' | 'stats'
 export default function TrackDetail() {
   const { t } = useI18n()
   const { trackId = '' } = useParams()
-  const [tab, setTab] = useState<TabId>('tt-guide')
+  const [tab, setTab] = useState<TabId>('times')
   const track = getTrack(trackId)
   if (!track) return <NotFound />
 
@@ -22,6 +22,7 @@ export default function TrackDetail() {
   const parent = track.parentId ? getTrack(track.parentId) : undefined
   const variants = TRACKS.filter((v) => v.parentId === track.id)
   const image = getTrackImage(track)
+  const imageHd = getTrackImage(track, true)
 
   return (
     <>
@@ -57,17 +58,23 @@ export default function TrackDetail() {
           </div>
         </div>
         {image && (
-          <div className="slant halftone aspect-[16/9] overflow-hidden bg-surface-2">
-            <img src={image} alt="" className="thumb" />
+          <div className="slant aspect-[16/9] overflow-hidden bg-surface-2 shadow-lg">
+            <img
+              src={imageHd || image}
+              srcSet={imageHd ? `${image} 800w, ${imageHd} 1600w` : undefined}
+              sizes="(min-width: 768px) 40vw, 100vw"
+              alt={track.name}
+              className="thumb"
+            />
           </div>
         )}
       </header>
 
       <Tabs
         tabs={[
+          { id: 'times', label: t('tracks.tabTimes') },
           { id: 'tt-guide', label: t('tracks.tabTTGuide') },
           { id: 'race-guide', label: t('tracks.tabRaceGuide') },
-          { id: 'times', label: t('tracks.tabTimes') },
           { id: 'stats', label: t('tracks.tabStats') },
         ]}
         value={tab}

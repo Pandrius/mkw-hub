@@ -8,6 +8,7 @@ import { ROLE_LABEL } from '../lib/roles'
 const NAV: { to: string; label: MessageKey }[] = [
   { to: '/pistas', label: 'nav.tracks' },
   { to: '/contrarreloj', label: 'nav.timeTrials' },
+  { to: '/tiempos', label: 'nav.times' },
   { to: '/estadisticas', label: 'nav.stats' },
   { to: '/equipos', label: 'nav.teams' },
 ]

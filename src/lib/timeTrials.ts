@@ -13,6 +13,8 @@ export type TimeTrial = {
   proof_url: string | null
   achieved_on: string | null
   source: 'manual' | 'mkc'
+  /** Usuario de la web al que pertenece el tiempo (si está registrado) */
+  profile_id: string | null
 }
 
 export type TimeTrialInput = Pick<
@@ -28,7 +30,7 @@ function client() {
 export async function listTimes(trackId: string, category: TtCategory, nita: boolean): Promise<TimeTrial[]> {
   const { data, error } = await client()
     .from('time_trials')
-    .select('id, track_id, category, nita, time_ms, player_name, country_code, proof_url, achieved_on, source')
+    .select('id, track_id, category, nita, time_ms, player_name, country_code, proof_url, achieved_on, source, profile_id')
     .eq('track_id', trackId)
     .eq('category', category)
     .eq('nita', nita)
@@ -43,16 +45,27 @@ export async function addTime(input: TimeTrialInput): Promise<void> {
   if (error) throw error
 }
 
+/** Un jugador añade su propio tiempo (nombre y país salen de su perfil) */
+export async function addMyTime(
+  input: Pick<TimeTrial, 'track_id' | 'category' | 'nita' | 'time_ms' | 'proof_url' | 'achieved_on'>,
+): Promise<void> {
+  const { error } = await client().rpc('add_my_time', input)
+  if (error) throw error
+}
+
 export async function deleteTime(id: number): Promise<void> {
   const { error } = await client().from('time_trials').delete().eq('id', id)
   if (error) throw error
 }
 
-/** Ranking: el mejor tiempo de cada jugador (sin distinguir mayúsculas), ya ordenado. */
+/**
+ * Ranking: el mejor tiempo de cada jugador, ya ordenado.
+ * Se agrupa por usuario registrado; si no lo está, por nombre (sin distinguir mayúsculas).
+ */
 export function bestPerPlayer(times: TimeTrial[]): TimeTrial[] {
   const best = new Map<string, TimeTrial>()
   for (const t of times) {
-    const key = t.player_name.trim().toLowerCase()
+    const key = t.profile_id ? `id:${t.profile_id}` : `name:${t.player_name.trim().toLowerCase()}`
     const prev = best.get(key)
     if (!prev || t.time_ms < prev.time_ms) best.set(key, t)
   }

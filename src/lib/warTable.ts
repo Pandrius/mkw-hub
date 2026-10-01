@@ -19,9 +19,18 @@ export type PlayerRow = {
   positions: Record<number, number>
 }
 
+export type OpponentPlayerRow = {
+  name: string
+  points: number
+  races: number
+  /** Posición en cada carrera (por race_no); undefined si no corrió */
+  positions: Record<number, number>
+}
+
 export type WarTable = {
   races: RaceRow[]
   players: PlayerRow[]
+  opponentPlayers: OpponentPlayerRow[]
   home: number
   away: number
   diff: number
@@ -29,18 +38,28 @@ export type WarTable = {
   missingPoints: number
 }
 
-/** Tabla completa de una war: puntos por carrera, por jugador y totales. */
-export function buildWarTable(players: EventPlayer[], races: EventRace[]): WarTable {
+/** Tabla completa de una war: puntos por carrera, por jugador propio y rival, y totales. */
+export function buildWarTable(
+  players: EventPlayer[],
+  races: EventRace[],
+  opponentPlayerNames?: string[] | null,
+): WarTable {
   let home = 0
   let away = 0
   let missingPoints = 0
   const byPlayer = new Map<number, PlayerRow>(players.map((p) => [p.id, { player: p, points: 0, races: 0, positions: {} }]))
 
+  const rawOpponents = (opponentPlayerNames ?? []).map((s) => s.trim()).filter(Boolean)
+  const byOpponent = new Map<string, OpponentPlayerRow>(
+    rawOpponents.map((name) => [name, { name, points: 0, races: 0, positions: {} }]),
+  )
+
   const rows = [...races]
     .sort((a, b) => a.race_no - b.race_no)
     .map((race) => {
+      const homePositions = race.race_results.map((r) => r.position)
       const score = scoreTeamRace(
-        race.race_results.map((r) => r.position),
+        homePositions,
         race.missing_home,
         race.missing_away,
       )
@@ -54,6 +73,39 @@ export function buildWarTable(players: EventPlayer[], races: EventRace[]): WarTa
         row.races += 1
         row.positions[race.race_no] = r.position
       }
+
+      // Si hay rivales registrados, calculamos sus posiciones individuales
+      if (rawOpponents.length > 0) {
+        const racers = 12 - race.missing_home - race.missing_away
+        const awayPositions = Array.from({ length: racers }, (_, i) => i + 1)
+          .filter((pos) => !homePositions.includes(pos))
+          .sort((a, b) => a - b)
+
+        if (race.opponent_results && race.opponent_results.length > 0) {
+          for (const res of race.opponent_results) {
+            let row = byOpponent.get(res.name)
+            if (!row) {
+              row = { name: res.name, points: 0, races: 0, positions: {} }
+              byOpponent.set(res.name, row)
+            }
+            row.points += pointsForPosition(res.position)
+            row.races += 1
+            row.positions[race.race_no] = res.position
+          }
+        } else {
+          // Auto-asignación de las posiciones restantes entre los 6 rivales
+          rawOpponents.slice(0, awayPositions.length).forEach((name, idx) => {
+            const pos = awayPositions[idx]
+            const row = byOpponent.get(name)
+            if (row && pos !== undefined) {
+              row.points += pointsForPosition(pos)
+              row.races += 1
+              row.positions[race.race_no] = pos
+            }
+          })
+        }
+      }
+
       return { race, home: score.home, away: score.away, diff: score.home - score.away, runningDiff: home - away }
     })
 
@@ -61,6 +113,7 @@ export function buildWarTable(players: EventPlayer[], races: EventRace[]): WarTa
     races: rows,
     // Solo jugadores que han corrido alguna carrera, de más a menos puntos
     players: [...byPlayer.values()].filter((p) => p.races > 0).sort((a, b) => b.points - a.points),
+    opponentPlayers: [...byOpponent.values()].filter((p) => p.races > 0).sort((a, b) => b.points - a.points),
     home,
     away,
     diff: home - away,
@@ -82,7 +135,8 @@ const cleanName = (s: string) => s.replace(/[\r\n[\]]/g, ' ').replace(/\s+/g, ' 
  *   DC 1                      ← puntos de jugadores ausentes (carreras de 11/10)
  *
  *   ABC
- *   ABC 334                   ← del rival solo se conoce el total
+ *   rival1 12+10+…            ← si hay 12 jugadores, se muestran todos automáticamente
+ *   ABC 334                   ← o solo el total si no se especificaron rivales individuales
  */
 export function lorenziText(teamTag: string, opponentTag: string, table: WarTable): string {
   const home = cleanName(teamTag) || 'Home'
@@ -96,7 +150,19 @@ export function lorenziText(teamTag: string, opponentTag: string, table: WarTabl
     lines.push(`${cleanName(p.player.name)} ${perRace.join('+')}`)
   }
   if (table.missingPoints) lines.push(`DC ${table.missingPoints}`)
-  lines.push('', away, `${away} ${table.away}`)
+
+  lines.push('', away)
+  if (table.opponentPlayers && table.opponentPlayers.length > 0) {
+    for (const p of table.opponentPlayers) {
+      const perRace = Object.keys(p.positions)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map((raceNo) => pointsForPosition(p.positions[raceNo]))
+      lines.push(`${cleanName(p.name)} ${perRace.join('+')}`)
+    }
+  } else {
+    lines.push(`${away} ${table.away}`)
+  }
   return lines.join('\n')
 }
 

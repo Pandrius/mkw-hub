@@ -80,4 +80,57 @@ describe('buildWarTable', () => {
     expect(lorenziImageUrl('#title A vs B\nA')).toBe('https://gb2.hlorenzi.com/table.png?data=%23title%20A%20vs%20B%0AA')
     expect(lorenziEditorUrl('x')).toBe('https://gb2.hlorenzi.com/table?data=x')
   })
+
+  it('genera tabla completa de 12 jugadores automáticamente con los 6 rivales', () => {
+    const rivals = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']
+    // Home toma posiciones 1, 3, 5, 7, 9, 11 (suma: 15+10+8+6+4+2 = 45 pts)
+    // Rivales automáticamente toman 2, 4, 6, 8, 10, 12 (suma: 12+9+7+5+3+1 = 37 pts)
+    const t12 = buildWarTable(players, [race(1, [[1, 1], [2, 3], [3, 5], [4, 7], [5, 9], [6, 11]])], rivals)
+
+    expect(t12.opponentPlayers).toHaveLength(6)
+    expect(t12.opponentPlayers.map((p) => [p.name, p.points])).toEqual([
+      ['R1', 12],
+      ['R2', 9],
+      ['R3', 7],
+      ['R4', 5],
+      ['R5', 3],
+      ['R6', 1],
+    ])
+    expect(t12.home).toBe(45)
+    expect(t12.away).toBe(37)
+
+    const fullText = lorenziText('NEB', 'SOL', t12)
+    expect(fullText).toContain('NEB')
+    expect(fullText).toContain('SOL')
+    expect(fullText).toContain('R1 12')
+    expect(fullText).toContain('R6 1')
+    expect(fullText).not.toContain('SOL 37') // Rivales individuales en vez de solo total
+  })
+
+  it('respeta resultados específicos de rivales cuando se proporcionan', () => {
+    const rivals = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']
+    const rWithOpponents: EventRace = {
+      id: 1,
+      race_no: 1,
+      track_id: 'luigi-circuit',
+      missing_home: 0,
+      missing_away: 0,
+      race_results: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6]].map(([player_id, position]) => ({
+        player_id,
+        position,
+      })),
+      opponent_results: [
+        { name: 'R1', position: 12 },
+        { name: 'R2', position: 11 },
+        { name: 'R3', position: 10 },
+        { name: 'R4', position: 9 },
+        { name: 'R5', position: 8 },
+        { name: 'R6', position: 7 },
+      ],
+    }
+    const table = buildWarTable(players, [rWithOpponents], rivals)
+    const r6 = table.opponentPlayers.find((p) => p.name === 'R6')
+    expect(r6?.positions[1]).toBe(7)
+    expect(r6?.points).toBe(6) // 7º lugar = 6 pts
+  })
 })

@@ -53,7 +53,7 @@ export default function EventDetail() {
   const canEdit =
     isOpen && !!profile && (event.created_by === profile.id || players.some((p) => p.profile_id === profile.id))
   const nextRaceNo = races.length ? Math.max(...races.map((r) => r.race_no)) + 1 : 1
-  const table = isWar ? buildWarTable(players, races) : null
+  const table = isWar ? buildWarTable(players, races, event.opponent_players) : null
 
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
@@ -103,8 +103,33 @@ export default function EventDetail() {
             <span className="text-muted">{formatDate(event.created_at, locale)}</span>
           </p>
           <h1 className="mt-1 font-display text-3xl font-black sm:text-4xl">
-            {isWar ? `${event.team_tag ?? '?'} ${t('event.vs')} ${event.opponent_tag ?? '?'}` : players[0]?.name}
+            {isWar ? (
+              <span className="flex flex-wrap items-baseline gap-2">
+                {event.team_id ? (
+                  <Link to={`/equipos/${event.team_id}`} className="hover:text-kart-yellow">
+                    {event.team_tag} {event.team_name && <span className="text-xl text-muted">({event.team_name})</span>}
+                  </Link>
+                ) : (
+                  <span>{event.team_tag ?? '?'}</span>
+                )}
+                <span className="text-muted text-2xl font-normal">{t('event.vs')}</span>
+                {event.opponent_team_id ? (
+                  <Link to={`/equipos/${event.opponent_team_id}`} className="hover:text-kart-yellow">
+                    {event.opponent_tag} {event.opponent_name && <span className="text-xl text-muted">({event.opponent_name})</span>}
+                  </Link>
+                ) : (
+                  <span>{event.opponent_tag ?? '?'} {event.opponent_name && <span className="text-xl text-muted">({event.opponent_name})</span>}</span>
+                )}
+              </span>
+            ) : (
+              players[0]?.name
+            )}
           </h1>
+          {isWar && event.opponent_players && event.opponent_players.length > 0 && (
+            <p className="mt-1 text-xs text-muted">
+              <span className="font-semibold text-ink">Rivales:</span> {event.opponent_players.join(', ')}
+            </p>
+          )}
         </div>
         {table && <Scoreboard table={table} teamTag={event.team_tag} opponentTag={event.opponent_tag} racesDone={races.length} />}
       </header>
@@ -119,6 +144,9 @@ export default function EventDetail() {
           kind={event.kind}
           raceNo={nextRaceNo}
           players={players}
+          opponentPlayers={event.opponent_players}
+          teamTag={event.team_tag}
+          opponentTag={event.opponent_tag}
           onSaved={reload}
         />
       )}
@@ -233,6 +261,9 @@ function RacesTable({
               kind={event.kind}
               raceNo={race.race_no}
               players={players}
+              opponentPlayers={event.opponent_players}
+              teamTag={event.team_tag}
+              opponentTag={event.opponent_tag}
               initial={race}
               onSaved={onSaved}
               onCancel={() => onEdit(null)}
@@ -253,7 +284,12 @@ function RacesTable({
             <span className="flex max-w-full flex-wrap gap-1.5">
               {results.map((r) => (
                 <span key={r.player_id} className="rounded-md bg-surface-2 px-2 py-0.5 text-xs">
-                  <b className="tabular-nums">{r.position}</b> {nameOf(r.player_id)}
+                  <b className="tabular-nums text-kart-yellow">{r.position}</b> {nameOf(r.player_id)}
+                </span>
+              ))}
+              {race.opponent_results && race.opponent_results.map((r) => (
+                <span key={r.name} className="rounded-md bg-surface-2/60 px-2 py-0.5 text-xs text-muted">
+                  <b className="tabular-nums text-muted">{r.position}</b> {r.name}
                 </span>
               ))}
               {race.missing_home + race.missing_away > 0 && (
@@ -303,6 +339,8 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
     }
   }
 
+  const hasOpponentRows = table.opponentPlayers && table.opponentPlayers.length > 0
+
   return (
     <section className="overflow-hidden panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
@@ -316,62 +354,143 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
           </button>
         </span>
       </header>
-      {/* Imagen generada por el Table Maker de Lorenzi con nuestros datos */}
+
+      {/* Imagen oficial generada por el Table Maker de Lorenzi */}
       <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="block bg-bg">
         <img src={lorenziImageUrl(text)} alt={`${teamTag} ${table.home} – ${opponentTag} ${table.away}`} className="w-full" loading="lazy" />
       </a>
-      <div className="grid border-t border-line md:grid-cols-2">
-        <table className="w-full text-sm">
-          <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
-            <tr>
-              <th className="px-5 py-2 font-extrabold">{t('event.player')}</th>
-              <th className="px-3 py-2 text-right font-extrabold">{t('event.avgPos')}</th>
-              <th className="px-5 py-2 text-right font-extrabold">{t('event.points')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {table.players.map((p) => {
-              const positions = Object.values(p.positions)
-              const avg = positions.reduce((a, b) => a + b, 0) / positions.length
-              return (
-                <tr key={p.player.id} className="border-t border-line/60">
-                  <td className="px-5 py-2 font-semibold">
-                    {p.player.name}
-                    {p.races < table.races.length && <span className="ml-2 text-xs text-muted">({p.races})</span>}
-                  </td>
-                  <td className="time px-3 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
-                  <td className="px-5 py-2 text-right font-display text-base font-bold tabular-nums">{p.points}</td>
-                </tr>
-              )
-            })}
-            {table.missingPoints > 0 && (
-              <tr className="border-t border-line/60 text-muted">
-                <td className="px-5 py-2">{t('event.missingPts')}</td>
-                <td />
-                <td className="px-5 py-2 text-right tabular-nums">{table.missingPoints}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        <div className="flex flex-col items-center justify-center gap-1 border-t border-line p-6 md:border-l md:border-t-0">
-          <div className="flex items-baseline gap-4 font-display font-black">
-            <span className="text-lg text-kart-yellow">{teamTag}</span>
-            <span className="text-5xl tabular-nums">{table.home}</span>
+
+      {hasOpponentRows ? (
+        <div className="border-t border-line">
+          <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-line">
+            {/* Tabla Equipo Propio */}
+            <div className="p-3 sm:p-5">
+              <div className="mb-2 flex items-center justify-between px-2">
+                <span className="font-display text-base font-black text-kart-yellow">{teamTag}</span>
+                <span className="font-display text-lg font-bold tabular-nums text-kart-yellow">{table.home} pts</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-bg text-left font-display text-xs tracking-wider text-muted">
+                  <tr>
+                    <th className="px-3 py-1.5 font-bold">{t('event.player')}</th>
+                    <th className="px-2 py-1.5 text-right font-bold">{t('event.avgPos')}</th>
+                    <th className="px-3 py-1.5 text-right font-bold">{t('event.points')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.players.map((p) => {
+                    const positions = Object.values(p.positions)
+                    const avg = positions.reduce((a, b) => a + b, 0) / positions.length
+                    return (
+                      <tr key={p.player.id} className="border-t border-line/60">
+                        <td className="px-3 py-2 font-semibold">
+                          {p.player.name}
+                          {p.races < table.races.length && <span className="ml-1 text-xs text-muted">({p.races})</span>}
+                        </td>
+                        <td className="time px-2 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-right font-display text-base font-bold tabular-nums">{p.points}</td>
+                      </tr>
+                    )
+                  })}
+                  {table.missingPoints > 0 && (
+                    <tr className="border-t border-line/60 text-muted">
+                      <td className="px-3 py-2">{t('event.missingPts')}</td>
+                      <td />
+                      <td className="px-3 py-2 text-right tabular-nums">{table.missingPoints}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Tabla Equipo Rival */}
+            <div className="p-3 sm:p-5">
+              <div className="mb-2 flex items-center justify-between px-2">
+                <span className="font-display text-base font-black text-muted">{opponentTag}</span>
+                <span className="font-display text-lg font-bold tabular-nums text-muted">{table.away} pts</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-bg text-left font-display text-xs tracking-wider text-muted">
+                  <tr>
+                    <th className="px-3 py-1.5 font-bold">{t('event.player')}</th>
+                    <th className="px-2 py-1.5 text-right font-bold">{t('event.avgPos')}</th>
+                    <th className="px-3 py-1.5 text-right font-bold">{t('event.points')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.opponentPlayers.map((p) => {
+                    const positions = Object.values(p.positions)
+                    const avg = positions.length ? positions.reduce((a, b) => a + b, 0) / positions.length : 0
+                    return (
+                      <tr key={p.name} className="border-t border-line/60">
+                        <td className="px-3 py-2 font-medium text-muted">
+                          {p.name}
+                          {p.races < table.races.length && <span className="ml-1 text-xs text-muted">({p.races})</span>}
+                        </td>
+                        <td className="time px-2 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-right font-display text-base font-bold tabular-nums">{p.points}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="flex items-baseline gap-4 font-display font-black text-muted">
-            <span className="text-lg">{opponentTag}</span>
-            <span className="text-5xl tabular-nums">{table.away}</span>
-          </div>
-          <p
-            className={`mt-2 font-display text-2xl font-black ${
-              table.diff > 0 ? 'text-kart-green' : table.diff < 0 ? 'text-kart-red' : 'text-muted'
-            }`}
-          >
-            {table.diff > 0 ? '+' : ''}
-            {table.diff}
-          </p>
         </div>
-      </div>
+      ) : (
+        <div className="grid border-t border-line md:grid-cols-2">
+          <table className="w-full text-sm">
+            <thead className="bg-bg text-left font-display text-sm tracking-wider text-kart-yellow">
+              <tr>
+                <th className="px-5 py-2 font-extrabold">{t('event.player')}</th>
+                <th className="px-3 py-2 text-right font-extrabold">{t('event.avgPos')}</th>
+                <th className="px-5 py-2 text-right font-extrabold">{t('event.points')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {table.players.map((p) => {
+                const positions = Object.values(p.positions)
+                const avg = positions.reduce((a, b) => a + b, 0) / positions.length
+                return (
+                  <tr key={p.player.id} className="border-t border-line/60">
+                    <td className="px-5 py-2 font-semibold">
+                      {p.player.name}
+                      {p.races < table.races.length && <span className="ml-2 text-xs text-muted">({p.races})</span>}
+                    </td>
+                    <td className="time px-3 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
+                    <td className="px-5 py-2 text-right font-display text-base font-bold tabular-nums">{p.points}</td>
+                  </tr>
+                )
+              })}
+              {table.missingPoints > 0 && (
+                <tr className="border-t border-line/60 text-muted">
+                  <td className="px-5 py-2">{t('event.missingPts')}</td>
+                  <td />
+                  <td className="px-5 py-2 text-right tabular-nums">{table.missingPoints}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <div className="flex flex-col items-center justify-center gap-1 border-t border-line p-6 md:border-l md:border-t-0">
+            <div className="flex items-baseline gap-4 font-display font-black">
+              <span className="text-lg text-kart-yellow">{teamTag}</span>
+              <span className="text-5xl tabular-nums">{table.home}</span>
+            </div>
+            <div className="flex items-baseline gap-4 font-display font-black text-muted">
+              <span className="text-lg">{opponentTag}</span>
+              <span className="text-5xl tabular-nums">{table.away}</span>
+            </div>
+            <p
+              className={`mt-2 font-display text-2xl font-black ${
+                table.diff > 0 ? 'text-kart-green' : table.diff < 0 ? 'text-kart-red' : 'text-muted'
+              }`}
+            >
+              {table.diff > 0 ? '+' : ''}
+              {table.diff}
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

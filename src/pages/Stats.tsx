@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import EventList from '../components/EventList'
-import { EmptyState, PageHeader, Tabs } from '../components/ui'
+import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
+import { entityKey, teamsOf, type Entity } from '../lib/compare'
 import { getPlayerResults, type PlayerResult } from '../lib/events'
 import { bestAndWorst, computeStats, MIN_RACES_RELIABLE, type StatsFilter, type TrackStats } from '../lib/stats'
 import { supabase } from '../lib/supabase'
@@ -72,22 +73,25 @@ export default function Stats() {
 }
 
 function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [filter, setFilter] = useState<StatsFilter>('all')
   const [results, setResults] = useState<PlayerResult[] | null>(null)
-  const [owner, setOwner] = useState<Pick<Profile, 'username' | 'avatar_url'> | null>(null)
+  const [owner, setOwner] = useState<Pick<Profile, 'username' | 'avatar_url' | 'country_code'> | null>(null)
+  const [teams, setTeams] = useState<Entity[]>([])
   const [error, setError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     Promise.all([
       getPlayerResults(profileId),
-      supabase!.from('profiles').select('username, avatar_url').eq('id', profileId).maybeSingle(),
+      supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', profileId).maybeSingle(),
+      teamsOf(profileId),
     ]).then(
-      ([res, prof]) => {
+      ([res, prof, tms]) => {
         if (cancelled) return
         setResults(res)
         setOwner(prof.data)
+        setTeams(tms)
       },
       () => !cancelled && setError(true),
     )
@@ -106,10 +110,29 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="flex items-center gap-3 font-display text-2xl font-bold">
-          {owner?.avatar_url && <img src={owner.avatar_url} alt="" className="size-10 rounded-full" />}
-          {isMe ? t('stats.mine') : t('stats.of', { user: owner?.username ?? '…' })}
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="flex items-center gap-2.5 font-display text-2xl font-bold">
+            {owner?.avatar_url && <img src={owner.avatar_url} alt="" className="size-10 rounded-full" />}
+            <Flag code={owner?.country_code ?? null} locale={locale} />
+            {isMe ? t('stats.mine') : t('stats.of', { user: owner?.username ?? '…' })}
+          </h2>
+          {teams.map((tm) => (
+            <Link
+              key={entityKey(tm)}
+              to={`/tiempos?con=team:${tm.kind === 'team' ? tm.id : ''}`}
+              className="font-mono text-xs font-bold text-kart-yellow hover:underline"
+              title={tm.name}
+            >
+              [{tm.kind === 'team' ? tm.tag : ''}]
+            </Link>
+          ))}
+          <Link
+            to={`/tiempos?con=player:${profileId}`}
+            className="font-mono text-xs font-bold text-muted hover:text-kart-yellow"
+          >
+            → {t('nav.times')}
+          </Link>
+        </div>
         <Tabs
           tabs={[
             { id: 'all', label: t('stats.all') },

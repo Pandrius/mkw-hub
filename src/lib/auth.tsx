@@ -13,7 +13,13 @@ export type Profile = {
   role: Role
   tt_editor: boolean
   strat_editor: boolean
+  country_code: string | null
+  mkc_player_id: number | null
+  mkc_synced_at: string | null
 }
+
+/** Cada cuánto se vuelve a consultar MKC (país y equipos) al iniciar sesión */
+const MKC_SYNC_EVERY_MS = 12 * 60 * 60 * 1000
 
 type AuthState = {
   user: User | null
@@ -30,6 +36,8 @@ type AuthState = {
   isAdmin: boolean
   signIn: () => Promise<void>
   signOut: () => Promise<void>
+  /** Vuelve a sincronizar el perfil con Mario Kart Central a petición */
+  syncMkc: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -50,7 +58,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       const { data } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
-      setProfile(data as Profile | null)
+      const prof = data as Profile | null
+      setProfile(prof)
+
+      // Vincula con Mario Kart Central (país y equipos) si hace tiempo que no se hace
+      const stale = !prof?.mkc_synced_at || Date.now() - Date.parse(prof.mkc_synced_at) > MKC_SYNC_EVERY_MS
+      if (prof && stale) {
+        const { data: session } = await client.auth.getSession()
+        const token = session.session?.access_token
+        if (!token) return
+        const res = await fetch('/api/mkc-link', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(
+          () => null,
+        )
+        if (res?.ok) {
+          const { data: fresh } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
+          if (fresh) setProfile(fresh as Profile)
+        }
+      }
     }
 
     client.auth.getSession().then(async ({ data }) => {
@@ -77,6 +101,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const syncMkc = async (): Promise<boolean> => {
+    if (!supabase || !user) return false
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+      if (!token) return false
+      const res = await fetch('/api/mkc-link', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const { data: fresh } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+        if (fresh) setProfile(fresh as Profile)
+        return true
+      }
+    } catch {
+      // ignore
+    }
+    return false
+  }
+
   const isModerator = profile?.role === 'moderator' || profile?.role === 'admin'
   return (
     <AuthContext.Provider
@@ -91,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: profile?.role === 'admin',
         signIn,
         signOut,
+        syncMkc,
       }}
     >
       {children}
