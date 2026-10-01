@@ -46,44 +46,41 @@ export async function GET(request: Request): Promise<Response> {
 
   const tracks = new Set(records.map((r) => r.track_id)).size
 
-  // Sincroniza equipos de Mario Kart World y Mario Kart Wii desde Mario Kart Central (MKC)
+  // Sincroniza equipos de Mario Kart World desde Mario Kart Central (MKC)
   let mkcTeamsCount = 0
   try {
-    const games = ['mkworld', 'mkw']
     const allMap = new Map<number, { id: number; name: string; tag: string; color: number | null; updated_at: string }>()
-    for (const g of games) {
-      let page = 1
-      let pageCount = 1
-      while (page <= pageCount) {
-        const mkcRes = await fetch(`https://mkcentral.com/api/registry/teams?game=${g}&page=${page}`, {
-          headers: { 'User-Agent': 'MKW Hub (https://mkw-hub.vercel.app)' },
-        })
-        if (!mkcRes.ok) break
-        const data = (await mkcRes.json()) as {
-          page_count?: number
-          teams?: {
-            id: number
-            name: string
-            tag: string
-            color?: number | null
-            rosters?: { tag?: string; roster_tag?: string }[]
-          }[]
-        }
-        pageCount = data.page_count || 1
-        for (const t of data.teams ?? []) {
-          const tag = t.rosters?.[0]?.roster_tag || t.rosters?.[0]?.tag || t.tag || ''
-          if (!allMap.has(t.id)) {
-            allMap.set(t.id, {
-              id: t.id,
-              name: t.name,
-              tag,
-              color: t.color ?? null,
-              updated_at: startedAt,
-            })
-          }
-        }
-        page++
+    let page = 1
+    let pageCount = 1
+    while (page <= pageCount) {
+      const mkcRes = await fetch(`https://mkcentral.com/api/registry/teams?game=mkworld&page=${page}`, {
+        headers: { 'User-Agent': 'MKW Hub (https://mkw-hub.vercel.app)' },
+      })
+      if (!mkcRes.ok) break
+      const data = (await mkcRes.json()) as {
+        page_count?: number
+        teams?: {
+          id: number
+          name: string
+          tag: string
+          color?: number | null
+          rosters?: { tag?: string; roster_tag?: string }[]
+        }[]
       }
+      pageCount = data.page_count || 1
+      for (const t of data.teams ?? []) {
+        const tag = t.rosters?.[0]?.roster_tag || t.rosters?.[0]?.tag || t.tag || ''
+        if (!allMap.has(t.id)) {
+          allMap.set(t.id, {
+            id: t.id,
+            name: t.name,
+            tag,
+            color: t.color ?? null,
+            updated_at: startedAt,
+          })
+        }
+      }
+      page++
     }
 
     const teams = Array.from(allMap.values())
@@ -91,6 +88,8 @@ export async function GET(request: Request): Promise<Response> {
       for (let i = 0; i < teams.length; i += CHUNK_SIZE) {
         await supabase.from('teams').upsert(teams.slice(i, i + CHUNK_SIZE), { onConflict: 'id' })
       }
+      // Borra equipos que ya no pertenezcan a mkworld
+      await supabase.from('teams').delete().lt('updated_at', startedAt)
       mkcTeamsCount = teams.length
     }
   } catch (err) {

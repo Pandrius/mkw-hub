@@ -53,7 +53,11 @@ export default function EventDetail() {
   const canEdit =
     isOpen && !!profile && (event.created_by === profile.id || players.some((p) => p.profile_id === profile.id))
   const nextRaceNo = races.length ? Math.max(...races.map((r) => r.race_no)) + 1 : 1
-  const table = isWar ? buildWarTable(players, races, event.opponent_players) : null
+  const opponentNames =
+    event.opponent_players && event.opponent_players.length > 0
+      ? event.opponent_players
+      : [1, 2, 3, 4, 5, 6].map((i) => `${event.opponent_tag || 'Rival'} ${i}`)
+  const table = isWar ? buildWarTable(players, races, opponentNames) : null
 
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
@@ -144,7 +148,7 @@ export default function EventDetail() {
           kind={event.kind}
           raceNo={nextRaceNo}
           players={players}
-          opponentPlayers={event.opponent_players}
+          opponentPlayers={opponentNames}
           teamTag={event.team_tag}
           opponentTag={event.opponent_tag}
           onSaved={reload}
@@ -157,6 +161,7 @@ export default function EventDetail() {
       <RacesTable
         detail={detail}
         table={table}
+        opponentNames={opponentNames}
         canEdit={canEdit}
         editing={editing}
         onEdit={setEditing}
@@ -230,6 +235,7 @@ function Scoreboard({
 function RacesTable({
   detail,
   table,
+  opponentNames,
   canEdit,
   editing,
   onEdit,
@@ -238,6 +244,7 @@ function RacesTable({
 }: {
   detail: Detail
   table: WarTable | null
+  opponentNames?: string[] | null
   canEdit: boolean
   editing: number | null
   onEdit: (raceNo: number | null) => void
@@ -261,7 +268,7 @@ function RacesTable({
               kind={event.kind}
               raceNo={race.race_no}
               players={players}
-              opponentPlayers={event.opponent_players}
+              opponentPlayers={opponentNames}
               teamTag={event.team_tag}
               opponentTag={event.opponent_tag}
               initial={race}

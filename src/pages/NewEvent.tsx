@@ -29,7 +29,6 @@ export default function NewEvent() {
   // Jugadores
   const [players, setPlayers] = useState<string[]>(() => Array(6).fill(''))
   const [opponentPlayers, setOpponentPlayers] = useState<string[]>(() => Array(6).fill(''))
-  const [showOpponentPlayers, setShowOpponentPlayers] = useState(false)
   const [ingame, setIngame] = useState('')
 
   const [saving, setSaving] = useState(false)
@@ -94,16 +93,26 @@ export default function NewEvent() {
     setOpponentQuery('')
   }
 
-  const roster = players.map((p, i) => (i === 0 && !p.trim() ? profile.username : p))
-  const placeholder = (i: number) => (i === 0 ? profile.username : t('event.playerN', { n: i + 1 }))
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
     try {
-      const homeEntries = kind === 'war' ? roster.map((p) => p.trim()) : [ingame.trim()]
-      const cleanOpponentPlayers = opponentPlayers.map((p) => p.trim()).filter(Boolean)
+      const tagH = teamTag.trim() || 'Home'
+      const tagA = opponentTag.trim() || 'Away'
+
+      const homeEntries =
+        kind === 'war'
+          ? players.map((p, i) => {
+              const val = p.trim()
+              if (val) return val
+              if (i === 0) return profile.username
+              return `${tagH} ${i + 1}`
+            })
+          : [ingame.trim()]
+
+      const cleanOpponentPlayers =
+        kind === 'war' ? opponentPlayers.map((p, i) => p.trim() || `${tagA} ${i + 1}`) : null
 
       const id = await createEvent({
         kind,
@@ -114,7 +123,7 @@ export default function NewEvent() {
         teamName: kind === 'war' ? teamName.trim() || null : null,
         opponentTeamId: kind === 'war' ? selectedOpponentTeam?.id ?? null : null,
         opponentName: kind === 'war' ? opponentName.trim() || null : null,
-        opponentPlayers: kind === 'war' && cleanOpponentPlayers.length > 0 ? cleanOpponentPlayers : null,
+        opponentPlayers: cleanOpponentPlayers,
       })
       navigate(`/eventos/${id}`)
     } catch (err) {
@@ -261,82 +270,82 @@ export default function NewEvent() {
               )}
             </div>
 
-            {/* Jugadores del equipo propio */}
-            <div className="border-t border-line/60 pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">{t('event.players')}</p>
-                  <p className="text-xs text-muted">{t('event.playersHint')}</p>
-                </div>
-                {currentTeamMembers.length > 0 && (
-                  <span className="font-mono text-xs text-muted">
-                    {currentTeamMembers.length} miembros registrados
-                  </span>
-                )}
+            {/* Los 12 jugadores de la War (opcionales) */}
+            <div className="border-t border-line/60 pt-4 space-y-4">
+              <div>
+                <p className="text-base font-bold text-ink">{t('event.playersOptional')}</p>
+                <p className="text-xs text-muted">{t('event.playersOptionalHint')}</p>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {players.map((p, i) => (
-                  <div key={i} className="flex gap-1.5">
-                    <input
-                      required={i > 0}
-                      maxLength={80}
-                      value={p}
-                      onChange={(e) => setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))}
-                      placeholder={placeholder(i)}
-                      className="field flex-1"
-                    />
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Tu equipo (6 jugadores) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between border-b border-line pb-1">
+                    <span className="font-display text-sm font-bold text-kart-yellow">
+                      {teamTag ? `[${teamTag}]` : ''} {t('event.players')}
+                    </span>
                     {currentTeamMembers.length > 0 && (
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))
-                            e.target.value = ''
-                          }
-                        }}
-                        className="w-8 shrink-0 bg-surface-2 px-1 text-center font-mono text-xs hover:bg-line"
-                        title={t('event.pickMember')}
-                      >
-                        <option value="">▼</option>
-                        {currentTeamMembers.map((m) => (
-                          <option key={m.id} value={m.username}>
-                            {m.username}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="font-mono text-xs text-muted">
+                        {currentTeamMembers.length} miembros
+                      </span>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="space-y-1.5">
+                    {players.map((p, i) => (
+                      <div key={i} className="flex gap-1.5">
+                        <input
+                          maxLength={80}
+                          value={p}
+                          onChange={(e) => setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))}
+                          placeholder={i === 0 ? profile.username : `${teamTag.trim() || 'Player'} ${i + 1}`}
+                          className="field flex-1"
+                        />
+                        {currentTeamMembers.length > 0 && (
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))
+                                e.target.value = ''
+                              }
+                            }}
+                            className="w-8 shrink-0 bg-surface-2 px-1 text-center font-mono text-xs hover:bg-line"
+                            title={t('event.pickMember')}
+                          >
+                            <option value="">▼</option>
+                            {currentTeamMembers.map((m) => (
+                              <option key={m.id} value={m.username}>
+                                {m.username}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Jugadores rivales opcionales */}
-            <div className="border-t border-line/60 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowOpponentPlayers(!showOpponentPlayers)}
-                className="font-mono text-xs font-bold text-kart-yellow hover:underline"
-              >
-                {showOpponentPlayers ? '− Ocultar rivales' : '+ ' + t('event.opponentPlayers')}
-              </button>
-
-              {showOpponentPlayers && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-muted">{t('event.opponentPlayersHint')}</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                {/* Equipo rival (6 jugadores) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between border-b border-line pb-1">
+                    <span className="font-display text-sm font-bold text-muted">
+                      {opponentTag ? `[${opponentTag}]` : ''} {t('event.opponentTeam')}
+                    </span>
+                    <span className="text-xs text-muted">6 rivales</span>
+                  </div>
+                  <div className="space-y-1.5">
                     {opponentPlayers.map((p, i) => (
                       <input
                         key={i}
                         maxLength={60}
                         value={p}
                         onChange={(e) => setOpponentPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))}
-                        placeholder={t('event.opponentPlayerN', { n: i + 1 })}
+                        placeholder={`${opponentTag.trim() || 'Rival'} ${i + 1}`}
                         className="field"
                       />
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </>
         ) : (

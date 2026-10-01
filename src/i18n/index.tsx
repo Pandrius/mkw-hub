@@ -26,7 +26,7 @@ function initialLang(): Lang {
   } catch {
     // almacenamiento no disponible
   }
-  return navigator.language.toLowerCase().startsWith('es') ? 'es' : 'en'
+  return 'en'
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
