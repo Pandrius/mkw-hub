@@ -322,4 +322,8 @@ export const en: Record<MessageKey, string> = {
   'admin.confirmAdmin': 'Make {user} an admin? They will have full control.',
   'admin.allPerms': 'All permissions',
   'admin.error': 'Could not apply the change: {message}',
+  'admin.syncMkcRosters': 'Sync MKC rosters',
+  'admin.syncing': 'Syncing with MKC…',
+  'admin.syncSuccess': 'Rosters synced ({checked} checked, {updated} updated).',
+  'admin.syncError': 'Error syncing rosters: {error}',
 }

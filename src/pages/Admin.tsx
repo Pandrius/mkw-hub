@@ -24,6 +24,44 @@ export default function Admin() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [syncingMkc, setSyncingMkc] = useState(false)
+
+  const handleSyncMkc = async () => {
+    if (!supabase || syncingMkc) return
+    setSyncingMkc(true)
+    setMessage(null)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('No session')
+      const res = await fetch('/api/sync', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setMessage({
+          ok: true,
+          text: t('admin.syncSuccess', {
+            checked: String(json.usersChecked ?? 0),
+            updated: String(json.usersUpdated ?? 0),
+          }),
+        })
+        setRows(await fetchRows())
+      } else {
+        setMessage({
+          ok: false,
+          text: t('admin.syncError', { error: json.error || res.statusText }),
+        })
+      }
+    } catch (err: unknown) {
+      setMessage({
+        ok: false,
+        text: t('admin.syncError', { error: err instanceof Error ? err.message : String(err) }),
+      })
+    } finally {
+      setSyncingMkc(false)
+    }
+  }
 
   const fetchRows = useCallback(async () => {
     const { data, error } = await supabase!
@@ -97,13 +135,23 @@ export default function Admin() {
         title={t('admin.title')}
         subtitle={profile.role === 'admin' ? t('admin.subtitleAdmin') : t('admin.subtitleMod')}
       >
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('admin.search')}
-          className="field sm:w-64"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSyncMkc}
+            disabled={syncingMkc}
+            className="btn-line text-sm"
+          >
+            {syncingMkc ? t('admin.syncing') : `↻ ${t('admin.syncMkcRosters')}`}
+          </button>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('admin.search')}
+            className="field sm:w-64"
+          />
+        </div>
       </PageHeader>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

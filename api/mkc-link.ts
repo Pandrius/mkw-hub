@@ -1,16 +1,13 @@
 /**
  * Vincula al usuario con Mario Kart Central usando su Discord:
  *   - país del jugador (para su bandera)
- *   - equipos de Mario Kart World en los que está (para comparar por equipos)
+ *   - equipos de Mario Kart World en los que está (para comparar por equipos y registrar wars)
  *
- * La web la llama al iniciar sesión (como mucho cada 12 h) con el token de Supabase del usuario.
- * La API de MKC no permite llamadas desde el navegador, por eso pasa por aquí.
+ * La web la llama al iniciar sesión o registrarse con Discord, y periódicamente si los datos son antiguos.
+ * La API de MKC no permite llamadas directas desde el navegador por CORS, por eso pasa por aquí.
  */
 import { createClient } from '@supabase/supabase-js'
-
-const MKC = 'https://mkcentral.com/api/registry'
-
-type MkcRoster = { team_id: number; team_name: string; team_tag: string; roster_tag?: string; team_color?: number; game: string }
+import { syncPlayerRoster } from '../src/lib/mkc.js'
 
 export async function POST(request: Request): Promise<Response> {
   const token = request.headers.get('authorization')?.replace(/^Bearer /, '')
@@ -20,65 +17,56 @@ export async function POST(request: Request): Promise<Response> {
     auth: { persistSession: false },
   })
 
-  const { data: auth } = await admin.auth.getUser(token)
-  const userId = auth.user?.id
-  if (!userId) return new Response('Unauthorized', { status: 401 })
+  const { data: auth, error: authError } = await admin.auth.getUser(token)
+  const user = auth?.user
+  if (!user || authError) return new Response('Unauthorized', { status: 401 })
+  const userId = user.id
 
-  const { data: profile } = await admin.from('profiles').select('id, discord_id, username').eq('id', userId).maybeSingle()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id, discord_id, username, mkc_player_id')
+    .eq('id', userId)
+    .maybeSingle()
+
   let discordId = profile?.discord_id
   if (!discordId) {
-    const discordIdentity = auth.user.identities?.find((i) => i.provider === 'discord')
+    const discordIdentity = user.identities?.find((i) => i.provider === 'discord')
     discordId =
-      (auth.user.user_metadata?.provider_id as string | undefined) ||
-      (discordIdentity?.id as string | undefined) ||
       (discordIdentity?.identity_data?.provider_id as string | undefined) ||
-      (auth.user.user_metadata?.sub as string | undefined)
-    if (discordId) {
-      await admin.from('profiles').update({ discord_id: discordId }).eq('id', userId)
-    }
-  }
-  if (!discordId) return Response.json({ ok: false, reason: 'no discord id' })
-
-  const now = new Date().toISOString()
-  const headers = { 'User-Agent': 'MKW Hub (https://mkw-hub.vercel.app)' }
-  const search = await fetch(`${MKC}/players?discord_id=${encodeURIComponent(discordId)}`, { headers })
-  if (!search.ok) return Response.json({ ok: false, reason: `MKC ${search.status}` }, { status: 502 })
-  const player = ((await search.json()) as { player_list?: { id: number; country_code?: string | null }[] }).player_list?.[0]
-
-  let rosters: MkcRoster[] = []
-  if (player) {
-    const detail = await fetch(`${MKC}/players/${player.id}`, { headers })
-    if (detail.ok) {
-      rosters = (((await detail.json()) as { rosters?: MkcRoster[] }).rosters ?? []).filter((r) => r.game === 'mkworld')
-    }
+      (discordIdentity?.id as string | undefined) ||
+      (user.user_metadata?.provider_id as string | undefined) ||
+      (user.app_metadata?.provider === 'discord' ? (user.user_metadata?.sub as string | undefined) : undefined)
   }
 
-  const teams = [...new Map(rosters.map((r) => [r.team_id, r])).values()].map((r) => ({
-    id: r.team_id,
-    name: r.team_name,
-    tag: r.roster_tag || r.team_tag,
-    color: r.team_color ?? null,
-    updated_at: now,
-  }))
+  // Si el usuario acaba de hacer sign-up y el trigger de Supabase aún no ha insertado el perfil,
+  // nos aseguramos de que el perfil exista en public.profiles con su discord_id
+  if (!profile) {
+    const username =
+      (user.user_metadata?.custom_claims?.global_name as string | undefined) ||
+      (user.user_metadata?.full_name as string | undefined) ||
+      (user.user_metadata?.name as string | undefined) ||
+      'Jugador'
+    const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) || null
 
-  if (teams.length) {
-    const { error } = await admin.from('teams').upsert(teams)
-    if (error) return Response.json({ ok: false, reason: error.message }, { status: 500 })
-  }
-  await admin.from('team_members').delete().eq('profile_id', userId)
-  if (teams.length) {
-    await admin.from('team_members').insert(teams.map((t) => ({ team_id: t.id, profile_id: userId })))
-  }
-
-  const country = player?.country_code?.toUpperCase()
-  await admin
-    .from('profiles')
-    .update({
-      mkc_player_id: player?.id ?? null,
-      country_code: country && /^[A-Z]{2}$/.test(country) ? country : null,
-      mkc_synced_at: now,
+    await admin.from('profiles').upsert({
+      id: userId,
+      discord_id: discordId ?? null,
+      username,
+      avatar_url: avatarUrl,
     })
-    .eq('id', userId)
+  } else if (discordId && !profile.discord_id) {
+    await admin.from('profiles').update({ discord_id: discordId }).eq('id', userId)
+  }
 
-  return Response.json({ ok: true, mkcPlayer: player?.id ?? null, teams: teams.map((t) => t.tag) })
+  if (!discordId && !profile?.mkc_player_id) {
+    return Response.json({ ok: false, reason: 'no discord id' })
+  }
+
+  const result = await syncPlayerRoster(admin, {
+    id: userId,
+    discord_id: discordId ?? null,
+    mkc_player_id: profile?.mkc_player_id ?? null,
+  })
+
+  return Response.json(result)
 }

@@ -1,25 +1,40 @@
 /**
- * Sincronización diaria (cron de Vercel, ver vercel.json).
+ * Sincronización periódica (cron diario de Vercel, ver vercel.json).
  *
- * - Récords mundiales de las 40 pistas desde mkwrs.com (la web del canal @MKWorldRecords).
- * - Al escribir cada día en la base de datos, evita que Supabase pause el proyecto.
+ * - Récords mundiales de las 40 pistas desde mkwrs.com.
+ * - Equipos de Mario Kart World desde Mario Kart Central (MKC).
+ * - Comprobación y sincronización de rosters de los usuarios registrados contra MKC (1 vez al día).
+ * - Mantiene el proyecto de Supabase activo escribiendo cada día.
  *
  * Los imports llevan .js porque Vercel compila cada archivo por separado como ESM.
- * Protegida con CRON_SECRET: Vercel la envía automáticamente en la cabecera Authorization.
+ * Protegida con CRON_SECRET de Vercel o token de administrador/moderador.
  */
 import { createClient } from '@supabase/supabase-js'
 import { MKWRS_CSV_URL, parseWorldRecords } from '../src/lib/mkwrs.js'
+import { syncAllRegisteredUsersMkc } from '../src/lib/mkc.js'
 
 const CHUNK_SIZE = 500
 
 export async function GET(request: Request): Promise<Response> {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
+  const authHeader = request.headers.get('authorization')?.replace(/^Bearer /, '')
   const supabase = createClient(process.env.VITE_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
     auth: { persistSession: false },
   })
+
+  let isAuthorized = authHeader === process.env.CRON_SECRET
+  if (!isAuthorized && authHeader) {
+    const { data: authUser } = await supabase.auth.getUser(authHeader)
+    if (authUser?.user) {
+      const { data: prof } = await supabase.from('profiles').select('role').eq('id', authUser.user.id).maybeSingle()
+      if (prof?.role === 'admin' || prof?.role === 'moderator') {
+        isAuthorized = true
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
   const startedAt = new Date().toISOString()
   const res = await fetch(MKWRS_CSV_URL, { headers: { 'User-Agent': 'MKW Hub (https://mkw-hub.vercel.app)' } })
@@ -96,6 +111,19 @@ export async function GET(request: Request): Promise<Response> {
     console.error('Error sincronizando equipos de MKC:', err)
   }
 
+  // Comprueba que los jugadores registrados estén en el equipo que les corresponde en MKC
+  // y actualiza cualquier cambio en los rosters
+  let userRosterStats = { checked: 0, updated: 0, errors: 0 }
+  try {
+    userRosterStats = await syncAllRegisteredUsersMkc(supabase, {
+      olderThanHours: 24,
+      maxUsers: 100,
+      delayMs: 100,
+    })
+  } catch (err) {
+    console.error('Error verificando rosters de usuarios:', err)
+  }
+
   return Response.json({
     ok: true,
     syncedAt: startedAt,
@@ -103,5 +131,8 @@ export async function GET(request: Request): Promise<Response> {
     tracks,
     removed: count ?? 0,
     mkcTeams: mkcTeamsCount,
+    usersChecked: userRosterStats.checked,
+    usersUpdated: userRosterStats.updated,
+    userErrors: userRosterStats.errors,
   })
 }

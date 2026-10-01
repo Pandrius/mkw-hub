@@ -321,6 +321,10 @@ export const es = {
   'admin.confirmAdmin': '¿Seguro que quieres hacer admin a {user}? Tendrá control total.',
   'admin.allPerms': 'Todos los permisos',
   'admin.error': 'No se ha podido aplicar el cambio: {message}',
+  'admin.syncMkcRosters': 'Sincronizar rosters de MKC',
+  'admin.syncing': 'Sincronizando con MKC…',
+  'admin.syncSuccess': 'Rosters sincronizados ({checked} comprobados, {updated} actualizados).',
+  'admin.syncError': 'Error al sincronizar rosters: {error}',
 } as const
 
 export type MessageKey = keyof typeof es

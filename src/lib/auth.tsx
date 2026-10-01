@@ -51,39 +51,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return
     const client = supabase
 
-    const loadProfile = async (u: User | null) => {
+    const loadProfile = async (u: User | null, isExplicitSignIn = false) => {
       setUser(u)
       if (!u) {
         setProfile(null)
         return
       }
-      const { data } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
-      const prof = data as Profile | null
-      setProfile(prof)
+      let { data } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
+      let prof = data as Profile | null
 
-      // Vincula con Mario Kart Central (país y equipos) si hace tiempo que no se hace
-      const stale = !prof?.mkc_synced_at || Date.now() - Date.parse(prof.mkc_synced_at) > MKC_SYNC_EVERY_MS
-      if (prof && stale) {
+      // Vincula con Mario Kart Central inmediatamente al registrarse o iniciar sesión con Discord,
+      // si es un perfil nuevo sin fecha de sincronización, o si hace más de 12 h que no se actualiza
+      const isNew = !prof || !prof.mkc_synced_at
+      const isStale = prof?.mkc_synced_at
+        ? Date.now() - Date.parse(prof.mkc_synced_at) > MKC_SYNC_EVERY_MS
+        : false
+      const shouldSync = isExplicitSignIn || isNew || isStale
+
+      if (shouldSync) {
         const { data: session } = await client.auth.getSession()
         const token = session.session?.access_token
-        if (!token) return
-        const res = await fetch('/api/mkc-link', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(
-          () => null,
-        )
-        if (res?.ok) {
-          const { data: fresh } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
-          if (fresh) setProfile(fresh as Profile)
+        if (token) {
+          const res = await fetch('/api/mkc-link', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(
+            () => null,
+          )
+          if (res?.ok) {
+            const { data: fresh } = await client.from('profiles').select('*').eq('id', u.id).maybeSingle()
+            if (fresh) prof = fresh as Profile
+          }
         }
       }
+
+      setProfile(prof)
     }
 
     client.auth.getSession().then(async ({ data }) => {
       await loadProfile(data.session?.user ?? null)
       setLoading(false)
     })
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      // Se difiere para no bloquear el callback de Supabase con otra consulta
-      setTimeout(() => loadProfile(session?.user ?? null), 0)
+    const { data } = client.auth.onAuthStateChange((event, session) => {
+      // Si el evento es SIGNED_IN (login o sign-up con Discord), forzar sincronización inmediata
+      const isSignIn = event === 'SIGNED_IN'
+      setTimeout(() => loadProfile(session?.user ?? null, isSignIn), 0)
     })
     return () => data.subscription.unsubscribe()
   }, [])
