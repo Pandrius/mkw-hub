@@ -164,6 +164,67 @@ describe('syncPlayerRoster', () => {
     expect(res.teams).toEqual(['SS'])
     expect(res.country).toBe('FR')
   })
+
+  it('sincroniza sub-equipos y rosters vinculando al club padre', async () => {
+    const upsertTeamsMock = vi.fn().mockResolvedValue({ error: null })
+    const deleteMembersMock = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+    const insertMembersMock = vi.fn().mockResolvedValue({ error: null })
+    const updateProfileMock = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+
+    const adminMock = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'teams') return { upsert: upsertTeamsMock }
+        if (table === 'team_members') return { delete: deleteMembersMock, insert: insertMembersMock }
+        if (table === 'profiles') return { update: updateProfileMock }
+        return {}
+      }),
+    } as any
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 77531,
+          country_code: 'ES',
+          rosters: [
+            {
+              roster_id: 4447,
+              team_id: 2376,
+              team_name: 'Nebulosa',
+              team_tag: 'ηβ',
+              roster_name: 'Nebulosa del Cangrejo',
+              roster_tag: 'ηβ',
+              team_color: 10,
+              game: 'mkworld',
+            },
+          ],
+        }),
+      })
+    )
+
+    const res = await syncPlayerRoster(adminMock, {
+      id: 'user-cangrejo',
+      discord_id: null,
+      mkc_player_id: 77531,
+    })
+
+    expect(res.ok).toBe(true)
+    expect(upsertTeamsMock).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: 4447,
+          name: 'Nebulosa del Cangrejo',
+          tag: 'ηβ',
+          parent_team_id: 2376,
+          parent_name: 'Nebulosa',
+        }),
+      ],
+      { onConflict: 'id' }
+    )
+    expect(insertMembersMock).toHaveBeenCalledWith([{ team_id: 4447, profile_id: 'user-cangrejo' }])
+  })
 })
 
 describe('syncAllRegisteredUsersMkc', () => {

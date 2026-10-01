@@ -4,7 +4,16 @@ import type { TtCategory } from './timeTrials'
 /** Algo que se puede comparar: un jugador o un equipo (el mejor tiempo de sus miembros) */
 export type Entity =
   | { kind: 'player'; id: string; name: string; country: string | null; avatar: string | null }
-  | { kind: 'team'; id: number; name: string; tag: string; memberIds: string[] }
+  | {
+      kind: 'team'
+      id: number
+      name: string
+      tag: string
+      memberIds: string[]
+      parent_team_id?: number | null
+      parent_name?: string | null
+      logo_url?: string | null
+    }
 
 export const entityKey = (e: Entity) => `${e.kind}:${e.id}`
 
@@ -73,7 +82,11 @@ export async function searchEntities(query: string): Promise<Entity[]> {
   const pattern = `%${q.replace(/[%_]/g, '')}%`
   const [players, teams] = await Promise.all([
     db.from('profiles').select('id, username, country_code, avatar_url').ilike('username', pattern).limit(8),
-    db.from('teams').select('id, name, tag, team_members(profile_id)').or(`name.ilike.${pattern},tag.ilike.${pattern}`).limit(8),
+    db
+      .from('teams')
+      .select('id, name, tag, parent_team_id, parent_name, logo_url, team_members(profile_id)')
+      .or(`name.ilike.${pattern},tag.ilike.${pattern},parent_name.ilike.${pattern}`)
+      .limit(8),
   ])
   return [
     ...(players.data ?? []).map(
@@ -85,6 +98,9 @@ export async function searchEntities(query: string): Promise<Entity[]> {
         id: t.id,
         name: t.name,
         tag: t.tag,
+        parent_team_id: (t as any).parent_team_id,
+        parent_name: (t as any).parent_name,
+        logo_url: (t as any).logo_url,
         memberIds: ((t.team_members as { profile_id: string }[] | null) ?? []).map((m) => m.profile_id),
       }),
     ),
@@ -159,6 +175,9 @@ export type TeamWithMembers = {
   name: string
   tag: string
   color: number | null
+  parent_team_id?: number | null
+  parent_name?: string | null
+  logo_url?: string | null
   members: { id: string; username: string; avatar_url: string | null; country_code: string | null }[]
 }
 
@@ -166,7 +185,7 @@ export type TeamWithMembers = {
 export async function getAllTeams(): Promise<TeamWithMembers[]> {
   const { data, error } = await client()
     .from('teams')
-    .select('id, name, tag, color, team_members(profile_id, profiles(id, username, avatar_url, country_code))')
+    .select('id, name, tag, color, parent_team_id, parent_name, logo_url, team_members(profile_id, profiles(id, username, avatar_url, country_code))')
     .order('name', { ascending: true })
   if (error) throw error
   const list = (data ?? []).map((t) => {
@@ -186,6 +205,9 @@ export async function getAllTeams(): Promise<TeamWithMembers[]> {
       name: t.name as string,
       tag: t.tag as string,
       color: t.color as number | null,
+      parent_team_id: (t as any).parent_team_id ?? null,
+      parent_name: (t as any).parent_name ?? null,
+      logo_url: (t as any).logo_url ?? null,
       members,
     }
   })

@@ -60,7 +60,11 @@ export default function Teams() {
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = teams.filter((tm) => {
-      const matchQuery = !q || tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q)
+      const matchQuery =
+        !q ||
+        tm.name.toLowerCase().includes(q) ||
+        tm.tag.toLowerCase().includes(q) ||
+        (tm.parent_name && tm.parent_name.toLowerCase().includes(q))
       const matchFilter = filter === 'all' || tm.members.length > 0
       return matchQuery && matchFilter
     })
@@ -72,7 +76,12 @@ export default function Teams() {
     const q = search.trim().toLowerCase()
     if (!q) return []
     return teams
-      .filter((tm) => tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q))
+      .filter(
+        (tm) =>
+          tm.name.toLowerCase().includes(q) ||
+          tm.tag.toLowerCase().includes(q) ||
+          (tm.parent_name && tm.parent_name.toLowerCase().includes(q)),
+      )
       .slice(0, 6)
   }, [teams, search])
 
@@ -81,20 +90,29 @@ export default function Teams() {
     const q = search.trim().toLowerCase()
     if (!q) return
 
-    // 1. Coincidencia exacta de nombre o tag
+    // 1. Coincidencia exacta de nombre, tag o club
     let match = teams.find(
-      (tm) => tm.name.toLowerCase() === q || tm.tag.toLowerCase() === q,
+      (tm) =>
+        tm.name.toLowerCase() === q ||
+        tm.tag.toLowerCase() === q ||
+        (tm.parent_name && tm.parent_name.toLowerCase() === q),
     )
     // 2. Coincidencia que empiece por la búsqueda
     if (!match) {
       match = teams.find(
-        (tm) => tm.name.toLowerCase().startsWith(q) || tm.tag.toLowerCase().startsWith(q),
+        (tm) =>
+          tm.name.toLowerCase().startsWith(q) ||
+          tm.tag.toLowerCase().startsWith(q) ||
+          (tm.parent_name && tm.parent_name.toLowerCase().startsWith(q)),
       )
     }
     // 3. Primer resultado que contenga la búsqueda
     if (!match) {
       match = teams.find(
-        (tm) => tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q),
+        (tm) =>
+          tm.name.toLowerCase().includes(q) ||
+          tm.tag.toLowerCase().includes(q) ||
+          (tm.parent_name && tm.parent_name.toLowerCase().includes(q)),
       )
     }
 
@@ -146,7 +164,7 @@ export default function Teams() {
               >
                 <Link to={`/equipos/${tm.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
                   <img
-                    src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                    src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
                     alt=""
                     className="size-11 shrink-0 rounded border border-line bg-surface object-contain p-0.5 shadow-sm"
                     onError={(e) => {
@@ -158,6 +176,9 @@ export default function Teams() {
                     <h3 className="truncate font-display text-lg font-bold group-hover:text-kart-yellow">
                       {tm.name}
                     </h3>
+                    {tm.parent_name && tm.parent_name !== tm.name && (
+                      <p className="truncate font-mono text-[11px] text-muted">{tm.parent_name}</p>
+                    )}
                     <p className="font-mono text-xs text-muted">
                       {t('teams.membersRegistered', { n: tm.members.length })}
                     </p>
@@ -229,7 +250,7 @@ export default function Teams() {
                     className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors border-b border-line/40 last:border-b-0"
                   >
                     <img
-                      src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                      src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
                       alt=""
                       className="size-7 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
                       onError={(e) => {
@@ -237,7 +258,12 @@ export default function Teams() {
                       }}
                     />
                     <Plate>{tm.tag}</Plate>
-                    <span className="truncate font-semibold">{tm.name}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate font-semibold">{tm.name}</span>
+                      {tm.parent_name && tm.parent_name !== tm.name && (
+                        <span className="truncate text-[10px] text-muted font-mono">{tm.parent_name}</span>
+                      )}
+                    </div>
                   </Link>
                 </li>
               ))}
@@ -269,7 +295,7 @@ export default function Teams() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <img
-                      src={`https://mkcentral.com/img/team_logos/${tm.id}.png`}
+                      src={tm.logo_url || `https://mkcentral.com/img/team_logos/${tm.parent_team_id || tm.id}.png`}
                       alt=""
                       className="size-9 shrink-0 rounded border border-line bg-bg object-contain p-0.5"
                       onError={(e) => {
@@ -284,9 +310,14 @@ export default function Teams() {
                       : t('teams.noMembers')}
                   </span>
                 </div>
-                <Link to={`/equipos/${tm.id}`} className="mt-3 block font-display text-2xl font-black hover:text-kart-yellow">
-                  {tm.name}
-                </Link>
+                <div className="mt-3">
+                  <Link to={`/equipos/${tm.id}`} className="block font-display text-2xl font-black hover:text-kart-yellow">
+                    {tm.name}
+                  </Link>
+                  {tm.parent_name && tm.parent_name !== tm.name && (
+                    <span className="font-mono text-xs text-muted block mt-0.5">{tm.parent_name}</span>
+                  )}
+                </div>
 
                 {tm.members.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">

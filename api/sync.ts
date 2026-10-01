@@ -64,7 +64,19 @@ export async function GET(request: Request): Promise<Response> {
   // Sincroniza equipos de Mario Kart World desde Mario Kart Central (MKC)
   let mkcTeamsCount = 0
   try {
-    const allMap = new Map<number, { id: number; name: string; tag: string; color: number | null; updated_at: string }>()
+    const allMap = new Map<
+      number,
+      {
+        id: number
+        name: string
+        tag: string
+        color: number | null
+        parent_team_id: number | null
+        parent_name: string | null
+        logo_url: string | null
+        updated_at: string
+      }
+    >()
     let page = 1
     let pageCount = 1
     while (page <= pageCount) {
@@ -79,18 +91,47 @@ export async function GET(request: Request): Promise<Response> {
           name: string
           tag: string
           color?: number | null
-          rosters?: { tag?: string; roster_tag?: string }[]
+          logo?: string | null
+          rosters?: {
+            id: number
+            name?: string
+            tag?: string
+            color?: number | null
+            game: string
+          }[]
         }[]
       }
       pageCount = data.page_count || 1
       for (const t of data.teams ?? []) {
-        const tag = t.rosters?.[0]?.roster_tag || t.rosters?.[0]?.tag || t.tag || ''
-        if (!allMap.has(t.id)) {
+        const logoUrl = t.logo
+          ? t.logo.startsWith('http')
+            ? t.logo
+            : `https://mkcentral.com${t.logo.startsWith('/') ? '' : '/'}${t.logo}`
+          : `https://mkcentral.com/img/team_logos/${t.id}.png`
+
+        const mkworldRosters = (t.rosters ?? []).filter((r) => r.game === 'mkworld')
+        if (mkworldRosters.length > 0) {
+          for (const r of mkworldRosters) {
+            allMap.set(r.id, {
+              id: r.id,
+              name: r.name || t.name,
+              tag: r.tag || t.tag || '',
+              color: r.color ?? t.color ?? null,
+              parent_team_id: t.id,
+              parent_name: t.name,
+              logo_url: logoUrl,
+              updated_at: startedAt,
+            })
+          }
+        } else {
           allMap.set(t.id, {
             id: t.id,
             name: t.name,
-            tag,
+            tag: t.tag || '',
             color: t.color ?? null,
+            parent_team_id: t.id,
+            parent_name: t.name,
+            logo_url: logoUrl,
             updated_at: startedAt,
           })
         }

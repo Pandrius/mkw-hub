@@ -17,6 +17,7 @@ export default function TeamDetail() {
   const id = Number(teamId)
   const isValidId = Boolean(id && !Number.isNaN(id))
   const [team, setTeam] = useState<TeamWithMembers | null>(null)
+  const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([])
   const [stats, setStats] = useState<TeamStats | null>(null)
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('tracks')
@@ -43,9 +44,17 @@ export default function TeamDetail() {
     Promise.all([getAllTeams(), getTeamWars(id)])
       .then(([teams, wars]) => {
         if (cancelled) return
-        const found = teams.find((tm) => tm.id === id) || null
+        setAllTeams(teams)
+        // Busca por ID de roster directo, o fallback por parent_team_id si se usó el ID de club de MKC
+        const found = teams.find((tm) => tm.id === id) || teams.find((tm) => tm.parent_team_id === id) || null
         setTeam(found)
-        setStats(computeTeamStats(id, wars))
+        if (found && found.id !== id) {
+          getTeamWars(found.id).then((actualWars) => {
+            if (!cancelled) setStats(computeTeamStats(found.id, actualWars))
+          })
+        } else if (found) {
+          setStats(computeTeamStats(found.id, wars))
+        }
         setLoading(false)
       })
       .catch(() => {
@@ -56,6 +65,12 @@ export default function TeamDetail() {
       cancelled = true
     }
   }, [id, isValidId])
+
+  const siblingRosters = useMemo(() => {
+    if (!team) return []
+    const parentId = team.parent_team_id || team.id
+    return allTeams.filter((tm) => tm.parent_team_id === parentId || tm.id === parentId)
+  }, [team, allTeams])
 
   if (loading) return <p className="text-muted">{t('common.loading')}</p>
   if (!team) {
@@ -81,7 +96,7 @@ export default function TeamDetail() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <img
-                src={`https://mkcentral.com/img/team_logos/${team.id}.png`}
+                src={team.logo_url || `https://mkcentral.com/img/team_logos/${team.parent_team_id || team.id}.png`}
                 alt=""
                 className="size-16 sm:size-20 shrink-0 rounded-lg border-2 border-line bg-surface object-contain p-1 shadow-sm"
                 onError={(e) => {
@@ -91,6 +106,9 @@ export default function TeamDetail() {
               <Plate color="var(--color-kart-yellow)">{team.tag}</Plate>
               <div>
                 <h1 className="font-display text-4xl font-black sm:text-5xl">{team.name}</h1>
+                {team.parent_name && team.parent_name !== team.name && (
+                  <p className="font-mono text-sm font-semibold text-kart-yellow">{team.parent_name}</p>
+                )}
                 <p className="font-mono text-xs text-muted">
                   MKC #{team.id} · {t('teams.membersRegistered', { n: team.members.length })}
                 </p>
@@ -108,6 +126,39 @@ export default function TeamDetail() {
               )}
             </div>
           </div>
+
+          {/* Rosters / Sub-equipos del club */}
+          {siblingRosters.length > 1 && (
+            <div className="mt-5 rounded-lg border border-line bg-surface p-3">
+              <p className="font-mono text-xs font-bold text-muted mb-2 uppercase">
+                {locale === 'es' ? 'Rosters / Sub-equipos del club:' : 'Club rosters / Sub-teams:'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {siblingRosters.map((sib) => {
+                  const isCurrent = sib.id === team.id
+                  return (
+                    <Link
+                      key={sib.id}
+                      to={`/equipos/${sib.id}`}
+                      className={`flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isCurrent
+                          ? 'border-kart-yellow bg-kart-yellow text-bg font-bold shadow-sm'
+                          : 'border-line bg-bg text-ink hover:border-kart-yellow hover:text-kart-yellow'
+                      }`}
+                    >
+                      <Plate>{sib.tag}</Plate>
+                      <span>{sib.name}</span>
+                      {sib.members.length > 0 && (
+                        <span className={`text-[10px] ${isCurrent ? 'text-bg/80' : 'text-muted'}`}>
+                          ({sib.members.length})
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </header>
       </div>
 

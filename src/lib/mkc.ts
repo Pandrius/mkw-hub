@@ -3,10 +3,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const MKC_REGISTRY_BASE = 'https://mkcentral.com/api/registry'
 
 export type MkcRoster = {
+  roster_id?: number
+  roster_name?: string
+  roster_tag?: string
   team_id: number
   team_name: string
   team_tag: string
-  roster_tag?: string
   team_color?: number
   game: string
 }
@@ -23,7 +25,7 @@ export type PlayerRosterResult = {
  * Sincroniza un jugador con Mario Kart Central usando su mkc_player_id o discord_id:
  * 1. Busca el perfil del jugador en MKC.
  * 2. Extrae sus rosters de Mario Kart World (game === 'mkworld').
- * 3. Actualiza la tabla teams (upsert de los equipos encontrados).
+ * 3. Actualiza la tabla teams (upsert de los equipos/rosters encontrados con su club padre).
  * 4. Actualiza team_members (elimina equipos antiguos y añade los actuales).
  * 5. Actualiza profiles (mkc_player_id, country_code, mkc_synced_at).
  */
@@ -84,14 +86,21 @@ export async function syncPlayerRoster(
     return { ok: false, mkcPlayer: playerId, teams: [], error: String(err) }
   }
 
-  // 3. Mapear equipos únicos de Mario Kart World
-  const teams = [...new Map(rosters.map((r) => [r.team_id, r])).values()].map((r) => ({
-    id: r.team_id,
-    name: r.team_name,
-    tag: r.roster_tag || r.team_tag,
-    color: r.team_color ?? null,
-    updated_at: now,
-  }))
+  // 3. Mapear rosters únicos de Mario Kart World (incluyendo sub-equipos del mismo club)
+  const teams = [...new Map(rosters.map((r) => [r.roster_id || r.team_id, r])).values()].map((r) => {
+    const rosterId = r.roster_id || r.team_id
+    const logoUrl = `https://mkcentral.com/img/team_logos/${r.team_id}.png`
+    return {
+      id: rosterId,
+      name: r.roster_name || r.team_name,
+      tag: r.roster_tag || r.team_tag,
+      color: r.team_color ?? null,
+      parent_team_id: r.team_id,
+      parent_name: r.team_name,
+      logo_url: logoUrl,
+      updated_at: now,
+    }
+  })
 
   if (teams.length > 0) {
     const { error: upsertErr } = await admin.from('teams').upsert(teams, { onConflict: 'id' })
