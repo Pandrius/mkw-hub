@@ -23,6 +23,8 @@ export default function Layout() {
   const searchRef = useRef<HTMLInputElement>(null)
   // En móvil el atajo abre el menú y enfoca el buscador que hay dentro
   const [focusMobileSearch, setFocusMobileSearch] = useState(false)
+  // Entre md y lg no cabe el campo en la cabecera: se abre en una barra aparte
+  const [tabletSearch, setTabletSearch] = useState(false)
 
   // Atajo global: "/" o Ctrl/Cmd + K
   useEffect(() => {
@@ -34,6 +36,9 @@ export default function Layout() {
       if (input && input.offsetParent !== null) {
         input.focus()
         input.select()
+      } else if (window.matchMedia('(min-width: 48rem)').matches) {
+        // Tableta: el buscador va en una barra bajo la cabecera
+        setTabletSearch(true)
       } else {
         setOpen(true)
         setFocusMobileSearch(true)
@@ -62,9 +67,18 @@ export default function Layout() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-5 md:flex">
-            <div className="w-36 lg:w-48 xl:w-60">
+            <div className="hidden w-48 lg:block xl:w-60">
               <GlobalSearch inputRef={searchRef} showShortcut />
             </div>
+            <button
+              className="font-mono text-xs font-bold text-muted hover:text-kart-yellow lg:hidden"
+              onClick={() => setTabletSearch((s) => !s)}
+              aria-expanded={tabletSearch}
+              aria-label={t('gsearch.label')}
+              title={t('gsearch.shortcut')}
+            >
+              {tabletSearch ? '✕' : t('gsearch.placeholder')}
+            </button>
             <LanguageSwitch />
             <AuthButton />
           </div>
@@ -77,6 +91,14 @@ export default function Layout() {
             {open ? `✕ ${t('nav.close')}` : `≡ ${t('nav.menu')}`}
           </button>
         </div>
+
+        {tabletSearch && (
+          <div className="hidden border-t-2 border-line px-4 py-3 md:block lg:hidden">
+            <div className="mx-auto max-w-6xl">
+              <GlobalSearch floating={false} autoFocus onNavigate={() => setTabletSearch(false)} />
+            </div>
+          </div>
+        )}
 
         {open && (
           <nav className="flex flex-col border-t-2 border-line px-4 pb-4 md:hidden">
