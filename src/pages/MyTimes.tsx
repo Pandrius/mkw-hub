@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AddTimeForm from '../components/AddTimeForm'
+import TimeGoals from '../components/TimeGoals'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
 import { getCup, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -196,6 +197,17 @@ export default function MyTimes() {
           />
         )}
       </section>
+
+      {/* Objetivos: solo cuando se mira a un único jugador */}
+      {list.length === 1 && list[0].kind === 'player' && (
+        <TimeGoals
+          profileId={list[0].id}
+          category={category}
+          nita={items === 'nita'}
+          times={times}
+          wrs={showWr ? new Map([...wrs].map(([trackId, wr]) => [trackId, wr.time_ms])) : null}
+        />
+      )}
 
       {list.length > 0 && (
         <div className="panel overflow-x-auto">
