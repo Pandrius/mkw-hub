@@ -5,7 +5,9 @@ import { useAuth } from '../lib/auth'
 import { formatDate, formatTime } from '../lib/time'
 import { bestPerPlayer, deleteTime, listTimes, type TimeTrial, type TtCategory } from '../lib/timeTrials'
 import { getProfileTeams } from '../lib/compare'
+import type { PbResult } from '../lib/pbHistory'
 import AddTimeForm from './AddTimeForm'
+import { PbNotice } from './PbHistory'
 import { EmptyState, Flag } from './ui'
 
 const MEDALS = ['#ffd500', '#d6d3cc', '#e0914a']
@@ -17,6 +19,7 @@ export default function Leaderboard({ trackId, category, nita }: { trackId: stri
   const [teamTags, setTeamTags] = useState<Map<string, { id: number; tag: string; name: string }[]>>(new Map())
   const [error, setError] = useState(false)
   const [adding, setAdding] = useState<'mine' | 'other' | null>(null)
+  const [pbResult, setPbResult] = useState<PbResult | null>(null)
 
   const reload = useCallback(
     () =>
@@ -58,14 +61,16 @@ export default function Leaderboard({ trackId, category, nita }: { trackId: stri
 
   return (
     <div className="space-y-4">
+      {pbResult && <PbNotice result={pbResult} onClose={() => setPbResult(null)} />}
       {adding ? (
         <AddTimeForm
           trackId={trackId}
           category={category}
           nita={nita}
           forOther={adding === 'other'}
-          onDone={async () => {
+          onDone={async (result) => {
             setAdding(null)
+            setPbResult(result ?? null)
             await reload()
           }}
           onCancel={() => setAdding(null)}

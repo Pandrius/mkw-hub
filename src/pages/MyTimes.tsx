@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AddTimeForm from '../components/AddTimeForm'
+import { PbHistoryList, PbNotice, RecentPbs } from '../components/PbHistory'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
 import { getCup, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -18,6 +19,7 @@ import {
   type BestTime,
   type Entity,
 } from '../lib/compare'
+import { buildHistories, listPlayerTimes, type PbResult, type PlayerTime } from '../lib/pbHistory'
 import { formatTime } from '../lib/time'
 import type { TtCategory } from '../lib/timeTrials'
 import { listCurrentWorldRecords, type WorldRecord } from '../lib/worldRecords'
@@ -40,6 +42,8 @@ export default function MyTimes() {
   const [myTeams, setMyTeams] = useState<Entity[]>([])
   const [adding, setAdding] = useState(false)
   const [version, setVersion] = useState(0)
+  const [pbResult, setPbResult] = useState<PbResult | null>(null)
+  const [playerTimes, setPlayerTimes] = useState<{ id: string; times: PlayerTime[] } | null>(null)
 
   // Selección desde la URL (?con=player:<id>,team:<id>); por defecto, uno mismo
   const keysParam = params.get('con')
@@ -87,6 +91,23 @@ export default function MyTimes() {
       cancelled = true
     }
   }, [enabled, entities, profileIds, category, items, version])
+
+  // Historial de PBs: solo cuando se ve a un único jugador (todos sus tiempos, no solo el mejor)
+  const historyPlayerId = entities?.length === 1 && entities[0].kind === 'player' ? entities[0].id : null
+
+  useEffect(() => {
+    if (!enabled || !historyPlayerId) return
+    let cancelled = false
+    listPlayerTimes(historyPlayerId).then((times) => !cancelled && setPlayerTimes({ id: historyPlayerId, times }), () => {})
+    return () => {
+      cancelled = true
+    }
+  }, [enabled, historyPlayerId, version])
+
+  const histories = useMemo(
+    () => (playerTimes && playerTimes.id === historyPlayerId ? buildHistories(playerTimes.times) : null),
+    [playerTimes, historyPlayerId],
+  )
 
   const setKeys = (next: string[]) => setParams(next.length ? { con: next.join(',') } : {})
   const add = (e: Entity) => {
@@ -188,14 +209,19 @@ export default function MyTimes() {
           <AddTimeForm
             category={category}
             nita={items === 'nita'}
-            onDone={() => {
+            onDone={(result) => {
               setAdding(false)
+              setPbResult(result ?? null)
               setVersion((v) => v + 1)
             }}
             onCancel={() => setAdding(false)}
           />
         )}
+
+        {pbResult && <PbNotice result={pbResult} onClose={() => setPbResult(null)} />}
       </section>
+
+      {histories && <RecentPbs histories={histories} />}
 
       {list.length > 0 && (
         <div className="panel overflow-x-auto">
@@ -284,6 +310,8 @@ export default function MyTimes() {
           {list.length > 1 && ` · ${t('times.highlight')}`}
         </p>
       )}
+
+      {histories && <PbHistoryList histories={histories.filter((h) => h.category === category && h.nita === (items === 'nita'))} />}
     </>
   )
 }

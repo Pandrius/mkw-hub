@@ -332,6 +332,26 @@ export const es = {
   'admin.syncing': 'Sincronizando con MKC…',
   'admin.syncSuccess': 'Rosters sincronizados ({checked} comprobados, {updated} actualizados).',
   'admin.syncError': 'Error al sincronizar rosters: {error}',
+
+  // Historial de récords personales (PB)
+  'pb.newPb': '¡Nuevo PB! {diff}',
+  'pb.newPbText': 'Tu marca anterior era {prev}.',
+  'pb.first': '¡Primer tiempo!',
+  'pb.firstText': 'Aquí empieza tu historial en esta pista.',
+  'pb.tie': 'Igualas tu PB',
+  'pb.miss': 'Sin PB: te faltó {diff}',
+  'pb.missText': 'Tu PB sigue siendo {pb}.',
+  'pb.close': 'Cerrar',
+  'pb.recentTitle': 'Últimos PBs',
+  'pb.recentEmpty': 'Todavía no hay récords personales. Añade tu primer tiempo.',
+  'pb.historyTitle': 'Historial de PBs',
+  'pb.historyHint': 'Cada mejora del récord personal en esta categoría. Toca una pista para ver su evolución.',
+  'pb.historyEmpty': 'Sin tiempos en esta categoría.',
+  'pb.count': '{n} PB',
+  'pb.attempts': '{n} tiempos registrados',
+  'pb.total': 'mejora total {diff}',
+  'pb.firstMark': 'Primera marca',
+  'pb.chartLabel': 'Evolución del récord personal en {track}',
 } as const
 
 export type MessageKey = keyof typeof es

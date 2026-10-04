@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { CUPS, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
+import { useAuth } from '../lib/auth'
+import { getPersonalBest, pbVerdict, type PbResult } from '../lib/pbHistory'
 import { formatTime, parseTime } from '../lib/time'
 import { addMyTime, addTime, type TtCategory } from '../lib/timeTrials'
 import { Tabs } from './ui'
@@ -12,13 +14,15 @@ type Props = {
   nita?: boolean
   /** true: un editor añade el tiempo de otro jugador */
   forOther?: boolean
-  onDone: () => Promise<void> | void
+  /** Al guardar un tiempo propio recibe si es nuevo PB (si no se pudo comprobar, undefined) */
+  onDone: (result?: PbResult) => Promise<void> | void
   onCancel: () => void
 }
 
 /** Formulario para añadir un tiempo: el tuyo o, si eres editor, el de otro jugador. */
 export default function AddTimeForm({ trackId, category, nita, forOther = false, onDone, onCancel }: Props) {
   const { t } = useI18n()
+  const { profile } = useAuth()
   const [track, setTrack] = useState(trackId ?? '')
   const [cat, setCat] = useState<TtCategory>(category ?? 'race')
   const [items, setItems] = useState<'items' | 'nita'>(nita ? 'nita' : 'items')
@@ -46,9 +50,21 @@ export default function AddTimeForm({ trackId, category, nita, forOther = false,
     setError(null)
     const base = { track_id: track, category: cat, nita: items === 'nita', time_ms: parsed, proof_url: proofUrl, achieved_on: date || null }
     try {
-      if (forOther) await addTime({ ...base, player_name: player.trim(), country_code: cc })
-      else await addMyTime(base)
-      await onDone()
+      if (forOther) {
+        await addTime({ ...base, player_name: player.trim(), country_code: cc })
+        await onDone()
+      } else {
+        // PB anterior, consultado antes de guardar; si falla, se guarda igual pero sin aviso
+        const previous = profile
+          ? await getPersonalBest(profile.id, base.track_id, base.category, base.nita).catch(() => undefined)
+          : undefined
+        await addMyTime(base)
+        await onDone(
+          previous === undefined
+            ? undefined
+            : { verdict: pbVerdict(previous, parsed), track_id: base.track_id, category: base.category, nita: base.nita, time_ms: parsed, previous_ms: previous },
+        )
+      }
     } catch {
       setError(t('common.saveError'))
       setSaving(false)
