@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import EventList from '../components/EventList'
+import { PlayerFormPanel } from '../components/FormPanel'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
 import { getPlayerResults, type PlayerResult } from '../lib/events'
+import { computePlayerForm, getPlayerTimeline, type TimedResult } from '../lib/form'
 import { bestAndWorst, computeStats, MIN_RACES_RELIABLE, type StatsFilter, type TrackStats } from '../lib/stats'
 import { supabase } from '../lib/supabase'
 
@@ -78,6 +80,7 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
   const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [owner, setOwner] = useState<Pick<Profile, 'username' | 'avatar_url' | 'country_code'> | null>(null)
   const [teams, setTeams] = useState<Entity[]>([])
+  const [timeline, setTimeline] = useState<TimedResult[] | null>(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -86,12 +89,14 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
       getPlayerResults(profileId),
       supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', profileId).maybeSingle(),
       teamsOf(profileId),
+      getPlayerTimeline(profileId),
     ]).then(
-      ([res, prof, tms]) => {
+      ([res, prof, tms, tl]) => {
         if (cancelled) return
         setResults(res)
         setOwner(prof.data)
         setTeams(tms)
+        setTimeline(tl)
       },
       () => !cancelled && setError(true),
     )
@@ -101,6 +106,7 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
   }, [profileId])
 
   const stats = useMemo(() => (results ? computeStats(results, filter) : null), [results, filter])
+  const form = useMemo(() => (timeline ? computePlayerForm(timeline, filter) : null), [timeline, filter])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
   if (!stats) return <p className="text-muted">{t('common.loading')}</p>
@@ -159,6 +165,7 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
             <TrackPodium title={t('stats.bestTracks')} tracks={best} color="var(--color-kart-green)" />
             <TrackPodium title={t('stats.worstTracks')} tracks={worst} color="var(--color-kart-red)" />
           </div>
+          <PlayerFormPanel form={form} />
           <TrackTable tracks={stats.tracks} />
         </>
       )}
