@@ -333,4 +333,15 @@ export const en: Record<MessageKey, string> = {
   'admin.syncing': 'Syncing with MKC…',
   'admin.syncSuccess': 'Rosters synced ({checked} checked, {updated} updated).',
   'admin.syncError': 'Error syncing rosters: {error}',
+
+  // Global header search
+  'gsearch.label': 'Search players, teams and tracks',
+  'gsearch.placeholder': 'Search…',
+  'gsearch.shortcut': 'Press / or Ctrl+K to search',
+  'gsearch.players': 'Players',
+  'gsearch.teams': 'Teams',
+  'gsearch.tracks': 'Tracks',
+  'gsearch.loading': 'Searching…',
+  'gsearch.noResults': 'No results for “{query}”',
+  'gsearch.count': '{count} results',
 }

@@ -332,6 +332,17 @@ export const es = {
   'admin.syncing': 'Sincronizando con MKC…',
   'admin.syncSuccess': 'Rosters sincronizados ({checked} comprobados, {updated} actualizados).',
   'admin.syncError': 'Error al sincronizar rosters: {error}',
+
+  // Búsqueda global de la cabecera
+  'gsearch.label': 'Buscar jugadores, equipos y pistas',
+  'gsearch.placeholder': 'Buscar…',
+  'gsearch.shortcut': 'Pulsa / o Ctrl+K para buscar',
+  'gsearch.players': 'Jugadores',
+  'gsearch.teams': 'Equipos',
+  'gsearch.tracks': 'Pistas',
+  'gsearch.loading': 'Buscando…',
+  'gsearch.noResults': 'Sin resultados para «{query}»',
+  'gsearch.count': '{count} resultados',
 } as const
 
 export type MessageKey = keyof typeof es
