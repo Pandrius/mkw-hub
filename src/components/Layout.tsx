@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useI18n, type Lang } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL } from '../lib/roles'
+import { isSearchShortcut } from '../lib/search'
+import { GlobalSearch } from './GlobalSearch'
 
 const NAV: { to: string; label: MessageKey }[] = [
   { to: '/pistas', label: 'nav.tracks' },
@@ -18,13 +20,45 @@ export default function Layout() {
   const { isModerator } = useAuth()
   const { t } = useI18n()
   const nav = isModerator ? [...NAV, { to: '/admin', label: 'nav.admin' as const }] : NAV
+  const searchRef = useRef<HTMLInputElement>(null)
+  // En móvil el atajo abre el menú y enfoca el buscador que hay dentro
+  const [focusMobileSearch, setFocusMobileSearch] = useState(false)
+  // Entre md y lg no cabe el campo en la cabecera: se abre en una barra aparte
+  const [tabletSearch, setTabletSearch] = useState(false)
+
+  // Atajo global: "/" o Ctrl/Cmd + K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isSearchShortcut(e)) return
+      e.preventDefault()
+      const input = searchRef.current
+      // offsetParent es null si el buscador de escritorio está oculto (pantalla estrecha)
+      if (input && input.offsetParent !== null) {
+        input.focus()
+        input.select()
+      } else if (window.matchMedia('(min-width: 48rem)').matches) {
+        // Tableta: el buscador va en una barra bajo la cabecera
+        setTabletSearch(true)
+      } else {
+        setOpen(true)
+        setFocusMobileSearch(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const closeMenu = () => {
+    setOpen(false)
+    setFocusMobileSearch(false)
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">
       <div className="hazard h-1.5" />
       <header className="sticky top-0 z-20 border-b-2 border-line bg-bg">
         <div className="mx-auto flex h-16 max-w-6xl items-stretch gap-6 px-4">
-          <Logo onClick={() => setOpen(false)} />
+          <Logo onClick={closeMenu} />
 
           <nav className="hidden flex-1 items-stretch gap-1 md:flex">
             {nav.map((item) => (
@@ -33,23 +67,46 @@ export default function Layout() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-5 md:flex">
+            <div className="hidden w-48 lg:block xl:w-60">
+              <GlobalSearch inputRef={searchRef} showShortcut />
+            </div>
+            <button
+              className="font-mono text-xs font-bold text-muted hover:text-kart-yellow lg:hidden"
+              onClick={() => setTabletSearch((s) => !s)}
+              aria-expanded={tabletSearch}
+              aria-label={t('gsearch.label')}
+              title={t('gsearch.shortcut')}
+            >
+              {tabletSearch ? '✕' : t('gsearch.placeholder')}
+            </button>
             <LanguageSwitch />
             <AuthButton />
           </div>
 
           <button
             className="my-auto ml-auto font-display text-lg font-extrabold md:hidden"
-            onClick={() => setOpen((o) => !o)}
+            onClick={() => (open ? closeMenu() : setOpen(true))}
             aria-expanded={open}
           >
             {open ? `✕ ${t('nav.close')}` : `≡ ${t('nav.menu')}`}
           </button>
         </div>
 
+        {tabletSearch && (
+          <div className="hidden border-t-2 border-line px-4 py-3 md:block lg:hidden">
+            <div className="mx-auto max-w-6xl">
+              <GlobalSearch floating={false} autoFocus onNavigate={() => setTabletSearch(false)} />
+            </div>
+          </div>
+        )}
+
         {open && (
           <nav className="flex flex-col border-t-2 border-line px-4 pb-4 md:hidden">
+            <div className="pt-4 pb-2">
+              <GlobalSearch floating={false} autoFocus={focusMobileSearch} onNavigate={closeMenu} />
+            </div>
             {nav.map((item) => (
-              <NavItem key={item.to} to={item.to} label={t(item.label)} onClick={() => setOpen(false)} />
+              <NavItem key={item.to} to={item.to} label={t(item.label)} onClick={closeMenu} />
             ))}
             <div className="mt-4 flex items-center justify-between gap-4">
               <AuthButton />

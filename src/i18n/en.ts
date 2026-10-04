@@ -334,6 +334,16 @@ export const en: Record<MessageKey, string> = {
   'admin.syncSuccess': 'Rosters synced ({checked} checked, {updated} updated).',
   'admin.syncError': 'Error syncing rosters: {error}',
 
+  // Global header search
+  'gsearch.label': 'Search players, teams and tracks',
+  'gsearch.placeholder': 'Search…',
+  'gsearch.shortcut': 'Press / or Ctrl+K to search',
+  'gsearch.players': 'Players',
+  'gsearch.teams': 'Teams',
+  'gsearch.tracks': 'Tracks',
+  'gsearch.loading': 'Searching…',
+  'gsearch.noResults': 'No results for “{query}”',
+  'gsearch.count': '{count} results',
   // Historial de récords personales (PB)
   'pb.newPb': 'New PB! {diff}',
   'pb.newPbText': 'Your previous best was {prev}.',
