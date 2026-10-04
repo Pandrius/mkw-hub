@@ -143,7 +143,7 @@ function playerBadges(
   if (wins >= 5) badges.push({ id: 'winner', tone: 'good', vars: { n: wins } })
 
   // --- Las malas (con cariño) ---
-  if (streaks.bottom.best >= 4) badges.push({ id: 'blueShell', tone: 'bad', vars: { n: streaks.bottom.best } })
+  if (streaks.bottom.best >= 5) badges.push({ id: 'blueShell', tone: 'bad', vars: { n: streaks.bottom.best } })
   const lasts = rows.filter(lastPlace).length
   if (lasts >= 2) badges.push({ id: 'redLantern', tone: 'bad', vars: { n: lasts } })
   const fourths = positions.filter((p) => p === 4).length

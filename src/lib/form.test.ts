@@ -60,11 +60,11 @@ describe('computePlayerForm', () => {
   })
 
   it('rachas de top 6, podio, victorias y mitad de abajo', () => {
-    const f = computePlayerForm(event('a', '2026-10-01T10:00:00Z', [1, 1, 1, 9, 10, 11, 12, 2, 3]), 'all')!
+    const f = computePlayerForm(event('a', '2026-10-01T10:00:00Z', [1, 1, 1, 10, 9, 11, 12, 8, 1, 3]), 'all')!
     expect(f.streaks.win).toEqual({ current: 0, best: 3 })
     expect(f.streaks.podium).toEqual({ current: 2, best: 3 })
     expect(f.streaks.top6).toEqual({ current: 2, best: 3 })
-    expect(f.streaks.bottom).toEqual({ current: 0, best: 4 })
+    expect(f.streaks.bottom).toEqual({ current: 0, best: 5 })
     expect(ids(f)).toEqual(expect.arrayContaining(['winStreak', 'blueShell', 'rollercoaster']))
   })
 

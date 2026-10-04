@@ -91,9 +91,9 @@ function teamBadges(wars: WarOutcome[], races: { raceNo: number; diff: number }[
 
   // Paliza dada y paliza recibida
   const biggest = wars.reduce((a, b) => (b.diff > a.diff ? b : a))
-  if (biggest.diff >= 40) badges.push({ id: 'thrashing', tone: 'good', vars: { diff: biggest.diff, opp: biggest.opponent } })
+  if (biggest.diff >= 100) badges.push({ id: 'thrashing', tone: 'good', vars: { diff: biggest.diff, opp: biggest.opponent } })
   const worst = wars.reduce((a, b) => (b.diff < a.diff ? b : a))
-  if (worst.diff <= -40) badges.push({ id: 'beatdown', tone: 'bad', vars: { diff: -worst.diff, opp: worst.opponent } })
+  if (worst.diff <= -100) badges.push({ id: 'beatdown', tone: 'bad', vars: { diff: -worst.diff, opp: worst.opponent } })
 
   // Finales de infarto: wars decididas por 10 puntos o menos
   const close = wars.filter((w) => Math.abs(w.diff) <= 10)
