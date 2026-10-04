@@ -332,6 +332,19 @@ export const es = {
   'admin.syncing': 'Sincronizando con MKC…',
   'admin.syncSuccess': 'Rosters sincronizados ({checked} comprobados, {updated} actualizados).',
   'admin.syncError': 'Error al sincronizar rosters: {error}',
+  // Imagen de la war para compartir (warImg.*)
+  'warImg.download': 'Descargar imagen',
+  'warImg.copy': 'Copiar imagen',
+  'warImg.generating': 'Generando…',
+  'warImg.copied': '¡Imagen copiada!',
+  'warImg.downloaded': 'Imagen descargada',
+  'warImg.fallback': 'Tu navegador no deja copiar imágenes: se ha descargado.',
+  'warImg.error': 'No se ha podido generar la imagen.',
+  'warImg.final': 'Final',
+  'warImg.live': 'En curso · {n}/{total}',
+  'warImg.runningDiff': 'Diferencia acumulada',
+  'warImg.noOpponents': 'Sin desglose de los rivales',
+  'warImg.footer': 'Fan site no oficial de Mario Kart World',
 } as const
 
 export type MessageKey = keyof typeof es

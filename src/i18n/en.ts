@@ -333,4 +333,17 @@ export const en: Record<MessageKey, string> = {
   'admin.syncing': 'Syncing with MKC…',
   'admin.syncSuccess': 'Rosters synced ({checked} checked, {updated} updated).',
   'admin.syncError': 'Error syncing rosters: {error}',
+  // War image to share (warImg.*)
+  'warImg.download': 'Download image',
+  'warImg.copy': 'Copy image',
+  'warImg.generating': 'Generating…',
+  'warImg.copied': 'Image copied!',
+  'warImg.downloaded': 'Image downloaded',
+  'warImg.fallback': 'Your browser can’t copy images: it was downloaded instead.',
+  'warImg.error': 'Could not generate the image.',
+  'warImg.final': 'Final',
+  'warImg.live': 'Live · {n}/{total}',
+  'warImg.runningDiff': 'Running difference',
+  'warImg.noOpponents': 'No opponent breakdown',
+  'warImg.footer': 'Unofficial Mario Kart World fan site',
 }
