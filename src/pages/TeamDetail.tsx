@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { TeamFormPanel } from '../components/FormPanel'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
+import { computeTeamForm, type TeamForm } from '../lib/teamForm'
 import { computeTeamStats, getTeamWars, type TeamStats } from '../lib/teamStats'
 
 type TabId = 'tracks' | 'rivals' | 'wars' | 'members'
@@ -20,6 +22,7 @@ export default function TeamDetail() {
   const [team, setTeam] = useState<TeamWithMembers | null>(null)
   const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([])
   const [stats, setStats] = useState<TeamStats | null>(null)
+  const [form, setForm] = useState<TeamForm | null>(null)
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('tracks')
   const [trackSearch, setTrackSearch] = useState('')
@@ -51,10 +54,13 @@ export default function TeamDetail() {
         setTeam(found)
         if (found && found.id !== id) {
           getTeamWars(found.id).then((actualWars) => {
-            if (!cancelled) setStats(computeTeamStats(found.id, actualWars))
+            if (cancelled) return
+            setStats(computeTeamStats(found.id, actualWars))
+            setForm(computeTeamForm(actualWars))
           })
         } else if (found) {
           setStats(computeTeamStats(found.id, wars))
+          setForm(computeTeamForm(wars))
         }
         setLoading(false)
       })
@@ -248,6 +254,8 @@ export default function TeamDetail() {
           )}
         </section>
       )}
+
+      <TeamFormPanel form={form} />
 
       {/* Pestañas de detalle */}
       <Tabs
