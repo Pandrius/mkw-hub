@@ -333,4 +333,18 @@ export const en: Record<MessageKey, string> = {
   'admin.syncing': 'Syncing with MKC…',
   'admin.syncSuccess': 'Rosters synced ({checked} checked, {updated} updated).',
   'admin.syncError': 'Error syncing rosters: {error}',
+
+  'ttGoals.title': 'Goals',
+  'ttGoals.hint': 'What is within reach on each track, based on the community ranking. Tracks with the most room for improvement first.',
+  'ttGoals.position': '#{pos} of {total}',
+  'ttGoals.next': '{gap} s behind #{pos} ({player})',
+  'ttGoals.top': '{gap} s off the top {n}',
+  'ttGoals.first': '{gap} s off community #1',
+  'ttGoals.leader': 'Community #1, {gap} s ahead of 2nd',
+  'ttGoals.alone': 'Only community time on this track',
+  'ttGoals.wrPct': '{pct}% of the world record ({gap} s)',
+  'ttGoals.communityPct': '{pct}% of community #1 ({gap} s)',
+  'ttGoals.mostMargin': 'Most room',
+  'ttGoals.showAll': 'Show all {n} tracks',
+  'ttGoals.showLess': 'Show less',
 }
