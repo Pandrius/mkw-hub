@@ -1,5 +1,5 @@
 import type { EventPlayer, EventRace } from './events'
-import { pointsForPosition, scoreTeamRace, MISSING_PLAYER_POINTS } from './scoring'
+import { pointsForPosition, scoreTeamRace, MISSING_PLAYER_POINTS } from './scoring.js'
 
 export type RaceRow = {
   race: EventRace
