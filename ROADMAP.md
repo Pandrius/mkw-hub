@@ -36,7 +36,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
       sincronizados cada día desde mkwrs.com / canal @MKWorldRecords (cron de Vercel)
 - [x] Panel de administración: roles y permisos de editor (contrarreloj / strats)
 - [x] Web en español e inglés
-- [ ] Historial de récords personales
+- [x] Historial de récords personales (progresión por pista con gráfico, aviso de nuevo PB, últimos PBs)
+- [x] Objetivos: puesto en la comunidad, distancia al siguiente puesto / top 10 / top 3, % del récord mundial
 
 ### 3. Estadísticas individuales
 - [x] Eventos de 12 carreras: **Iniciar → editar → Finalizar** (con confirmación). Finalizado = bloqueado
@@ -47,27 +48,38 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Carreras de 11 o 10 jugadores indicando de qué equipo faltan
 - [x] Tabla automática de la war (puntos por jugador, marcador, texto para copiar)
 - [x] Las posiciones de la war cuentan en las estadísticas War de cada jugador
-- [ ] Gráfico de evolución
+- [x] Forma reciente (últimas 12 carreras frente a la media) y media por evento
+- [x] Rachas (top 6, podios, victorias, mitad de abajo) y vitrina de trofeos con nombres de Mario Kart
 
 ### 3b. Bot de Discord
-- [ ] Comandos `/evento iniciar`, `/carrera`, `/sub`, `/corregir`, `/evento ver`, `/evento finalizar`
-- [ ] Marcador tras cada carrera y tabla en imagen al finalizar
-- [ ] Funciona por HTTP en Vercel (sin servidor aparte), mismas funciones de la base de datos que la web
+- [x] Comandos `/evento iniciar`, `/carrera`, `/sub`, `/corregir`, `/evento ver`, `/evento finalizar`
+- [x] Marcador tras cada carrera (embed)
+- [ ] Tabla en imagen al finalizar (en la web ya existe el botón de imagen)
+- [x] Funciona por HTTP en Vercel (sin servidor aparte), mismas funciones de la base de datos que la web
+- [ ] **Activarlo:** aplicar la migración 0012 y configurar la app de Discord (ver README)
 
 ### 4. Equipos
-- [ ] Equipos y tags importados de MKC; miembros verificados por Discord ID; líder/manager administra
-- [ ] Wars vinculadas al equipo: solo sus miembros las editan
-- [ ] Rendimiento del equipo por pista, historial contra rivales
+- [x] Equipos y tags importados de MKC; miembros verificados por Discord ID
+- [ ] Líder/manager administra el equipo
+- [x] Wars vinculadas al equipo: solo sus miembros las editan
+- [x] Rendimiento del equipo por pista, historial contra rivales
+- [x] Forma del equipo: últimas wars, rachas, remontadas, bestia negra…
+- [ ] Disponibilidad del equipo para organizar wars (más adelante)
 
 ### 5. Extras
 - [ ] Recomendador de picks para wars
-- [ ] Comparador jugador vs jugador
+- [x] Comparador de tiempos entre jugadores y equipos
 - [ ] Combos recomendados por pista
-- [ ] **Lectura desde capturadora** (OCR en el navegador):
+- [ ] **Lectura desde capturadora** (OCR en el navegador) — aparcado de momento:
   - Lounge: el jugador indica su nombre en el juego antes de empezar
   - War: se apuntan todos automáticamente; revisión antes de finalizar
   - Alias de nombre con el formato `Original = nombre en el juego` (p. ej. `Peckmat = tortelini`)
   - Las filas rojas y azules ayudan a identificar el equipo
+
+### 6. Comodidad
+- [x] Buscador global en la cabecera (jugadores, equipos y pistas; atajo `/` o Ctrl+K)
+- [x] Web instalable (PWA) con service worker que nunca cachea Supabase ni `/api/`
+- [x] Tabla de la war como imagen (descargar o copiar para Discord)
 
 ## Puntuación de wars
 
