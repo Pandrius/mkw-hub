@@ -26,8 +26,8 @@ export type PlayerRosterResult = {
  * 1. Busca el perfil del jugador en MKC.
  * 2. Extrae sus rosters de Mario Kart World (game === 'mkworld').
  * 3. Actualiza la tabla teams (upsert de los equipos/rosters encontrados con su club padre).
- * 4. Actualiza team_members (elimina equipos antiguos y añade los actuales).
- * 5. Actualiza profiles (mkc_player_id, country_code, mkc_synced_at).
+ * 4. Actualiza profiles (mkc_player_id, country_code, mkc_synced_at); si falla, para aquí.
+ * 5. Actualiza team_members (elimina equipos antiguos y añade los actuales).
  */
 export async function syncPlayerRoster(
   admin: SupabaseClient,
@@ -42,6 +42,8 @@ export async function syncPlayerRoster(
   // 1. Si no hay mkc_player_id conocido, buscar en MKC mediante discord_id
   if (!playerId) {
     if (!user.discord_id) {
+      // Sin Discord verificado no se puede pertenecer a ningún equipo
+      await admin.from('team_members').delete().eq('profile_id', user.id)
       await admin.from('profiles').update({ mkc_synced_at: now }).eq('id', user.id)
       return { ok: true, mkcPlayer: null, teams: [] }
     }
@@ -117,7 +119,24 @@ export async function syncPlayerRoster(
     }
   }
 
-  // 4. Actualizar miembros del equipo para este usuario
+  // 4. Actualizar el perfil del usuario con país, player_id y timestamp. Va antes que los equipos:
+  // si falla (p. ej. ese jugador de MKC ya está vinculado a otro perfil) no se toca team_members.
+  const country = countryCode?.toUpperCase()
+  const validCountry = country && /^[A-Z]{2}$/.test(country) ? country : null
+
+  const { error: profileErr } = await admin
+    .from('profiles')
+    .update({
+      mkc_player_id: playerId,
+      country_code: validCountry,
+      mkc_synced_at: now,
+    })
+    .eq('id', user.id)
+  if (profileErr) {
+    return { ok: false, mkcPlayer: playerId, teams: [], error: `profile update: ${profileErr.message}` }
+  }
+
+  // 5. Actualizar miembros del equipo para este usuario
   // Elimina cualquier afiliación previa y añade la lista actual de MKC
   const { error: delErr } = await admin.from('team_members').delete().eq('profile_id', user.id)
   if (delErr) {
@@ -132,19 +151,6 @@ export async function syncPlayerRoster(
       console.error('Error insertando nuevos team_members:', insertErr)
     }
   }
-
-  // 5. Actualizar el perfil del usuario con país, player_id y timestamp
-  const country = countryCode?.toUpperCase()
-  const validCountry = country && /^[A-Z]{2}$/.test(country) ? country : null
-
-  await admin
-    .from('profiles')
-    .update({
-      mkc_player_id: playerId,
-      country_code: validCountry,
-      mkc_synced_at: now,
-    })
-    .eq('id', user.id)
 
   return {
     ok: true,

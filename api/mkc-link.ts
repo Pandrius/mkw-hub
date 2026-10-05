@@ -9,6 +9,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { syncPlayerRoster } from '../src/lib/mkc.js'
 
+/** Tiempo mínimo entre dos sincronizaciones del mismo usuario */
+const RESYNC_MS = 2 * 60 * 1000
+
 export async function POST(request: Request): Promise<Response> {
   const token = request.headers.get('authorization')?.replace(/^Bearer /, '')
   if (!token) return new Response('Unauthorized', { status: 401 })
@@ -24,19 +27,22 @@ export async function POST(request: Request): Promise<Response> {
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, discord_id, username, mkc_player_id')
+    .select('id, discord_id, username, mkc_player_id, mkc_synced_at')
     .eq('id', userId)
     .maybeSingle()
 
-  let discordId = profile?.discord_id
-  if (!discordId) {
-    const discordIdentity = user.identities?.find((i) => i.provider === 'discord')
-    discordId =
-      (discordIdentity?.identity_data?.provider_id as string | undefined) ||
-      (discordIdentity?.id as string | undefined) ||
-      (user.user_metadata?.provider_id as string | undefined) ||
-      (user.app_metadata?.provider === 'discord' ? (user.user_metadata?.sub as string | undefined) : undefined)
-  }
+  // El Discord ID sale SOLO de la identidad de Discord que gestiona Supabase Auth.
+  // user_metadata lo puede editar el propio usuario, así que nunca se usa para esto.
+  const discordIdentity = user.identities?.find((i) => i.provider === 'discord')
+  const discordId =
+    (discordIdentity?.identity_data?.provider_id as string | undefined) ||
+    (discordIdentity?.identity_data?.sub as string | undefined) ||
+    (discordIdentity?.id as string | undefined)
+  if (!discordId) return Response.json({ ok: false, reason: 'no discord identity' }, { status: 403 })
+
+  // No volver a consultar MKC si se sincronizó hace muy poco (evita usar la web contra MKC)
+  const syncedAt = profile?.mkc_synced_at ? Date.parse(profile.mkc_synced_at as string) : 0
+  if (profile && Date.now() - syncedAt < RESYNC_MS) return Response.json({ ok: true, skipped: 'recent' })
 
   // Si el usuario acaba de hacer sign-up y el trigger de Supabase aún no ha insertado el perfil,
   // nos aseguramos de que el perfil exista en public.profiles con su discord_id
@@ -48,24 +54,23 @@ export async function POST(request: Request): Promise<Response> {
       'Jugador'
     const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) || null
 
-    await admin.from('profiles').upsert({
+    const { error } = await admin.from('profiles').upsert({
       id: userId,
-      discord_id: discordId ?? null,
+      discord_id: discordId,
       username,
       avatar_url: avatarUrl,
     })
-  } else if (discordId && !profile.discord_id) {
-    await admin.from('profiles').update({ discord_id: discordId }).eq('id', userId)
-  }
-
-  if (!discordId && !profile?.mkc_player_id) {
-    return Response.json({ ok: false, reason: 'no discord id' })
+    if (error) return Response.json({ ok: false, reason: 'profile error' }, { status: 409 })
+  } else if (profile.discord_id !== discordId) {
+    // El perfil tenía otro Discord ID (o ninguno): manda la identidad real, y el jugador de MKC se vuelve a buscar
+    const { error } = await admin.from('profiles').update({ discord_id: discordId, mkc_player_id: null }).eq('id', userId)
+    if (error) return Response.json({ ok: false, reason: 'profile error' }, { status: 409 })
   }
 
   const result = await syncPlayerRoster(admin, {
     id: userId,
-    discord_id: discordId ?? null,
-    mkc_player_id: profile?.mkc_player_id ?? null,
+    discord_id: discordId,
+    mkc_player_id: profile?.discord_id === discordId ? (profile?.mkc_player_id ?? null) : null,
   })
 
   return Response.json(result)

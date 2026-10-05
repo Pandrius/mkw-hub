@@ -26,7 +26,7 @@ export default function Stats() {
     e.preventDefault()
     const name = search.trim()
     if (!name || !supabase) return
-    const { data } = await supabase.from('profiles').select('id').ilike('username', name).limit(1).maybeSingle()
+    const { data } = await supabase.from('profiles').select('id').ilike('username', name.replace(/[\\%_]/g, (c) => `\\${c}`)).limit(1).maybeSingle()
     setNotFound(!data)
     if (data) navigate(`/estadisticas/${data.id}`)
   }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { EventDetail, EventPlayer, EventRace, GameEvent } from '../events'
+import { sanitizeEventDetail } from '../eventSanitize.js'
 import type { BotStore, TeamRef } from './bot.js'
 
 /**
@@ -63,7 +64,7 @@ export function supabaseBotStore(db: SupabaseClient): BotStore {
       ])
       const event = check(ev) as GameEvent | null
       if (!event) return null
-      return { event, players: check(players) as EventPlayer[], races: check(races) as EventRace[] } satisfies EventDetail
+      return sanitizeEventDetail({ event, players: check(players) as EventPlayer[], races: check(races) as EventRace[] } satisfies EventDetail)
     },
 
     async teamsOf(profileId) {
