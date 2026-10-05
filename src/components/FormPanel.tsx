@@ -251,9 +251,9 @@ export function TeamFormPanel({ form }: { form: TeamForm | null }) {
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-          <TeamStat label={t('form.team.winStreak')} value={t('form.team.wars', { n: form.winStreak.best })} color="var(--color-kart-green)" />
-          <TeamStat label={t('form.team.lossStreak')} value={t('form.team.wars', { n: form.lossStreak.best })} color="var(--color-kart-red)" />
-          <TeamStat label={t('form.team.raceWinStreak')} value={t('form.team.races', { n: form.raceWinStreak.best })} color="var(--color-kart-yellow)" />
+          <TeamStat label={t('form.team.winStreak')} value={t(form.winStreak.best === 1 ? 'form.team.war' : 'form.team.wars', { n: form.winStreak.best })} color="var(--color-kart-green)" />
+          <TeamStat label={t('form.team.lossStreak')} value={t(form.lossStreak.best === 1 ? 'form.team.war' : 'form.team.wars', { n: form.lossStreak.best })} color="var(--color-kart-red)" />
+          <TeamStat label={t('form.team.raceWinStreak')} value={t(form.raceWinStreak.best === 1 ? 'form.team.race' : 'form.team.races', { n: form.raceWinStreak.best })} color="var(--color-kart-yellow)" />
         </div>
       </div>
       <BadgeGrid badges={form.badges} />

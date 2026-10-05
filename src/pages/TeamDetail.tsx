@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { TeamFormPanel } from '../components/FormPanel'
+import { RivalPreview } from '../components/RivalPreview'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { getCup, getTrack } from '../data/tracks'
@@ -8,9 +9,9 @@ import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { computeTeamForm, type TeamForm } from '../lib/teamForm'
-import { computeTeamStats, getTeamWars, type TeamStats } from '../lib/teamStats'
+import { computeTeamStats, getTeamWars, type TeamStats, type TeamWar } from '../lib/teamStats'
 
-type TabId = 'tracks' | 'rivals' | 'wars' | 'members'
+type TabId = 'tracks' | 'rivals' | 'preview' | 'wars' | 'members'
 
 export default function TeamDetail() {
   const { t, locale } = useI18n()
@@ -23,6 +24,7 @@ export default function TeamDetail() {
   const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([])
   const [stats, setStats] = useState<TeamStats | null>(null)
   const [form, setForm] = useState<TeamForm | null>(null)
+  const [wars, setWars] = useState<TeamWar[]>([])
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('tracks')
   const [trackSearch, setTrackSearch] = useState('')
@@ -57,10 +59,12 @@ export default function TeamDetail() {
             if (cancelled) return
             setStats(computeTeamStats(found.id, actualWars))
             setForm(computeTeamForm(actualWars))
+            setWars(actualWars)
           })
         } else if (found) {
           setStats(computeTeamStats(found.id, wars))
           setForm(computeTeamForm(wars))
+          setWars(wars)
         }
         setLoading(false)
       })
@@ -262,6 +266,7 @@ export default function TeamDetail() {
         tabs={[
           { id: 'tracks', label: t('teamStats.trackPerformance') },
           { id: 'rivals', label: t('teamStats.rivals') },
+          { id: 'preview', label: t('preview.tab') },
           { id: 'wars', label: t('teamStats.wars') },
           { id: 'members', label: `${t('times.player')}s (${team.members.length})` },
         ]}
@@ -405,6 +410,10 @@ export default function TeamDetail() {
             </div>
           )}
         </section>
+      )}
+
+      {tab === 'preview' && stats && (
+        <RivalPreview teamId={team.id} wars={wars} stats={stats} allTeams={allTeams} />
       )}
 
       {tab === 'wars' && (

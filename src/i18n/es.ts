@@ -366,7 +366,7 @@ export const es = {
   'pb.missText': 'Tu PB sigue siendo {pb}.',
   'pb.close': 'Cerrar',
   'pb.recentTitle': 'Últimos PBs',
-  'pb.recentEmpty': 'Todavía no hay récords personales. Añade tu primer tiempo.',
+  'pb.recentEmpty': 'Todavía no hay récords personales.',
   'pb.historyTitle': 'Historial de PBs',
   'pb.historyHint': 'Cada mejora del récord personal en esta categoría. Toca una pista para ver su evolución.',
   'pb.historyEmpty': 'Sin tiempos en esta categoría.',
@@ -479,6 +479,24 @@ export const es = {
   'form.badge.strongFinish.desc': 'Arrancáis a {start} por carrera y cerráis a {end}.',
   'form.badge.fastStart.title': 'Salida con turbo',
   'form.badge.fastStart.desc': 'Arrancáis a {start} por carrera y cerráis a {end}: luego se acaban los champiñones.',
+  // Previa contra rival y recomendador de picks
+  'preview.tab': 'Previa vs rival',
+  'preview.hint': 'Elige rival y te decimos dónde pickear y qué pistas evitar: cuenta vuestro +/- en cada pista, el del rival en sus propias wars y, el doble, lo que pasó contra él.',
+  'preview.searchRival': 'Buscar otro equipo…',
+  'preview.pickRival': 'Elige un rival para ver la previa.',
+  'preview.vs': 'Previa contra',
+  'preview.firstTime': 'Primer enfrentamiento registrado.',
+  'preview.rivalData': 'El rival tiene {n} wars registradas en MKW Hub: también cuentan.',
+  'preview.noRivalData': 'El rival no tiene wars registradas en MKW Hub: solo cuentan las vuestras.',
+  'preview.noData': 'Todavía no hay carreras suficientes para recomendar pistas.',
+  'preview.pick': '🍄 Pickead: aquí hay champiñón',
+  'preview.avoid': '🍌 Evitad: piel de plátano',
+  'preview.none': 'Ninguna pista destaca.',
+  'preview.ours': 'Vosotros',
+  'preview.theirs': 'Ellos',
+  'preview.h2h': 'Contra ellos',
+  'form.team.war': '{n} war',
+  'form.team.race': '{n} carrera',
 } as const
 
 export type MessageKey = keyof typeof es
