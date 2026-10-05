@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import RaceForm from '../components/RaceForm'
+import WarImageButtons from '../components/WarImageButtons'
 import { EmptyState } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -14,6 +15,7 @@ import {
   RACES_PER_EVENT,
   type EventDetail as Detail,
   type EventRace,
+  type GameEvent,
 } from '../lib/events'
 import { formatDate } from '../lib/time'
 import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziText, type WarTable } from '../lib/warTable'
@@ -175,7 +177,7 @@ export default function EventDetail() {
       />
 
       {table && table.players.length > 0 && (
-        <WarTableCard table={table} teamTag={event.team_tag ?? '?'} opponentTag={event.opponent_tag ?? '?'} />
+        <WarTableCard table={table} teamTag={event.team_tag ?? '?'} opponentTag={event.opponent_tag ?? '?'} event={event} races={races} />
       )}
 
       {error && <p className="text-sm text-kart-red">{error}</p>}
@@ -331,7 +333,19 @@ function RacesTable({
   )
 }
 
-function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTag: string; opponentTag: string }) {
+function WarTableCard({
+  table,
+  teamTag,
+  opponentTag,
+  event,
+  races,
+}: {
+  table: WarTable
+  teamTag: string
+  opponentTag: string
+  event: GameEvent
+  races: EventRace[]
+}) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const text = lorenziText(teamTag, opponentTag, table)
@@ -352,7 +366,9 @@ function WarTableCard({ table, teamTag, opponentTag }: { table: WarTable; teamTa
     <section className="overflow-hidden panel">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="font-display text-xl font-bold">{t('event.table')}</h2>
-        <span className="flex gap-4 text-sm font-semibold">
+        <span className="flex flex-wrap gap-4 text-sm font-semibold">
+          {/* Tabla propia en PNG para compartir en Discord */}
+          <WarImageButtons event={event} races={races} table={table} />
           <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="text-kart-blue hover:underline">
             {t('event.openLorenzi')} ↗
           </a>

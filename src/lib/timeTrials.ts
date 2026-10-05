@@ -62,12 +62,40 @@ export async function deleteTime(id: number): Promise<void> {
  * Ranking: el mejor tiempo de cada jugador, ya ordenado.
  * Se agrupa por usuario registrado; si no lo está, por nombre (sin distinguir mayúsculas).
  */
-export function bestPerPlayer(times: TimeTrial[]): TimeTrial[] {
-  const best = new Map<string, TimeTrial>()
+export function bestPerPlayer<T extends Pick<TimeTrial, 'time_ms' | 'player_name' | 'profile_id'>>(times: T[]): T[] {
+  const best = new Map<string, T>()
   for (const t of times) {
     const key = t.profile_id ? `id:${t.profile_id}` : `name:${t.player_name.trim().toLowerCase()}`
     const prev = best.get(key)
     if (!prev || t.time_ms < prev.time_ms) best.set(key, t)
   }
   return [...best.values()].sort((a, b) => a.time_ms - b.time_ms)
+}
+
+/**
+ * Tiempos de la comunidad de varias pistas a la vez (una categoría y modo), para calcular
+ * rankings sin pedir pista a pista. Se pagina porque Supabase devuelve 1000 filas como máximo.
+ */
+export async function listTimesForTracks(
+  trackIds: string[],
+  category: TtCategory,
+  nita: boolean,
+): Promise<Pick<TimeTrial, 'id' | 'track_id' | 'time_ms' | 'player_name' | 'profile_id'>[]> {
+  if (trackIds.length === 0) return []
+  const PAGE = 1000
+  const all: Pick<TimeTrial, 'id' | 'track_id' | 'time_ms' | 'player_name' | 'profile_id'>[] = []
+  for (let from = 0; from < 20 * PAGE; from += PAGE) {
+    const { data, error } = await client()
+      .from('time_trials')
+      .select('id, track_id, time_ms, player_name, profile_id')
+      .in('track_id', trackIds)
+      .eq('category', category)
+      .eq('nita', nita)
+      .order('id')
+      .range(from, from + PAGE - 1)
+    if (error) throw error
+    all.push(...(data as typeof all))
+    if (data.length < PAGE) break
+  }
+  return all
 }

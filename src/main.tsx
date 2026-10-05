@@ -17,3 +17,12 @@ createRoot(document.getElementById('root')!).render(
     </I18nProvider>
   </StrictMode>,
 )
+
+// PWA: service worker solo en producción (en desarrollo interferiría con la recarga de Vite)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // sin service worker la web funciona igual
+    })
+  })
+}
