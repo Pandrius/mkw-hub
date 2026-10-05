@@ -1,3 +1,4 @@
+import { sanitizeEventDetail } from './eventSanitize'
 import { supabase } from './supabase'
 
 export type EventKind = 'war' | 'lounge'
@@ -116,8 +117,9 @@ export async function getEvent(eventId: string): Promise<EventDetail | null> {
   ])
   for (const r of [ev, players, races]) if (r.error) throw r.error
   if (!ev.data) return null
-  return { event: ev.data as GameEvent, players: players.data as EventPlayer[], races: races.data as EventRace[] }
+  return sanitizeEventDetail({ event: ev.data as GameEvent, players: players.data as EventPlayer[], races: races.data as EventRace[] })
 }
+
 
 /** Eventos en los que participa (o que ha creado) un usuario, del más reciente al más antiguo */
 export async function listEventsFor(profileId: string): Promise<(GameEvent & { races: number })[]> {

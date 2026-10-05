@@ -27,21 +27,18 @@ alter table public.discord_channel_events enable row level security;
 revoke all on public.discord_channel_events from anon, authenticated;
 
 -- Perfil de la web a partir del Discord ID ------------------------------------------------------
--- Primero profiles.discord_id (lo rellena el alta y api/mkc-link); si falta, la identidad de
--- Discord de Supabase Auth (auth.identities.provider_id = ID de usuario de Discord).
+-- Solo la identidad de Discord de Supabase Auth (auth.identities.provider_id = ID de usuario de
+-- Discord). profiles.discord_id NO se usa: no es una prueba de que la cuenta sea de esa persona.
 create function public.bot_profile_for_discord(discord_user_id text)
 returns uuid
 language sql stable
 security definer set search_path = ''
 as $$
-  select coalesce(
-    (select p.id from public.profiles p where p.discord_id = discord_user_id limit 1),
-    (select p.id
-       from auth.identities i
-       join public.profiles p on p.id = i.user_id
-      where i.provider = 'discord' and i.provider_id = discord_user_id
-      limit 1)
-  );
+  select p.id
+    from auth.identities i
+    join public.profiles p on p.id = i.user_id
+   where i.provider = 'discord' and i.provider_id = discord_user_id
+   limit 1;
 $$;
 
 -- Fija "actor" como usuario actual hasta el final de la transacción (lo que lee auth.uid()).

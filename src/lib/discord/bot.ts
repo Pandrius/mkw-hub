@@ -107,7 +107,9 @@ export function errorText(lang: BotLang, error: unknown): string {
   if (/could not find the (function|table)|schema cache|does not exist/i.test(m)) return msg(lang, 'notConfigured')
   if (/^forbidden/i.test(m)) return msg(lang, 'forbidden')
   if (/has no races/i.test(m)) return msg(lang, 'finishNoRaces')
-  return msg(lang, 'error', { message: m.replace(/^invalid:\s*/i, '') })
+  // Solo los errores pensados para el usuario ("invalid: …") se muestran tal cual; el resto, genérico
+  if (/^invalid:/i.test(m)) return msg(lang, 'error', { message: m.replace(/^invalid:\s*/i, '') })
+  return msg(lang, 'unexpected')
 }
 
 /** Opciones del comando (o del subcomando) como objeto nombre → valor */
@@ -156,6 +158,11 @@ async function startEvent(ctx: Ctx, opts: Record<string, unknown>): Promise<Inte
   if (current && opts.forzar !== true) {
     const old = await ctx.store.getEvent(current.eventId)
     if (old?.event.status === 'open') throw new UserError('eventOpenHere')
+  }
+  // Forzar solo puede quien también puede editar el evento abierto que se sustituye
+  if (current && opts.forzar === true && !(await ctx.store.canEdit(actor, current.eventId))) {
+    const old = await ctx.store.getEvent(current.eventId)
+    if (old?.event.status === 'open') throw new UserError('forbidden')
   }
 
   const args: CreateEventArgs = {

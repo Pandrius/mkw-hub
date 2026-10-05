@@ -9,6 +9,7 @@
  * Los imports llevan .js porque Vercel compila cada archivo por separado como ESM.
  * Protegida con CRON_SECRET de Vercel o token de administrador/moderador.
  */
+import { timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { MKWRS_CSV_URL, parseWorldRecords } from '../src/lib/mkwrs.js'
 import { syncAllRegisteredUsersMkc } from '../src/lib/mkc.js'
@@ -21,7 +22,7 @@ export async function GET(request: Request): Promise<Response> {
     auth: { persistSession: false },
   })
 
-  let isAuthorized = authHeader === process.env.CRON_SECRET
+  let isAuthorized = isCronSecret(authHeader, process.env.CRON_SECRET)
   if (!isAuthorized && authHeader) {
     const { data: authUser } = await supabase.auth.getUser(authHeader)
     if (authUser?.user) {
@@ -79,11 +80,16 @@ export async function GET(request: Request): Promise<Response> {
     >()
     let page = 1
     let pageCount = 1
+    // Si falla alguna página, la lista está incompleta: se actualiza lo leído pero no se borra nada
+    let complete = true
     while (page <= pageCount) {
       const mkcRes = await fetch(`https://mkcentral.com/api/registry/teams?game=mkworld&page=${page}`, {
         headers: { 'User-Agent': 'MKW Hub (https://mkw-hub.vercel.app)' },
       })
-      if (!mkcRes.ok) break
+      if (!mkcRes.ok) {
+        complete = false
+        break
+      }
       const data = (await mkcRes.json()) as {
         page_count?: number
         teams?: {
@@ -131,8 +137,8 @@ export async function GET(request: Request): Promise<Response> {
       for (let i = 0; i < teams.length; i += CHUNK_SIZE) {
         await supabase.from('teams').upsert(teams.slice(i, i + CHUNK_SIZE), { onConflict: 'id' })
       }
-      // Borra equipos que ya no pertenezcan a mkworld
-      await supabase.from('teams').delete().lt('updated_at', startedAt)
+      // Borra equipos que ya no pertenezcan a mkworld (solo con la lista completa)
+      if (complete) await supabase.from('teams').delete().lt('updated_at', startedAt)
       mkcTeamsCount = teams.length
     }
   } catch (err) {
@@ -163,4 +169,12 @@ export async function GET(request: Request): Promise<Response> {
     usersUpdated: userRosterStats.updated,
     userErrors: userRosterStats.errors,
   })
+}
+
+/** true solo si CRON_SECRET está configurado y coincide (comparación en tiempo constante) */
+function isCronSecret(given: string | undefined, secret: string | undefined): boolean {
+  if (!secret || !given) return false
+  const a = Buffer.from(given)
+  const b = Buffer.from(secret)
+  return a.length === b.length && timingSafeEqual(a, b)
 }

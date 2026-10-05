@@ -54,11 +54,13 @@ export async function deleteTip(id: number): Promise<void> {
 export function youtubeId(url: string): string | null {
   try {
     const u = new URL(url)
-    if (u.hostname === 'youtu.be') return u.pathname.slice(1) || null
-    if (u.hostname.endsWith('youtube.com')) {
-      if (u.pathname === '/watch') return u.searchParams.get('v')
+    // Solo ids de vídeo válidos (11 caracteres) y dominios de YouTube de verdad
+    const isId = (id: string | null) => (id && /^[\w-]{11}$/.test(id) ? id : null)
+    if (u.hostname === 'youtu.be') return isId(u.pathname.slice(1))
+    if (u.hostname === 'youtube.com' || u.hostname.endsWith('.youtube.com')) {
+      if (u.pathname === '/watch') return isId(u.searchParams.get('v'))
       const m = u.pathname.match(/^\/(shorts|embed|live)\/([\w-]+)/)
-      if (m) return m[2]
+      if (m) return isId(m[2])
     }
   } catch {
     // URL no válida

@@ -8,9 +8,11 @@ describe('syncPlayerRoster', () => {
 
   it('devuelve vacío y actualiza mkc_synced_at si no tiene discord_id ni mkc_player_id', async () => {
     const updateMock = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) })
+    const deleteMembersEq = vi.fn().mockResolvedValue({ error: null })
     const adminMock = {
       from: vi.fn().mockImplementation((table: string) => {
         if (table === 'profiles') return { update: updateMock }
+        if (table === 'team_members') return { delete: () => ({ eq: deleteMembersEq }) }
         return {}
       }),
     } as any
@@ -25,6 +27,8 @@ describe('syncPlayerRoster', () => {
     expect(res.mkcPlayer).toBeNull()
     expect(res.teams).toEqual([])
     expect(updateMock).toHaveBeenCalled()
+    // Sin Discord verificado no queda en ningún equipo
+    expect(deleteMembersEq).toHaveBeenCalledWith('profile_id', 'user-1')
   })
 
   it('sincroniza equipos correctamente cuando el jugador existe en MKC por mkc_player_id', async () => {
