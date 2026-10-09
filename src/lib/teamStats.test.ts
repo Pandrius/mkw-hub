@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeTeamStats, type TeamWar } from './teamStats'
+import { computeTeamPlayerStats, computeTeamStats, mergeTeamWars, mirrorWar, type TeamWar } from './teamStats'
 
 describe('computeTeamStats', () => {
   const dummyWars: TeamWar[] = [
@@ -94,6 +94,38 @@ describe('computeTeamStats', () => {
     expect(stats.worstTracks[0].trackId).toBe('bowsers-castle')
   })
 
+  it('calcula las estadísticas de cada jugador en las wars del equipo', () => {
+    const war = (id: string, races: TeamWar['races']): TeamWar => ({ ...dummyWars[0], id, races })
+    const res = (name: string, position: number, profileId: string | null = null) => ({ name, profileId, position })
+    const wars: TeamWar[] = [
+      // La más reciente primero: Peckmat ya está vinculado a su usuario
+      war('w2', [
+        { track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [1, 5], results: [res('Peckmat', 1, 'u1'), res('Sharpy', 5)] },
+      ]),
+      war('w1', [
+        { track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [3, 2], results: [res('Peck', 3, 'u1'), res('sharpy', 2)] },
+        { track_id: 'bowsers-castle', race_no: 2, missing_home: 0, missing_away: 0, positions: [12, 1], results: [res('Peck', 12, 'u1'), res('Sharpy', 1)] },
+      ]),
+    ]
+    const players = computeTeamPlayerStats(wars)
+    expect(players).toHaveLength(2)
+
+    // Sharpy: 8 + 12 + 15 = 35 pts en 3 carreras (sin usuario: se agrupa por nombre)
+    const [sharpy, peck] = players
+    expect(sharpy.name).toBe('Sharpy')
+    expect(sharpy.wars).toBe(2)
+    expect(sharpy.races).toBe(3)
+    expect(sharpy.points).toBe(35)
+    expect(sharpy.avgPoints).toBe(11.67)
+    expect(sharpy.top3Rate).toBe(67)
+
+    // Peckmat: 15 + 10 + 1 = 26 pts; nombre más reciente; mejor pista con ≥2 carreras
+    expect(peck.name).toBe('Peckmat')
+    expect(peck.profileId).toBe('u1')
+    expect(peck.avgPos).toBe(5.33)
+    expect(peck.bestTrack).toEqual({ trackId: 'rainbow-road', avgPoints: 12.5, races: 2 })
+  })
+
   it('devuelve estadísticas vacías para un equipo sin wars', () => {
     const stats = computeTeamStats(999, [])
     expect(stats.wars).toBe(0)
@@ -102,5 +134,61 @@ describe('computeTeamStats', () => {
     expect(stats.avgDiff).toBe(0)
     expect(stats.rivals).toEqual([])
     expect(stats.tracks).toEqual([])
+  })
+})
+
+describe('wars apuntadas por el rival', () => {
+  const raw = {
+    id: 'w-ck',
+    team_id: 4270,
+    team_tag: 'CK',
+    team_name: 'Crazy Karts',
+    opponent_team_id: 3710,
+    opponent_tag: 'ηβ',
+    opponent_name: 'Nebulosa',
+    created_at: '2026-10-07T22:00:00Z',
+    finished_at: '2026-10-07T23:00:00Z',
+    opponent_confirmed: null,
+    races: [
+      {
+        track_id: 'dk-pass',
+        race_no: 1,
+        missing_home: 1,
+        missing_away: 0,
+        positions: [1, 2, 3, 4, 5],
+        opponent_results: [
+          { name: 'Peckmat', position: 6 },
+          { name: 'ηβ 2', position: 7 },
+        ],
+      },
+    ],
+  }
+
+  it('da la vuelta a la war: equipos, posiciones restantes y ausentes', () => {
+    const m = mirrorWar(raw)
+    expect(m.team_id).toBe(3710)
+    expect(m.opponent_team_id).toBe(4270)
+    expect(m.opponent_tag).toBe('CK')
+    expect(m.races[0].positions).toEqual([6, 7, 8, 9, 10, 11])
+    expect(m.races[0].missing_home).toBe(0)
+    expect(m.races[0].missing_away).toBe(1)
+    // Los nombres por defecto no cuentan como jugadores
+    expect(m.races[0].results).toEqual([{ name: 'Peckmat', profileId: null, position: 6 }])
+  })
+
+  it('solo cuentan las confirmadas, y no si el equipo ya apuntó la misma war', () => {
+    const pending = mirrorWar(raw)
+    const confirmed = { ...mirrorWar(raw), id: 'w-ok', confirmed: true, created_at: '2026-10-01T20:00:00Z' }
+    const rejected = { ...mirrorWar(raw), id: 'w-no', confirmed: false }
+    const own: TeamWar = { ...confirmed, id: 'own', created_at: '2026-10-07T21:00:00Z' }
+
+    const a = mergeTeamWars([], [pending, confirmed, rejected])
+    expect(a.wars.map((w) => w.id)).toEqual(['w-ok'])
+    expect(a.pending.map((w) => w.id)).toEqual(['w-ck'])
+
+    // La propia es de una hora antes contra el mismo rival: la del rival se descarta
+    const b = mergeTeamWars([own], [pending])
+    expect(b.wars.map((w) => w.id)).toEqual(['own'])
+    expect(b.pending).toEqual([])
   })
 })
