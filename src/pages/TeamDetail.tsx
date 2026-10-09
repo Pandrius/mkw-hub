@@ -9,7 +9,15 @@ import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { computeTeamForm, type TeamForm } from '../lib/teamForm'
-import { computeTeamPlayerStats, computeTeamStats, getTeamWars, type TeamStats, type TeamWar } from '../lib/teamStats'
+import {
+  computeTeamPlayerStats,
+  computeTeamStats,
+  getTeamWarsWithPending,
+  type MirroredWar,
+  type TeamStats,
+  type TeamWar,
+} from '../lib/teamStats'
+import { PendingWars } from '../components/PendingWars'
 
 type TabId = 'tracks' | 'players' | 'rivals' | 'preview' | 'wars' | 'members'
 
@@ -25,6 +33,8 @@ export default function TeamDetail() {
   const [stats, setStats] = useState<TeamStats | null>(null)
   const [form, setForm] = useState<TeamForm | null>(null)
   const [wars, setWars] = useState<TeamWar[]>([])
+  const [pending, setPending] = useState<MirroredWar[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('tracks')
   const [trackSearch, setTrackSearch] = useState('')
@@ -47,24 +57,24 @@ export default function TeamDetail() {
     if (!isValidId) return
 
     let cancelled = false
-    Promise.all([getAllTeams(), getTeamWars(id)])
-      .then(([teams, wars]) => {
+    const show = (teamId: number, data: { wars: TeamWar[]; pending: MirroredWar[] }) => {
+      if (cancelled) return
+      setStats(computeTeamStats(teamId, data.wars))
+      setForm(computeTeamForm(data.wars))
+      setWars(data.wars)
+      setPending(data.pending)
+    }
+    Promise.all([getAllTeams(), getTeamWarsWithPending(id)])
+      .then(([teams, data]) => {
         if (cancelled) return
         setAllTeams(teams)
         // Busca por ID de roster directo, o fallback por parent_team_id si se usó el ID de club de MKC
         const found = teams.find((tm) => tm.id === id) || teams.find((tm) => tm.parent_team_id === id) || null
         setTeam(found)
         if (found && found.id !== id) {
-          getTeamWars(found.id).then((actualWars) => {
-            if (cancelled) return
-            setStats(computeTeamStats(found.id, actualWars))
-            setForm(computeTeamForm(actualWars))
-            setWars(actualWars)
-          })
+          getTeamWarsWithPending(found.id).then((actual) => show(found.id, actual))
         } else if (found) {
-          setStats(computeTeamStats(found.id, wars))
-          setForm(computeTeamForm(wars))
-          setWars(wars)
+          show(found.id, data)
         }
         setLoading(false)
       })
@@ -75,7 +85,7 @@ export default function TeamDetail() {
     return () => {
       cancelled = true
     }
-  }, [id, isValidId])
+  }, [id, isValidId, reloadKey])
 
   const playerStats = useMemo(() => computeTeamPlayerStats(wars), [wars])
 
@@ -260,6 +270,8 @@ export default function TeamDetail() {
           )}
         </section>
       )}
+
+      {isMember && pending.length > 0 && <PendingWars wars={pending} onDone={() => setReloadKey((k) => k + 1)} />}
 
       <TeamFormPanel form={form} />
 

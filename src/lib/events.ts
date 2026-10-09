@@ -103,6 +103,9 @@ export function saveRace(
 export const deleteRace = (eventId: string, raceNo: number) => rpc<void>('delete_race', { target: eventId, race_no: raceNo })
 export const finishEvent = (eventId: string) => rpc<void>('finish_event', { target: eventId })
 export const deleteEvent = (eventId: string) => rpc<void>('delete_event', { target: eventId })
+/** El equipo rival confirma (o rechaza) una war apuntada por el otro equipo */
+export const confirmOpponentWar = (eventId: string, accept: boolean) =>
+  rpc<void>('confirm_opponent_war', { target: eventId, accept })
 
 export async function getEvent(eventId: string): Promise<EventDetail | null> {
   const db = client()
