@@ -96,6 +96,17 @@ export default function RaceForm({
     else if (oppNums.some((n) => nums.includes(n))) error = t('event.errDupOpponent')
   }
 
+  // ↑/↓ saltan al jugador anterior/siguiente en vez de subir o bajar el número
+  const moveBetweenPlayers = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    const target = e.target
+    if ((e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || !(target instanceof HTMLInputElement) || !target.hasAttribute('data-position')) return
+    e.preventDefault()
+    const fields = [...e.currentTarget.querySelectorAll<HTMLInputElement>('input[data-position]')]
+    const next = fields[fields.indexOf(target) + (e.key === 'ArrowDown' ? 1 : -1)]
+    next?.focus()
+    next?.select()
+  }
+
   const preview = kind === 'war' && !error ? scoreTeamRace(nums, missingHome, missingAway) : null
 
   const submit = async (e: React.FormEvent) => {
@@ -133,7 +144,7 @@ export default function RaceForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
+    <form onSubmit={submit} onKeyDown={moveBetweenPlayers} className="space-y-4 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-display text-lg font-bold">
           {initial ? t('event.editRace', { n: raceNo }) : t('event.addRace', { n: raceNo })}
@@ -184,6 +195,7 @@ export default function RaceForm({
                   <input
                     type="number"
                     inputMode="numeric"
+                    data-position
                     min={1}
                     max={racers}
                     value={positions[p.id] ?? ''}
@@ -220,6 +232,7 @@ export default function RaceForm({
                   <input
                     type="number"
                     inputMode="numeric"
+                    data-position
                     min={1}
                     max={racers}
                     value={opponentPositions[name] ?? ''}
@@ -241,6 +254,7 @@ export default function RaceForm({
               <input
                 type="number"
                 inputMode="numeric"
+                data-position
                 min={1}
                 max={kind === 'war' ? racers : 24}
                 value={positions[p.id] ?? ''}
