@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeTeamPlayerStats, computeTeamStats, type TeamWar } from './teamStats'
+import { computeTeamPlayerStats, computeTeamStats, mergeTeamWars, mirrorWar, type TeamWar } from './teamStats'
 
 describe('computeTeamStats', () => {
   const dummyWars: TeamWar[] = [
@@ -134,5 +134,61 @@ describe('computeTeamStats', () => {
     expect(stats.avgDiff).toBe(0)
     expect(stats.rivals).toEqual([])
     expect(stats.tracks).toEqual([])
+  })
+})
+
+describe('wars apuntadas por el rival', () => {
+  const raw = {
+    id: 'w-ck',
+    team_id: 4270,
+    team_tag: 'CK',
+    team_name: 'Crazy Karts',
+    opponent_team_id: 3710,
+    opponent_tag: 'ηβ',
+    opponent_name: 'Nebulosa',
+    created_at: '2026-10-07T22:00:00Z',
+    finished_at: '2026-10-07T23:00:00Z',
+    opponent_confirmed: null,
+    races: [
+      {
+        track_id: 'dk-pass',
+        race_no: 1,
+        missing_home: 1,
+        missing_away: 0,
+        positions: [1, 2, 3, 4, 5],
+        opponent_results: [
+          { name: 'Peckmat', position: 6 },
+          { name: 'ηβ 2', position: 7 },
+        ],
+      },
+    ],
+  }
+
+  it('da la vuelta a la war: equipos, posiciones restantes y ausentes', () => {
+    const m = mirrorWar(raw)
+    expect(m.team_id).toBe(3710)
+    expect(m.opponent_team_id).toBe(4270)
+    expect(m.opponent_tag).toBe('CK')
+    expect(m.races[0].positions).toEqual([6, 7, 8, 9, 10, 11])
+    expect(m.races[0].missing_home).toBe(0)
+    expect(m.races[0].missing_away).toBe(1)
+    // Los nombres por defecto no cuentan como jugadores
+    expect(m.races[0].results).toEqual([{ name: 'Peckmat', profileId: null, position: 6 }])
+  })
+
+  it('solo cuentan las confirmadas, y no si el equipo ya apuntó la misma war', () => {
+    const pending = mirrorWar(raw)
+    const confirmed = { ...mirrorWar(raw), id: 'w-ok', confirmed: true, created_at: '2026-10-01T20:00:00Z' }
+    const rejected = { ...mirrorWar(raw), id: 'w-no', confirmed: false }
+    const own: TeamWar = { ...confirmed, id: 'own', created_at: '2026-10-07T21:00:00Z' }
+
+    const a = mergeTeamWars([], [pending, confirmed, rejected])
+    expect(a.wars.map((w) => w.id)).toEqual(['w-ok'])
+    expect(a.pending.map((w) => w.id)).toEqual(['w-ck'])
+
+    // La propia es de una hora antes contra el mismo rival: la del rival se descarta
+    const b = mergeTeamWars([own], [pending])
+    expect(b.wars.map((w) => w.id)).toEqual(['own'])
+    expect(b.pending).toEqual([])
   })
 })
