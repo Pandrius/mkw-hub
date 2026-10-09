@@ -80,6 +80,16 @@ export function addEventPlayer(eventId: string, entry: string): Promise<number> 
   return rpc<number>('add_event_player', { target: eventId, entry })
 }
 
+/** Corrige el nombre de un jugador del equipo (admite "Usuario = nombre en el juego") */
+export function renameEventPlayer(eventId: string, playerId: number, entry: string): Promise<void> {
+  return rpc<void>('rename_event_player', { target: eventId, player_id: playerId, entry })
+}
+
+/** Corrige el nombre de un rival, también en los resultados de las carreras ya guardadas */
+export function renameOpponentPlayer(eventId: string, oldName: string, newName: string): Promise<void> {
+  return rpc<void>('rename_opponent_player', { target: eventId, old_name: oldName, new_name: newName })
+}
+
 export function saveRace(
   eventId: string,
   raceNo: number,
