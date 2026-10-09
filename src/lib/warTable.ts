@@ -1,4 +1,5 @@
 import type { EventPlayer, EventRace } from './events'
+import { penaltyTotals, type Penalty } from './penalties.js'
 import { pointsForPosition, scoreTeamRace, MISSING_PLAYER_POINTS } from './scoring.js'
 
 export type RaceRow = {
@@ -36,6 +37,8 @@ export type WarTable = {
   diff: number
   /** Puntos que se lleva el equipo propio por jugadores ausentes */
   missingPoints: number
+  /** Penalties de la war; los totales home / away ya las incluyen */
+  penalties: Penalty[]
 }
 
 /** Tabla completa de una war: puntos por carrera, por jugador propio y rival, y totales. */
@@ -43,6 +46,7 @@ export function buildWarTable(
   players: EventPlayer[],
   races: EventRace[],
   opponentPlayerNames?: string[] | null,
+  penalties: Penalty[] = [],
 ): WarTable {
   let home = 0
   let away = 0
@@ -109,6 +113,11 @@ export function buildWarTable(
       return { race, home: score.home, away: score.away, diff: score.home - score.away, runningDiff: home - away }
     })
 
+  // Las penalties son puntos negativos: no cuentan en ninguna carrera, solo en el total
+  const pen = penaltyTotals(penalties)
+  home += pen.home
+  away += pen.away
+
   return {
     races: rows,
     // Solo jugadores que han corrido alguna carrera, de más a menos puntos
@@ -118,6 +127,7 @@ export function buildWarTable(
     away,
     diff: home - away,
     missingPoints,
+    penalties,
   }
 }
 
@@ -125,6 +135,9 @@ const LORENZI = 'https://gb2.hlorenzi.com'
 
 /** Nombre apto para una línea de Lorenzi: sin saltos de línea ni [ ] (se usan para la bandera) */
 const cleanName = (s: string) => s.replace(/[\r\n[\]]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/** Tag tal como aparece en el texto de Lorenzi (los escudos se asocian a él) */
+export const lorenziTag = (tag: string, fallback: string) => cleanName(tag) || fallback
 
 /**
  * Tabla en el formato de texto del Table Maker de Lorenzi (gb2.hlorenzi.com/table):
@@ -139,8 +152,8 @@ const cleanName = (s: string) => s.replace(/[\r\n[\]]/g, ' ').replace(/\s+/g, ' 
  *   ABC 334                   ← o solo el total si no se especificaron rivales individuales
  */
 export function lorenziText(teamTag: string, opponentTag: string, table: WarTable): string {
-  const home = cleanName(teamTag) || 'Home'
-  const away = cleanName(opponentTag) || 'Away'
+  const home = lorenziTag(teamTag, 'Home')
+  const away = lorenziTag(opponentTag, 'Away')
   const lines = [`#title ${home} vs ${away}`, home]
   for (const p of table.players) {
     const perRace = Object.keys(p.positions)
@@ -150,6 +163,7 @@ export function lorenziText(teamTag: string, opponentTag: string, table: WarTabl
     lines.push(`${cleanName(p.player.name)} ${perRace.join('+')}`)
   }
   if (table.missingPoints) lines.push(`DC ${table.missingPoints}`)
+  for (const p of table.penalties.filter((x) => x.side === 'home')) lines.push(`${cleanName(p.label) || 'Penalty'} ${p.points}`)
 
   lines.push('', away)
   if (table.opponentPlayers && table.opponentPlayers.length > 0) {
@@ -161,8 +175,10 @@ export function lorenziText(teamTag: string, opponentTag: string, table: WarTabl
       lines.push(`${cleanName(p.name)} ${perRace.join('+')}`)
     }
   } else {
-    lines.push(`${away} ${table.away}`)
+    // Solo el total de las carreras: las penalties van en sus propias líneas
+    lines.push(`${away} ${table.away - penaltyTotals(table.penalties).away}`)
   }
+  for (const p of table.penalties.filter((x) => x.side === 'away')) lines.push(`${cleanName(p.label) || 'Penalty'} ${p.points}`)
   return lines.join('\n')
 }
 

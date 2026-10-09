@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import PlayerInput from '../components/PlayerInput'
 import { EmptyState, PageHeader, Plate, Tabs } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
@@ -57,6 +58,10 @@ export default function NewEvent() {
     const found = allTeams.find((t) => t.id === selectedMyTeam)
     return found?.members ?? []
   }, [selectedMyTeam, allTeams])
+
+  // Nombres sugeridos al escribir cada jugador (miembros registrados de cada equipo)
+  const homeSuggestions = useMemo(() => currentTeamMembers.map((m) => m.username), [currentTeamMembers])
+  const opponentSuggestions = useMemo(() => selectedOpponentTeam?.members.map((m) => m.username) ?? [], [selectedOpponentTeam])
 
   // Filtrado de equipos rivales para autocompletado
   const filteredOpponents = useMemo(() => {
@@ -292,34 +297,14 @@ export default function NewEvent() {
                   </div>
                   <div className="space-y-1.5">
                     {players.map((p, i) => (
-                      <div key={i} className="flex gap-1.5">
-                        <input
-                          maxLength={80}
-                          value={p}
-                          onChange={(e) => setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))}
-                          placeholder={i === 0 ? profile.username : `${teamTag.trim() || 'Player'} ${i + 1}`}
-                          className="field flex-1"
-                        />
-                        {currentTeamMembers.length > 0 && (
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                setPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))
-                                e.target.value = ''
-                              }
-                            }}
-                            className="w-8 shrink-0 bg-surface-2 px-1 text-center font-mono text-xs hover:bg-line"
-                            title={t('event.pickMember')}
-                          >
-                            <option value="">▼</option>
-                            {currentTeamMembers.map((m) => (
-                              <option key={m.id} value={m.username}>
-                                {m.username}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
+                      <PlayerInput
+                        key={i}
+                        value={p}
+                        onChange={(v) => setPlayers((ps) => ps.map((x, j) => (j === i ? v : x)))}
+                        suggestions={homeSuggestions}
+                        taken={players.filter((_, j) => j !== i)}
+                        placeholder={i === 0 ? profile.username : `${teamTag.trim() || 'Player'} ${i + 1}`}
+                      />
                     ))}
                   </div>
                 </div>
@@ -334,13 +319,14 @@ export default function NewEvent() {
                   </div>
                   <div className="space-y-1.5">
                     {opponentPlayers.map((p, i) => (
-                      <input
+                      <PlayerInput
                         key={i}
                         maxLength={60}
                         value={p}
-                        onChange={(e) => setOpponentPlayers((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))}
+                        onChange={(v) => setOpponentPlayers((ps) => ps.map((x, j) => (j === i ? v : x)))}
+                        suggestions={opponentSuggestions}
+                        taken={opponentPlayers.filter((_, j) => j !== i)}
                         placeholder={`${opponentTag.trim() || 'Rival'} ${i + 1}`}
-                        className="field"
                       />
                     ))}
                   </div>

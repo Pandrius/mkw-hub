@@ -45,6 +45,7 @@ export default function WarImageButtons({ event, races, table }: { event: GameEv
     avgPos: t('event.avgPos'),
     points: t('event.points'),
     missing: t('event.missingPts'),
+    penalty: t('event.penaltyDefault'),
     runningDiff: t('warImg.runningDiff'),
     noOpponents: t('warImg.noOpponents'),
     footer: t('warImg.footer'),

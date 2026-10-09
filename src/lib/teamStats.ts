@@ -1,3 +1,4 @@
+import { mirrorPenalties, parsePenalties, penaltyTotals, type Penalty } from './penalties'
 import { pointsForPosition, scoreTeamRace } from './scoring'
 import { supabase } from './supabase'
 
@@ -25,6 +26,8 @@ export type TeamWar = {
   created_at: string
   finished_at: string | null
   races: TeamWarRace[]
+  /** Penalties de la war, desde el punto de vista de este equipo (home = el propio) */
+  penalties?: Penalty[]
 }
 
 export type TeamRivalMatch = {
@@ -136,6 +139,11 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
 
       trackMap.set(r.track_id, currentTrack)
     }
+
+    // Las penalties restan al resultado de la war (no a las pistas)
+    const pen = penaltyTotals(war.penalties)
+    warHomeScore += pen.home
+    warAwayScore += pen.away
 
     totalPointsHome += warHomeScore
     totalPointsAway += warAwayScore
@@ -368,6 +376,7 @@ export function mirrorWar(war: RawWar): MirroredWar {
     created_at: war.created_at,
     finished_at: war.finished_at,
     confirmed: war.opponent_confirmed,
+    penalties: mirrorPenalties(war.penalties ?? []),
     races: war.races.map((r) => {
       const racers = 12 - r.missing_home - r.missing_away
       const taken = new Set(r.positions)
@@ -424,7 +433,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
   const { data: events, error: evError } = await supabase
     .from('events')
     .select(
-      'id, team_id, team_tag, team_name, opponent_team_id, opponent_tag, opponent_name, created_at, finished_at, opponent_confirmed',
+      'id, team_id, team_tag, team_name, opponent_team_id, opponent_tag, opponent_name, created_at, finished_at, opponent_confirmed, penalties',
     )
     .eq(column, teamId)
     .eq('kind', 'war')
@@ -488,6 +497,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
     created_at: ev.created_at as string,
     finished_at: ev.finished_at as string | null,
     opponent_confirmed: (ev.opponent_confirmed as boolean | null) ?? null,
+    penalties: parsePenalties(ev.penalties),
     races: racesByEvent.get(ev.id as string) ?? [],
   }))
 }

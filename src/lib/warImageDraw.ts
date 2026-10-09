@@ -16,6 +16,8 @@ export type WarImageLabels = {
   avgPos: string
   points: string
   missing: string
+  /** Nombre por defecto de una penalty sin nombre */
+  penalty: string
   runningDiff: string
   noOpponents: string
   footer: string
@@ -275,8 +277,9 @@ function playersTable(
   text(ctx, labels.avgPos.toUpperCase(), colAvg, y + 23, head, C.muted, 'right')
   text(ctx, labels.points.toUpperCase(), colPts, y + 23, head, C.muted, 'right')
 
-  const list: (WarImagePlayer | 'missing')[] = [...team.players]
+  const list: (WarImagePlayer | 'missing' | WarImageTeam['penalties'][number])[] = [...team.players]
   if (team.missingPoints > 0) list.push('missing')
+  list.push(...team.penalties)
 
   if (list.length === 0) {
     text(ctx, labels.noOpponents, x + COL_W / 2, y + headH + (rows * ROW_H) / 2 + 6, `500 16px ${SANS}`, C.muted, 'center')
@@ -295,6 +298,13 @@ function playersTable(
     if (p === 'missing') {
       text(ctx, labels.missing, x + 52, base, `500 18px ${SANS}`, C.muted)
       text(ctx, String(team.missingPoints), colPts, base + 1, `800 24px ${DISPLAY}`, C.muted, 'right')
+      return
+    }
+    if ('label' in p) {
+      // Penalty: nombre libre y puntos negativos en rojo
+      const label = fitText(p.label || labels.penalty, colPts - 70 - (x + 52), (t) => ctx.measureText(t).width)
+      text(ctx, label, x + 52, base, `500 18px ${SANS}`, C.muted)
+      text(ctx, String(p.points), colPts, base + 1, `800 24px ${DISPLAY}`, C.red, 'right')
       return
     }
     text(ctx, String(i + 1).padStart(2, '0'), x + 20, base - 1, `500 13px ${MONO}`, C.muted)
@@ -383,7 +393,11 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
 
 /** Dibuja la imagen completa en un canvas nuevo (a 2x) */
 export function drawWarImage(data: WarImageData, labels: WarImageLabels, logos: WarImageLogos): HTMLCanvasElement {
-  const rows = Math.max(1, data.home.players.length + (data.home.missingPoints > 0 ? 1 : 0), data.away.players.length)
+  const rows = Math.max(
+    1,
+    data.home.players.length + (data.home.missingPoints > 0 ? 1 : 0) + data.home.penalties.length,
+    data.away.players.length + data.away.penalties.length,
+  )
   const hazardH = 14
   const headerH = 64
   const teamH = 160

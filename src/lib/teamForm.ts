@@ -1,4 +1,5 @@
 import { streakOf, type Badge, type Streak } from './form'
+import { penaltyTotals } from './penalties'
 import { scoreTeamRace } from './scoring'
 import type { TeamWar } from './teamStats'
 
@@ -46,6 +47,13 @@ export function computeTeamForm(wars: TeamWar[]): TeamForm | null {
       away += s.away
       running.push(home - away)
       raceDiffs.push({ raceNo: r.race_no, diff: s.home - s.away })
+    }
+    // Las penalties cuentan al final de la war: afectan al resultado y a la última diferencia acumulada
+    const pen = penaltyTotals(war.penalties)
+    if (pen.home || pen.away) {
+      home += pen.home
+      away += pen.away
+      if (running.length) running[running.length - 1] = home - away
     }
     const diff = home - away
     return {

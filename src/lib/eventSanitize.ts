@@ -1,4 +1,5 @@
 import type { EventDetail } from './events'
+import { parsePenalties } from './penalties'
 
 /** Los campos libres (jsonb / text[]) se descartan si no tienen la forma esperada, para no romper la página */
 export function sanitizeEventDetail(detail: EventDetail): EventDetail {
@@ -8,6 +9,7 @@ export function sanitizeEventDetail(detail: EventDetail): EventDetail {
     event: {
       ...detail.event,
       opponent_players: Array.isArray(players) ? players.filter((p) => typeof p === 'string').slice(0, 12) : null,
+      penalties: parsePenalties(detail.event.penalties),
     },
     races: detail.races.map((r) => ({
       ...r,

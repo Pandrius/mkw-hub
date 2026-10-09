@@ -134,3 +134,27 @@ describe('buildWarTable', () => {
     expect(r6?.points).toBe(6) // 7º lugar = 6 pts
   })
 })
+
+describe('penalties', () => {
+  const rs = [race(1, [[1, 1], [2, 3], [3, 5], [4, 7], [5, 9], [6, 11]])]
+  const plain = buildWarTable(players, rs)
+  const withPen = buildWarTable(players, rs, null, [
+    { side: 'home', label: 'Penalty', points: -5 },
+    { side: 'away', label: 'Late', points: -3 },
+  ])
+
+  it('restan al total del equipo penalizado, no a las carreras', () => {
+    expect(withPen.home).toBe(plain.home - 5)
+    expect(withPen.away).toBe(plain.away - 3)
+    expect(withPen.diff).toBe(plain.diff - 2)
+    expect(withPen.races[0].home).toBe(plain.races[0].home)
+  })
+
+  it('aparecen como línea propia en el texto de Lorenzi', () => {
+    const text = lorenziText('NB', 'RKL', withPen)
+    expect(text).toContain('Penalty -5')
+    expect(text).toContain('Late -3')
+    // El total del rival sin jugadores es el de las carreras: Lorenzi le suma la penalty
+    expect(text).toContain(`RKL ${plain.away}`)
+  })
+})

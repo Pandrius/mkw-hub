@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import RaceForm from '../components/RaceForm'
 import WarImageButtons from '../components/WarImageButtons'
@@ -15,13 +15,16 @@ import {
   RACES_PER_EVENT,
   renameEventPlayer,
   renameOpponentPlayer,
+  setEventPenalties,
   type EventDetail as Detail,
   type EventPlayer,
   type EventRace,
   type GameEvent,
 } from '../lib/events'
+import { MAX_PENALTIES, type Penalty } from '../lib/penalties'
+import { fetchTableImageWithEmblems, fetchTeamLogoUrls } from '../lib/tableEmblems'
 import { formatDate } from '../lib/time'
-import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziText, type WarTable } from '../lib/warTable'
+import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziTag, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
   const { t, locale } = useI18n()
@@ -62,7 +65,7 @@ export default function EventDetail() {
     event.opponent_players && event.opponent_players.length > 0
       ? event.opponent_players
       : [1, 2, 3, 4, 5, 6].map((i) => `${event.opponent_tag || 'Rival'} ${i}`)
-  const table = isWar ? buildWarTable(players, races, opponentNames) : null
+  const table = isWar ? buildWarTable(players, races, opponentNames, event.penalties) : null
 
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
@@ -181,6 +184,16 @@ export default function EventDetail() {
 
       {table && table.players.length > 0 && (
         <WarTableCard table={table} teamTag={event.team_tag ?? '?'} opponentTag={event.opponent_tag ?? '?'} event={event} races={races} />
+      )}
+
+      {isWar && (event.penalties.length > 0 || canEdit) && (
+        <PenaltiesCard
+          penalties={event.penalties}
+          teamTag={event.team_tag ?? 'Home'}
+          opponentTag={event.opponent_tag ?? 'Away'}
+          canEdit={canEdit}
+          onChange={(next) => act(() => setEventPenalties(event.id, next))}
+        />
       )}
 
       {error && <p className="text-sm text-kart-red">{error}</p>}
@@ -349,6 +362,42 @@ function RacesTable({
   )
 }
 
+/**
+ * Imagen de la tabla: la de Lorenzi con los escudos de los equipos si tienen logo (la genera
+ * api/war-table), y la de siempre con los tags si no lo tienen o no se puede generar.
+ */
+function useTableImage(text: string, event: GameEvent, teamTag: string, opponentTag: string): string {
+  const plain = useMemo(() => lorenziImageUrl(text), [text])
+  const [emblem, setEmblem] = useState<{ text: string; url: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    let objectUrl: string | null = null
+    const run = async () => {
+      const logos = await fetchTeamLogoUrls([event.team_id, event.opponent_team_id])
+      const home = event.team_id !== null ? (logos.get(event.team_id) ?? null) : null
+      const away = event.opponent_team_id !== null ? (logos.get(event.opponent_team_id) ?? null) : null
+      if (!home && !away) return
+      const blob = await fetchTableImageWithEmblems(text, [
+        { tag: lorenziTag(teamTag, 'Home'), logo: home },
+        { tag: lorenziTag(opponentTag, 'Away'), logo: away },
+      ])
+      objectUrl = URL.createObjectURL(blob)
+      if (!cancelled) setEmblem({ text, url: objectUrl })
+    }
+    run().catch(() => {
+      // sin escudos (función no disponible, sin red…): se queda la imagen con tags
+    })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [text, event.team_id, event.opponent_team_id, teamTag, opponentTag])
+
+  // Mientras llega la nueva, o si la guardada es de otro texto, se enseña la de tags
+  return emblem?.text === text ? emblem.url : plain
+}
+
 function WarTableCard({
   table,
   teamTag,
@@ -365,6 +414,7 @@ function WarTableCard({
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const text = lorenziText(teamTag, opponentTag, table)
+  const tableImage = useTableImage(text, event, teamTag, opponentTag)
 
   const copy = async () => {
     try {
@@ -396,7 +446,7 @@ function WarTableCard({
 
       {/* Imagen oficial generada por el Table Maker de Lorenzi */}
       <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="block bg-bg">
-        <img src={lorenziImageUrl(text)} alt={`${teamTag} ${table.home} – ${opponentTag} ${table.away}`} className="w-full" loading="lazy" />
+        <img src={tableImage} alt={`${teamTag} ${table.home} – ${opponentTag} ${table.away}`} className="w-full" loading="lazy" />
       </a>
 
       {hasOpponentRows ? (
@@ -438,6 +488,7 @@ function WarTableCard({
                       <td className="px-3 py-2 text-right tabular-nums">{table.missingPoints}</td>
                     </tr>
                   )}
+                  <PenaltyRows penalties={table.penalties} side="home" cellClass="px-3 py-2" />
                 </tbody>
               </table>
             </div>
@@ -471,6 +522,7 @@ function WarTableCard({
                       </tr>
                     )
                   })}
+                  <PenaltyRows penalties={table.penalties} side="away" cellClass="px-3 py-2" />
                 </tbody>
               </table>
             </div>
@@ -508,6 +560,7 @@ function WarTableCard({
                   <td className="px-5 py-2 text-right tabular-nums">{table.missingPoints}</td>
                 </tr>
               )}
+              <PenaltyRows penalties={table.penalties} side="home" cellClass="px-5 py-2" />
             </tbody>
           </table>
           <div className="flex flex-col items-center justify-center gap-1 border-t border-line p-6 md:border-l md:border-t-0">
@@ -529,6 +582,124 @@ function WarTableCard({
             </p>
           </div>
         </div>
+      )}
+    </section>
+  )
+}
+
+/** Filas de penalties de un equipo dentro de una tabla de jugadores */
+function PenaltyRows({ penalties, side, cellClass }: { penalties: Penalty[]; side: Penalty['side']; cellClass: string }) {
+  const { t } = useI18n()
+  return (
+    <>
+      {penalties
+        .filter((p) => p.side === side)
+        .map((p, i) => (
+          <tr key={i} className="border-t border-line/60 text-muted">
+            <td className={cellClass}>{p.label || t('event.penaltyDefault')}</td>
+            <td />
+            <td className={`${cellClass} text-right font-semibold tabular-nums text-kart-red`}>{p.points}</td>
+          </tr>
+        ))}
+    </>
+  )
+}
+
+/** Penalties de la war: lista, y formulario para añadir o quitar mientras el evento está abierto */
+function PenaltiesCard({
+  penalties,
+  teamTag,
+  opponentTag,
+  canEdit,
+  onChange,
+}: {
+  penalties: Penalty[]
+  teamTag: string
+  opponentTag: string
+  canEdit: boolean
+  onChange: (next: Penalty[]) => void
+}) {
+  const { t } = useI18n()
+  const [side, setSide] = useState<Penalty['side']>('home')
+  const [label, setLabel] = useState('')
+  const [points, setPoints] = useState('')
+  const tagOf = (s: Penalty['side']) => (s === 'home' ? teamTag : opponentTag)
+  // Se escribe en positivo ("5") y se guarda en negativo (-5)
+  const amount = Math.abs(Math.trunc(Number(points)))
+  const valid = Number.isFinite(amount) && amount >= 1 && amount <= 500 && penalties.length < MAX_PENALTIES
+
+  const add = () => {
+    if (!valid) return
+    onChange([...penalties, { side, label: label.trim() || t('event.penaltyDefault'), points: -amount }])
+    setLabel('')
+    setPoints('')
+  }
+
+  return (
+    <section className="panel space-y-3 p-4">
+      <div>
+        <h2 className="font-display text-xl font-bold">{t('event.penalties')}</h2>
+        {canEdit && <p className="text-xs text-muted">{t('event.penaltiesHint')}</p>}
+      </div>
+
+      {penalties.length > 0 && (
+        <ul className="divide-y divide-line/60">
+          {penalties.map((p, i) => (
+            <li key={i} className="flex items-center gap-3 py-2 text-sm">
+              <span className="w-16 font-display font-black text-muted">{tagOf(p.side)}</span>
+              <span className="flex-1 font-semibold">{p.label}</span>
+              <span className="font-display text-lg font-bold tabular-nums text-kart-red">{p.points}</span>
+              {canEdit && (
+                <button
+                  onClick={() => onChange(penalties.filter((_, j) => j !== i))}
+                  className="text-muted hover:text-kart-red"
+                  aria-label={t('event.penaltyRemove')}
+                  title={t('event.penaltyRemove')}
+                >
+                  ✕
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canEdit && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            add()
+          }}
+          className="flex flex-wrap items-end gap-2"
+        >
+          <label>
+            <span className="mb-1 block text-xs text-muted">{t('event.penaltyTeam')}</span>
+            <select value={side} onChange={(e) => setSide(e.target.value as Penalty['side'])} className="field">
+              <option value="home">{teamTag}</option>
+              <option value="away">{opponentTag}</option>
+            </select>
+          </label>
+          <label className="min-w-40 flex-1">
+            <span className="mb-1 block text-xs text-muted">{t('event.penaltyName')}</span>
+            <input maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('event.penaltyDefault')} className="field w-full" />
+          </label>
+          <label className="w-28">
+            <span className="mb-1 block text-xs text-muted">{t('event.penaltyPoints')}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={500}
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+              placeholder="5"
+              className="field w-full"
+            />
+          </label>
+          <button type="submit" disabled={!valid} className="btn-yellow text-sm disabled:opacity-50">
+            + {t('event.penaltyAdd')}
+          </button>
+        </form>
       )}
     </section>
   )

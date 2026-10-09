@@ -192,3 +192,36 @@ describe('wars apuntadas por el rival', () => {
     expect(b.pending).toEqual([])
   })
 })
+
+describe('penalties en las estadísticas', () => {
+  // Una carrera 61-21 a favor: con una penalty de -50 al equipo propio la war pasa a perderse
+  const war: TeamWar = {
+    id: 'w',
+    team_id: 10,
+    team_tag: 'NB',
+    team_name: null,
+    opponent_team_id: 20,
+    opponent_tag: 'SS',
+    opponent_name: null,
+    created_at: '2026-09-01T12:00:00Z',
+    finished_at: '2026-09-01T13:00:00Z',
+    races: [{ track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [1, 2, 3, 4, 5, 6] }],
+  }
+
+  it('cambian el resultado de la war', () => {
+    expect(computeTeamStats(10, [war]).wins).toBe(1)
+    const penalised = computeTeamStats(10, [{ ...war, penalties: [{ side: 'home', label: 'Penalty', points: -50 }] }])
+    expect(penalised.losses).toBe(1)
+    expect(penalised.totalPointsHome).toBe(61 - 50)
+  })
+
+  it('se dan la vuelta cuando la war la apuntó el rival', () => {
+    const mirrored = mirrorWar({
+      ...war,
+      penalties: [{ side: 'home', label: 'Penalty', points: -5 }],
+      opponent_confirmed: true,
+      races: war.races.map((r) => ({ ...r, opponent_results: null })),
+    })
+    expect(mirrored.penalties).toEqual([{ side: 'away', label: 'Penalty', points: -5 }])
+  })
+})

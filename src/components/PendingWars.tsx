@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useI18n } from '../i18n'
 import { confirmOpponentWar } from '../lib/events'
+import { penaltyTotals } from '../lib/penalties'
 import { scoreTeamRace } from '../lib/scoring'
 import type { MirroredWar } from '../lib/teamStats'
 import { Plate } from './ui'
@@ -38,6 +39,9 @@ export function PendingWars({ wars, onDone }: { wars: MirroredWar[]; onDone: () 
             },
             { home: 0, away: 0 },
           )
+          const pen = penaltyTotals(w.penalties)
+          score.home += pen.home
+          score.away += pen.away
           return (
             <div key={w.id} className="flex flex-wrap items-center gap-3 py-3">
               <Link to={`/eventos/${w.id}`} className="flex flex-1 items-center gap-2 hover:text-kart-yellow">

@@ -35,7 +35,7 @@ export function eventUrl(siteUrl: string, eventId: string): string {
 /** Marcador de una war: totales, carreras, puntos por jugador y alineación actual. */
 function warEmbed(detail: EventDetail, lang: BotLang, siteUrl: string, lineup: LineupPlayer[]): Embed {
   const { event, players, races } = detail
-  const table = buildWarTable(players, races, event.opponent_players)
+  const table = buildWarTable(players, races, event.opponent_players, event.penalties ?? [])
   const home = event.team_tag || 'Home'
   const away = event.opponent_tag || 'Away'
   const last = table.races.at(-1)

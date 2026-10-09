@@ -23,6 +23,8 @@ export type WarImageTeam = {
   players: WarImagePlayer[]
   /** Puntos por jugadores ausentes (carreras de 11/10) */
   missingPoints: number
+  /** Penalties del equipo (puntos negativos), una fila cada una */
+  penalties: { label: string; points: number }[]
 }
 
 export type WarImageRace = {
@@ -110,6 +112,7 @@ export function buildWarImageData(event: GameEvent, table: WarTable, showOpponen
         avgPos: avg(p.positions),
       })),
       missingPoints: table.missingPoints,
+      penalties: table.penalties.filter((x) => x.side === 'home').map(({ label, points }) => ({ label, points })),
     },
     away: {
       tag: event.opponent_tag?.trim() || '?',
@@ -119,6 +122,7 @@ export function buildWarImageData(event: GameEvent, table: WarTable, showOpponen
         ? table.opponentPlayers.map((p) => ({ name: p.name, points: p.points, races: p.races, avgPos: avg(p.positions) }))
         : [],
       missingPoints: 0,
+      penalties: table.penalties.filter((x) => x.side === 'away').map(({ label, points }) => ({ label, points })),
     },
     diff: table.diff,
     races,
