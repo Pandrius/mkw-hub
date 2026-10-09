@@ -1,3 +1,4 @@
+import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
 import { fitText, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
@@ -112,7 +113,11 @@ export async function loadTeamLogos(teamId: number | null, opponentTeamId: numbe
     const { data, error } = await supabase.from('teams').select('id, logo_url').in('id', ids)
     if (error) throw error
     const urlOf = (id: number | null) => (data ?? []).find((t) => t.id === id)?.logo_url as string | null | undefined
-    const [home, away] = await Promise.all([loadLogo(urlOf(teamId)), loadLogo(urlOf(opponentTeamId))])
+    const logoOf = (id: number | null) => {
+      const url = urlOf(id)
+      return loadLogo(url ? proxiedLogoUrl(url) : null)
+    }
+    const [home, away] = await Promise.all([logoOf(teamId), logoOf(opponentTeamId)])
     return { home, away }
   } catch {
     return { home: null, away: null }

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import RaceForm from '../components/RaceForm'
 import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
+import WarImagePreview from '../components/WarImagePreview'
 import { EmptyState } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -23,9 +24,8 @@ import {
   type GameEvent,
 } from '../lib/events'
 import { MAX_PENALTIES, type Penalty } from '../lib/penalties'
-import { fetchTableImageWithEmblems, fetchTeamLogoUrls } from '../lib/tableEmblems'
 import { formatDate } from '../lib/time'
-import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziTag, lorenziText, type WarTable } from '../lib/warTable'
+import { buildWarTable, lorenziEditorUrl, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
   const { t, locale } = useI18n()
@@ -402,42 +402,6 @@ function RacesTable({
   )
 }
 
-/**
- * Imagen de la tabla: la de Lorenzi con los escudos de los equipos si tienen logo (la genera
- * api/war-table), y la de siempre con los tags si no lo tienen o no se puede generar.
- */
-function useTableImage(text: string, event: GameEvent, teamTag: string, opponentTag: string): string {
-  const plain = useMemo(() => lorenziImageUrl(text), [text])
-  const [emblem, setEmblem] = useState<{ text: string; url: string } | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    let objectUrl: string | null = null
-    const run = async () => {
-      const logos = await fetchTeamLogoUrls([event.team_id, event.opponent_team_id])
-      const home = event.team_id !== null ? (logos.get(event.team_id) ?? null) : null
-      const away = event.opponent_team_id !== null ? (logos.get(event.opponent_team_id) ?? null) : null
-      if (!home && !away) return
-      const blob = await fetchTableImageWithEmblems(text, [
-        { tag: lorenziTag(teamTag, 'Home'), logo: home },
-        { tag: lorenziTag(opponentTag, 'Away'), logo: away },
-      ])
-      objectUrl = URL.createObjectURL(blob)
-      if (!cancelled) setEmblem({ text, url: objectUrl })
-    }
-    run().catch(() => {
-      // sin escudos (función no disponible, sin red…): se queda la imagen con tags
-    })
-    return () => {
-      cancelled = true
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [text, event.team_id, event.opponent_team_id, teamTag, opponentTag])
-
-  // Mientras llega la nueva, o si la guardada es de otro texto, se enseña la de tags
-  return emblem?.text === text ? emblem.url : plain
-}
-
 function WarTableCard({
   table,
   teamTag,
@@ -454,7 +418,6 @@ function WarTableCard({
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const text = lorenziText(teamTag, opponentTag, table)
-  const tableImage = useTableImage(text, event, teamTag, opponentTag)
 
   const copy = async () => {
     try {
@@ -484,10 +447,8 @@ function WarTableCard({
         </span>
       </header>
 
-      {/* Imagen oficial generada por el Table Maker de Lorenzi */}
-      <a href={lorenziEditorUrl(text)} target="_blank" rel="noreferrer" className="block bg-bg">
-        <img src={tableImage} alt={`${teamTag} ${table.home} – ${opponentTag} ${table.away}`} className="w-full" loading="lazy" />
-      </a>
+      {/* La misma imagen que se descarga o se copia: marcador, escudos, diferencia por pista y posiciones medias */}
+      <WarImagePreview event={event} races={races} table={table} />
 
       {hasOpponentRows ? (
         <div className="border-t border-line">

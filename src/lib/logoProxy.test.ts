@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLorenziBody, isAllowedLogoUrl, sniffImageMime } from './lorenziEmblems'
+import { isAllowedLogoUrl, proxiedLogoUrl, sniffImageMime } from './logoProxy'
 
 describe('isAllowedLogoUrl', () => {
   it('solo acepta https de Mario Kart Central', () => {
@@ -20,21 +20,16 @@ describe('sniffImageMime', () => {
     expect(sniffImageMime(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe('image/png')
     expect(sniffImageMime(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg')
     expect(sniffImageMime(Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]))).toBe('image/gif')
-    const webp = new TextEncoder().encode('RIFF\0\0\0\0WEBP')
-    expect(sniffImageMime(webp)).toBe('image/webp')
-    expect(sniffImageMime(new TextEncoder().encode('<html>'))).toBeNull()
+    expect(sniffImageMime(new TextEncoder().encode('RIFF\0\0\0\0WEBP'))).toBe('image/webp')
+    expect(sniffImageMime(new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>'))).toBeNull()
   })
 })
 
-describe('buildLorenziBody', () => {
-  it('añade el estilo solo de los equipos con escudo', () => {
-    const body = buildLorenziBody('txt', [
-      { tag: 'NB', dataUri: 'data:image/png;base64,AA' },
-      { tag: 'SR', dataUri: null },
-    ])
-    expect(body).toEqual({ data: 'txt', style: { emblemTag1: 'NB', emblemSrc1: 'data:image/png;base64,AA' } })
-  })
-  it('sin escudos pide la imagen normal', () => {
-    expect(buildLorenziBody('txt', [{ tag: 'NB', dataUri: null }])).toEqual({ data: 'txt' })
+describe('proxiedLogoUrl', () => {
+  it('pasa por nuestra función solo los logos de MKC', () => {
+    expect(proxiedLogoUrl('https://mkcentral.com/img/team_logos/3046.png')).toBe(
+      '/api/logo?u=https%3A%2F%2Fmkcentral.com%2Fimg%2Fteam_logos%2F3046.png',
+    )
+    expect(proxiedLogoUrl('https://otro.com/logo.png')).toBe('https://otro.com/logo.png')
   })
 })

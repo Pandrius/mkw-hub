@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { RACES_PER_EVENT, type GameEvent, type EventRace } from '../lib/events'
-import { formatDate } from '../lib/time'
-import { buildWarImageData, hasRealOpponents, warImageFileName } from '../lib/warImage'
-import { loadTeamLogos, renderWarImage, type WarImageLabels } from '../lib/warImageDraw'
+import type { GameEvent, EventRace } from '../lib/events'
 import type { WarTable } from '../lib/warTable'
+import { useWarImage } from './useWarImage'
 
 type Status = 'idle' | 'busy' | 'copied' | 'downloaded' | 'fallback' | 'error'
 
@@ -34,25 +32,9 @@ const canCopyImage = () =>
 
 /** Botones para descargar o copiar la tabla de la war como imagen PNG (para Discord) */
 export default function WarImageButtons({ event, races, table }: { event: GameEvent; races: EventRace[]; table: WarTable }) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [status, setStatus] = useState<Status>('idle')
-
-  const data = buildWarImageData(event, table, hasRealOpponents(event, races))
-  const labels: WarImageLabels = {
-    status: data.inProgress ? t('warImg.live', { n: data.races.length, total: RACES_PER_EVENT }) : t('warImg.final'),
-    date: formatDate(data.date, locale),
-    player: t('event.player'),
-    avgPos: t('event.avgPos'),
-    points: t('event.points'),
-    missing: t('event.missingPts'),
-    penalty: t('event.penaltyDefault'),
-    runningDiff: t('warImg.runningDiff'),
-    noOpponents: t('warImg.noOpponents'),
-    footer: t('warImg.footer'),
-  }
-  const fileName = warImageFileName(data)
-
-  const render = async () => renderWarImage(data, labels, await loadTeamLogos(event.team_id, event.opponent_team_id))
+  const { fileName, render } = useWarImage(event, races, table)
 
   const flash = (next: Status) => {
     setStatus(next)
