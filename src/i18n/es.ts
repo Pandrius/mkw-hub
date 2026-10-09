@@ -222,6 +222,8 @@ export const es = {
   'event.confirmDeleteRace': '¿Borrar la carrera {n}?',
   'event.addSub': 'Añadir sustituto',
   'event.subPlaceholder': 'Nombre (o Usuario = nombre en el juego)',
+  'event.renamePlayers': 'Corregir nombres',
+  'event.renameHint': 'Cambia el nombre de cualquier jugador; se actualiza en todas las carreras ya guardadas. En tu equipo puedes usar «Usuario = nombre en el juego».',
   'event.finish': 'Finalizar evento',
   'event.confirmFinish': '¿Seguro que quieres finalizar el evento? Después no podrás editarlo.',
   'event.confirmFinishIncomplete': 'Solo hay {n} de 12 carreras. ¿Seguro que quieres finalizar el evento? Después no podrás editarlo.',

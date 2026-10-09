@@ -223,6 +223,8 @@ export const en: Record<MessageKey, string> = {
   'event.confirmDeleteRace': 'Delete race {n}?',
   'event.addSub': 'Add substitute',
   'event.subPlaceholder': 'Name (or SiteName = in-game name)',
+  'event.renamePlayers': 'Fix names',
+  'event.renameHint': 'Rename any player; the change applies to every race already saved. For your team you can use “SiteName = in-game name”.',
   'event.finish': 'Finish event',
   'event.confirmFinish': 'Finish the event? You won’t be able to edit it afterwards.',
   'event.confirmFinishIncomplete': 'Only {n} of 12 races logged. Finish the event? You won’t be able to edit it afterwards.',
