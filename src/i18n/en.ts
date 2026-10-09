@@ -223,7 +223,7 @@ export const en: Record<MessageKey, string> = {
   'event.confirmDeleteRace': 'Delete race {n}?',
   'event.addSub': 'Add substitute',
   'event.subPlaceholder': 'Name (or SiteName = in-game name)',
-  'event.renamePlayers': 'Fix names',
+  'event.editName': 'Edit name',
   'event.renameHint': 'Rename any player; the change applies to every race already saved. For your team you can use “SiteName = in-game name”.',
   'ocr.button': 'Read screenshot (beta)',
   'ocr.hint': 'Upload a screenshot of the race results screen to fill in the positions.',

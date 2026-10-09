@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import EditableName from '../components/EditableName'
 import RaceForm from '../components/RaceForm'
 import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
@@ -19,7 +20,6 @@ import {
   renameOpponentPlayer,
   setEventPenalties,
   type EventDetail as Detail,
-  type EventPlayer,
   type EventRace,
   type GameEvent,
 } from '../lib/events'
@@ -185,7 +185,16 @@ export default function EventDetail() {
       />
 
       {table && table.players.length > 0 && (
-        <WarTableCard table={table} teamTag={event.team_tag ?? '?'} opponentTag={event.opponent_tag ?? '?'} event={event} races={races} />
+        <WarTableCard
+          table={table}
+          teamTag={event.team_tag ?? '?'}
+          opponentTag={event.opponent_tag ?? '?'}
+          event={event}
+          races={races}
+          canEdit={canEdit}
+          onRenameHome={(id, entry) => act(() => renameEventPlayer(event.id, id, entry))}
+          onRenameAway={(from, to) => act(() => renameOpponentPlayer(event.id, from, to))}
+        />
       )}
 
       {isWar && (event.penalties.length > 0 || canEdit) && (
@@ -229,19 +238,6 @@ export default function EventDetail() {
               substitutions={event.substitutions}
               nextRaceNo={nextRaceNo}
               onSubstitute={(side, out, inEntry, fromRace) => act(() => substitutePlayer(event.id, side, out, inEntry, fromRace))}
-            />
-          )}
-          {isWar && (
-            <RenamePlayers
-              players={players}
-              opponents={opponentNames}
-              onSave={(home, away) =>
-                act(async () => {
-                  // Uno a uno: si un nombre falla, los anteriores ya quedan guardados y se ve el error
-                  for (const [id, entry] of home) await renameEventPlayer(event.id, id, entry)
-                  for (const [from, to] of away) await renameOpponentPlayer(event.id, from, to)
-                })
-              }
             />
           )}
           <div className="ml-auto flex gap-2">
@@ -408,12 +404,18 @@ function WarTableCard({
   opponentTag,
   event,
   races,
+  canEdit,
+  onRenameHome,
+  onRenameAway,
 }: {
   table: WarTable
   teamTag: string
   opponentTag: string
   event: GameEvent
   races: EventRace[]
+  canEdit: boolean
+  onRenameHome: (playerId: number, entry: string) => Promise<void>
+  onRenameAway: (from: string, to: string) => Promise<void>
 }) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
@@ -474,7 +476,7 @@ function WarTableCard({
                     return (
                       <tr key={p.player.id} className="border-t border-line/60">
                         <td className="px-3 py-2 font-semibold">
-                          {p.player.name}
+                          <EditableName name={p.player.name} canEdit={canEdit} onSave={(v) => onRenameHome(p.player.id, v)} />
                           {p.races < table.races.length && <span className="ml-1 text-xs text-muted">({p.races})</span>}
                         </td>
                         <td className="time px-2 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
@@ -515,7 +517,7 @@ function WarTableCard({
                     return (
                       <tr key={p.name} className="border-t border-line/60">
                         <td className="px-3 py-2 font-medium text-muted">
-                          {p.name}
+                          <EditableName name={p.name} canEdit={canEdit} maxLength={40} onSave={(v) => onRenameAway(p.name, v)} />
                           {p.races < table.races.length && <span className="ml-1 text-xs text-muted">({p.races})</span>}
                         </td>
                         <td className="time px-2 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
@@ -546,7 +548,7 @@ function WarTableCard({
                 return (
                   <tr key={p.player.id} className="border-t border-line/60">
                     <td className="px-5 py-2 font-semibold">
-                      {p.player.name}
+                      <EditableName name={p.player.name} canEdit={canEdit} onSave={(v) => onRenameHome(p.player.id, v)} />
                       {p.races < table.races.length && <span className="ml-2 text-xs text-muted">({p.races})</span>}
                     </td>
                     <td className="time px-3 py-2 text-right font-medium text-muted">{avg.toFixed(1)}</td>
@@ -703,103 +705,5 @@ function PenaltiesCard({
         </form>
       )}
     </section>
-  )
-}
-
-function RenamePlayers({
-  players,
-  opponents,
-  onSave,
-}: {
-  players: EventPlayer[]
-  opponents: string[]
-  onSave: (home: [number, string][], away: [string, string][]) => Promise<void>
-}) {
-  const { t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const [home, setHome] = useState<Record<number, string>>({})
-  const [away, setAway] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => {
-          setHome(Object.fromEntries(players.map((p) => [p.id, p.name])))
-          setAway(Object.fromEntries(opponents.map((n) => [n, n])))
-          setOpen(true)
-        }}
-        className="btn-line text-base"
-      >
-        ✎ {t('event.renamePlayers')}
-      </button>
-    )
-  }
-
-  const homeChanges = players
-    .filter((p) => (home[p.id] ?? '').trim() && home[p.id].trim() !== p.name)
-    .map((p): [number, string] => [p.id, home[p.id].trim()])
-  const awayChanges = opponents
-    .filter((n) => (away[n] ?? '').trim() && away[n].trim() !== n)
-    .map((n): [string, string] => [n, away[n].trim()])
-
-  const field = 'w-full rounded-xl border border-line bg-bg px-3 py-1.5 text-sm outline-none focus:border-kart-yellow'
-
-  return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault()
-        setSaving(true)
-        await onSave(homeChanges, awayChanges)
-        setSaving(false)
-        setOpen(false)
-      }}
-      className="panel w-full space-y-4 p-4"
-    >
-      <div>
-        <h3 className="font-display text-lg font-bold">{t('event.renamePlayers')}</h3>
-        <p className="text-xs text-muted">{t('event.renameHint')}</p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <fieldset className="space-y-2">
-          <legend className="mb-1 font-mono text-xs font-bold uppercase text-kart-yellow">{t('event.yourTeam')}</legend>
-          {players.map((p) => (
-            <input
-              key={p.id}
-              maxLength={80}
-              value={home[p.id] ?? ''}
-              onChange={(e) => setHome({ ...home, [p.id]: e.target.value })}
-              aria-label={p.name}
-              className={field}
-            />
-          ))}
-        </fieldset>
-        <fieldset className="space-y-2">
-          <legend className="mb-1 font-mono text-xs font-bold uppercase text-muted">{t('event.opponentTeam')}</legend>
-          {opponents.map((n) => (
-            <input
-              key={n}
-              maxLength={40}
-              value={away[n] ?? ''}
-              onChange={(e) => setAway({ ...away, [n]: e.target.value })}
-              aria-label={n}
-              className={field}
-            />
-          ))}
-        </fieldset>
-      </div>
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => setOpen(false)} className="btn-line text-sm">
-          {t('common.cancel')}
-        </button>
-        <button
-          type="submit"
-          disabled={saving || homeChanges.length + awayChanges.length === 0}
-          className="btn-yellow text-sm"
-        >
-          {t('common.save')}
-        </button>
-      </div>
-    </form>
   )
 }
