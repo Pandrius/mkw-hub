@@ -274,6 +274,10 @@ export const en: Record<MessageKey, string> = {
   'teamStats.rivals': 'Rival history',
   'teamStats.trackPerformance': 'Track performance (+/- avg)',
   'teamStats.lastMatch': 'Last match',
+  'teamStats.players': 'Players in wars',
+  'teamStats.ptsPerRace': 'Pts/race',
+  'teamStats.top3': 'Top 3',
+  'teamStats.bestTrack': 'Best track',
 
   'teams.subtitle': 'Mario Kart World teams registered and approved on Mario Kart Central.',
   'teams.soonTitle': 'Teams will sync with Mario Kart Central',

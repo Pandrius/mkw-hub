@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeTeamStats, type TeamWar } from './teamStats'
+import { computeTeamPlayerStats, computeTeamStats, type TeamWar } from './teamStats'
 
 describe('computeTeamStats', () => {
   const dummyWars: TeamWar[] = [
@@ -92,6 +92,38 @@ describe('computeTeamStats', () => {
     // Best & Worst tracks
     expect(stats.bestTracks[0].trackId).toBe('rainbow-road')
     expect(stats.worstTracks[0].trackId).toBe('bowsers-castle')
+  })
+
+  it('calcula las estadísticas de cada jugador en las wars del equipo', () => {
+    const war = (id: string, races: TeamWar['races']): TeamWar => ({ ...dummyWars[0], id, races })
+    const res = (name: string, position: number, profileId: string | null = null) => ({ name, profileId, position })
+    const wars: TeamWar[] = [
+      // La más reciente primero: Peckmat ya está vinculado a su usuario
+      war('w2', [
+        { track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [1, 5], results: [res('Peckmat', 1, 'u1'), res('Sharpy', 5)] },
+      ]),
+      war('w1', [
+        { track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [3, 2], results: [res('Peck', 3, 'u1'), res('sharpy', 2)] },
+        { track_id: 'bowsers-castle', race_no: 2, missing_home: 0, missing_away: 0, positions: [12, 1], results: [res('Peck', 12, 'u1'), res('Sharpy', 1)] },
+      ]),
+    ]
+    const players = computeTeamPlayerStats(wars)
+    expect(players).toHaveLength(2)
+
+    // Sharpy: 8 + 12 + 15 = 35 pts en 3 carreras (sin usuario: se agrupa por nombre)
+    const [sharpy, peck] = players
+    expect(sharpy.name).toBe('Sharpy')
+    expect(sharpy.wars).toBe(2)
+    expect(sharpy.races).toBe(3)
+    expect(sharpy.points).toBe(35)
+    expect(sharpy.avgPoints).toBe(11.67)
+    expect(sharpy.top3Rate).toBe(67)
+
+    // Peckmat: 15 + 10 + 1 = 26 pts; nombre más reciente; mejor pista con ≥2 carreras
+    expect(peck.name).toBe('Peckmat')
+    expect(peck.profileId).toBe('u1')
+    expect(peck.avgPos).toBe(5.33)
+    expect(peck.bestTrack).toEqual({ trackId: 'rainbow-road', avgPoints: 12.5, races: 2 })
   })
 
   it('devuelve estadísticas vacías para un equipo sin wars', () => {

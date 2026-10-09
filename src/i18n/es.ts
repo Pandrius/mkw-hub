@@ -273,6 +273,10 @@ export const es = {
   'teamStats.rivals': 'Historial contra rivales',
   'teamStats.trackPerformance': 'Rendimiento por pista (+/- avg)',
   'teamStats.lastMatch': 'Último enfrentamiento',
+  'teamStats.players': 'Jugadores en wars',
+  'teamStats.ptsPerRace': 'Pts/carrera',
+  'teamStats.top3': 'Top 3',
+  'teamStats.bestTrack': 'Mejor pista',
 
   'teams.subtitle': 'Equipos de Mario Kart World registrados y aprobados en Mario Kart Central.',
   'teams.soonTitle': 'Los equipos se sincronizarán con Mario Kart Central',
