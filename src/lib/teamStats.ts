@@ -1,5 +1,8 @@
-import { scoreTeamRace } from './scoring'
+import { pointsForPosition, scoreTeamRace } from './scoring'
 import { supabase } from './supabase'
+
+/** Resultado de un jugador del equipo en una carrera de war */
+export type TeamWarResult = { name: string; profileId: string | null; position: number }
 
 export type TeamWarRace = {
   track_id: string
@@ -7,6 +10,8 @@ export type TeamWarRace = {
   missing_home: number
   missing_away: number
   positions: number[]
+  /** Quién quedó en cada posición (para las estadísticas por jugador) */
+  results?: TeamWarResult[]
 }
 
 export type TeamWar = {
@@ -246,6 +251,94 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
   }
 }
 
+export type TeamPlayerStats = {
+  key: string
+  name: string
+  profileId: string | null
+  wars: number
+  races: number
+  points: number
+  avgPoints: number // puntos por carrera
+  avgPos: number
+  top3Rate: number // % de carreras en el podio
+  bestTrack: { trackId: string; avgPoints: number; races: number } | null
+}
+
+/**
+ * Estadísticas de cada jugador del equipo en sus wars (función pura).
+ * Se agrupa por usuario de la web si está vinculado y, si no, por el nombre en el juego.
+ * Las wars vienen de la más reciente a la más antigua: se muestra el último nombre usado.
+ */
+export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
+  type Acc = {
+    name: string
+    profileId: string | null
+    wars: Set<string>
+    races: number
+    points: number
+    positions: number
+    top3: number
+    tracks: Map<string, { points: number; races: number }>
+  }
+  const map = new Map<string, Acc>()
+
+  for (const war of wars) {
+    for (const race of war.races) {
+      for (const res of race.results ?? []) {
+        const key = res.profileId ? `id:${res.profileId}` : `name:${res.name.trim().toLowerCase()}`
+        const acc = map.get(key) ?? {
+          name: res.name,
+          profileId: res.profileId,
+          wars: new Set<string>(),
+          races: 0,
+          points: 0,
+          positions: 0,
+          top3: 0,
+          tracks: new Map(),
+        }
+        const pts = pointsForPosition(res.position)
+        acc.wars.add(war.id)
+        acc.races += 1
+        acc.points += pts
+        acc.positions += res.position
+        if (res.position <= 3) acc.top3 += 1
+        const tr = acc.tracks.get(race.track_id) ?? { points: 0, races: 0 }
+        tr.points += pts
+        tr.races += 1
+        acc.tracks.set(race.track_id, tr)
+        map.set(key, acc)
+      }
+    }
+  }
+
+  const round = (n: number) => Number(n.toFixed(2))
+
+  return [...map.entries()]
+    .map(([key, a]) => {
+      // Mejor pista: la de más puntos de media, con al menos 2 carreras si las hay
+      const tracks = [...a.tracks.entries()].map(([trackId, t]) => ({
+        trackId,
+        avgPoints: round(t.points / t.races),
+        races: t.races,
+      }))
+      const pool = tracks.some((t) => t.races >= 2) ? tracks.filter((t) => t.races >= 2) : tracks
+      const bestTrack = pool.sort((x, y) => y.avgPoints - x.avgPoints || y.races - x.races)[0] ?? null
+      return {
+        key,
+        name: a.name,
+        profileId: a.profileId,
+        wars: a.wars.size,
+        races: a.races,
+        points: a.points,
+        avgPoints: round(a.points / a.races),
+        avgPos: round(a.positions / a.races),
+        top3Rate: Math.round((a.top3 / a.races) * 100),
+        bestTrack,
+      }
+    })
+    .sort((x, y) => y.avgPoints - x.avgPoints || y.races - x.races)
+}
+
 /** Consulta en Supabase las wars finalizadas registradas para un equipo dado */
 export async function getTeamWars(teamId: number): Promise<TeamWar[]> {
   if (!supabase) throw new Error('Supabase no está configurado')
@@ -262,24 +355,38 @@ export async function getTeamWars(teamId: number): Promise<TeamWar[]> {
 
   const eventIds = events.map((e) => e.id as string)
 
-  const { data: races, error: raceError } = await supabase
-    .from('event_races')
-    .select('id, event_id, race_no, track_id, missing_home, missing_away, race_results(position)')
-    .in('event_id', eventIds)
-    .order('race_no', { ascending: true })
+  const [{ data: races, error: raceError }, { data: players, error: playerError }] = await Promise.all([
+    supabase
+      .from('event_races')
+      .select('id, event_id, race_no, track_id, missing_home, missing_away, race_results(position, player_id)')
+      .in('event_id', eventIds)
+      .order('race_no', { ascending: true }),
+    supabase.from('event_players').select('id, name, profile_id').in('event_id', eventIds),
+  ])
 
   if (raceError) throw raceError
+  if (playerError) throw playerError
+
+  const playerById = new Map((players ?? []).map((p) => [p.id as number, p]))
 
   const racesByEvent = new Map<string, TeamWarRace[]>()
   for (const r of races ?? []) {
     const list = racesByEvent.get(r.event_id as string) ?? []
-    const results = (r.race_results as unknown as { position: number }[]) ?? []
+    const results = (r.race_results as unknown as { position: number; player_id: number }[]) ?? []
     list.push({
       track_id: r.track_id as string,
       race_no: r.race_no as number,
       missing_home: r.missing_home as number,
       missing_away: r.missing_away as number,
       positions: results.map((res) => res.position),
+      results: results.map((res) => {
+        const p = playerById.get(res.player_id)
+        return {
+          name: (p?.name as string | undefined) ?? '?',
+          profileId: (p?.profile_id as string | null | undefined) ?? null,
+          position: res.position,
+        }
+      }),
     })
     racesByEvent.set(r.event_id as string, list)
   }
