@@ -3,6 +3,7 @@ import { CUPS, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { saveRace, type EventKind, type EventPlayer, type EventRace, type OpponentResult } from '../lib/events'
 import { scoreTeamRace } from '../lib/scoring'
+import OcrReader, { type OcrFill } from './OcrReader'
 
 type Props = {
   eventId: string
@@ -45,6 +46,15 @@ export default function RaceForm({
   const [missingAway, setMissingAway] = useState(initial?.missing_away ?? 0)
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  /** Campos rellenados por el lector de capturas (se resaltan para revisarlos) */
+  const [ocrKeys, setOcrKeys] = useState<Set<string>>(new Set())
+
+  const applyOcr = (fill: OcrFill) => {
+    setPositions(fill.home)
+    if (kind === 'war') setOpponentPositions(fill.away)
+    setOcrKeys(new Set([...Object.keys(fill.home).map((id) => `h:${id}`), ...Object.keys(fill.away).map((n) => `a:${n}`)]))
+  }
+  const ocrClass = (key: string) => (ocrKeys.has(key) ? ' ring-2 ring-kart-yellow/70' : '')
 
   const filled = players
     .map((p) => ({ player_id: p.id, position: Number(positions[p.id]) }))
@@ -151,6 +161,10 @@ export default function RaceForm({
         </select>
       </label>
 
+      {kind === 'war' && (
+        <OcrReader players={players} opponents={hasOpponents ? rawOpponents : []} onFill={applyOcr} />
+      )}
+
       {hasOpponents ? (
         <div className="grid gap-6 md:grid-cols-2">
           {/* Tu equipo */}
@@ -176,7 +190,7 @@ export default function RaceForm({
                     onChange={(e) => setPositions((ps) => ({ ...ps, [p.id]: e.target.value }))}
                     placeholder="—"
                     title={t('event.didNotRace')}
-                    className="w-16 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-base font-bold tabular-nums outline-none focus:border-kart-yellow"
+                    className={`w-16 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-base font-bold tabular-nums outline-none focus:border-kart-yellow${ocrClass(`h:${p.id}`)}`}
                   />
                 </label>
               ))}
@@ -212,7 +226,7 @@ export default function RaceForm({
                     onChange={(e) => setOpponentPositions((ps) => ({ ...ps, [name]: e.target.value }))}
                     placeholder="auto"
                     title="Si se deja vacío, se auto-asignan las posiciones restantes"
-                    className="w-16 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-base font-bold tabular-nums outline-none focus:border-kart-yellow"
+                    className={`w-16 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-base font-bold tabular-nums outline-none focus:border-kart-yellow${ocrClass(`a:${name}`)}`}
                   />
                 </label>
               ))}
@@ -233,7 +247,7 @@ export default function RaceForm({
                 onChange={(e) => setPositions((ps) => ({ ...ps, [p.id]: e.target.value }))}
                 placeholder={kind === 'war' ? '—' : t('event.position')}
                 title={kind === 'war' ? t('event.didNotRace') : undefined}
-                className="w-20 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-lg font-bold tabular-nums outline-none focus:border-kart-yellow"
+                className={`w-20 rounded-lg border border-line bg-surface px-2 py-1 text-center font-display text-lg font-bold tabular-nums outline-none focus:border-kart-yellow${ocrClass(`h:${p.id}`)}`}
               />
             </label>
           ))}
