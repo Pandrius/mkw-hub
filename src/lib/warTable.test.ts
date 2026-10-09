@@ -60,9 +60,10 @@ describe('buildWarTable', () => {
       'B 10+12',
       'C 8+9',
       'D 6+7',
-      'Sub 5',
-      'E 4',
-      'F 2',
+      // Entre paréntesis, las carreras de quien no corrió todas
+      'Sub(1) 5',
+      'E(1) 4',
+      'F(1) 2',
       'DC 1',
       '',
       'ABC',
@@ -156,5 +157,36 @@ describe('penalties', () => {
     expect(text).toContain('Late -3')
     // El total del rival sin jugadores es el de las carreras: Lorenzi le suma la penalty
     expect(text).toContain(`RKL ${plain.away}`)
+  })
+})
+
+describe('sustituciones en la tabla', () => {
+  // Peckmat (id 1) corre las 2 primeras y Sub (id 7) la tercera; Lorenzi muestra las carreras de cada uno
+  const rs = [
+    race(1, [[1, 1], [2, 3], [3, 5], [4, 7], [5, 9], [6, 11]]),
+    race(2, [[1, 1], [2, 3], [3, 5], [4, 7], [5, 9], [6, 11]]),
+    race(3, [[7, 1], [2, 3], [3, 5], [4, 7], [5, 9], [6, 11]]),
+  ]
+  const table = buildWarTable(players, rs)
+
+  it('cuenta las carreras de cada jugador', () => {
+    expect(table.players.find((p) => p.player.name === 'A')?.races).toBe(2)
+    expect(table.players.find((p) => p.player.name === 'Sub')?.races).toBe(1)
+  })
+
+  it('el texto de Lorenzi indica entre paréntesis las carreras de quien no corrió todas', () => {
+    const text = lorenziText('NB', 'RKL', table)
+    expect(text).toContain('A(2) 15+15')
+    expect(text).toContain('Sub(1) 15')
+    expect(text).toMatch(/\nB 10\+10\+10/)
+  })
+
+  it('con sustituciones, solo los rivales que corren reparten las posiciones restantes', () => {
+    const rivals = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
+    const t = buildWarTable(players, [rs[0], rs[2]], rivals, [], [{ side: 'away', out: 'R1', in: 'R7', race_no: 3 }])
+    const r1 = t.opponentPlayers.find((p) => p.name === 'R1')
+    const r7 = t.opponentPlayers.find((p) => p.name === 'R7')
+    expect(Object.keys(r1?.positions ?? {})).toEqual(['1'])
+    expect(Object.keys(r7?.positions ?? {})).toEqual(['3'])
   })
 })

@@ -3,6 +3,7 @@ import { CUPS, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { saveRace, type EventKind, type EventPlayer, type EventRace, type OpponentResult } from '../lib/events'
 import { scoreTeamRace } from '../lib/scoring'
+import { activeNames, isActiveInRace, type Substitution } from '../lib/substitutions'
 import OcrReader, { type OcrFill } from './OcrReader'
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
   raceNo: number
   players: EventPlayer[]
   opponentPlayers?: string[] | null
+  /** Sustituciones de la war: deciden qué jugadores corren en esta carrera */
+  substitutions?: Substitution[]
   teamTag?: string | null
   opponentTag?: string | null
   /** Carrera existente si se está corrigiendo */
@@ -28,6 +31,7 @@ export default function RaceForm({
   raceNo,
   players,
   opponentPlayers,
+  substitutions = [],
   teamTag,
   opponentTag,
   initial,
@@ -63,7 +67,14 @@ export default function RaceForm({
   const racers = 12 - missingHome - missingAway
   const nums = filled.map((r) => r.position)
 
-  const rawOpponents = (opponentPlayers ?? []).filter(Boolean)
+  // Solo los jugadores que corren en esta carrera (más los que ya tienen resultado si se está corrigiendo)
+  const shownPlayers = players.filter(
+    (p) => isActiveInRace(p.name, 'home', substitutions, raceNo) || (initial?.race_results ?? []).some((r) => r.player_id === p.id),
+  )
+  const allOpponents = (opponentPlayers ?? []).filter(Boolean)
+  const rawOpponents = allOpponents.filter(
+    (n) => activeNames([n], 'away', substitutions, raceNo).length > 0 || (initial?.opponent_results ?? []).some((r) => r.name === n),
+  )
   const hasOpponents = kind === 'war' && rawOpponents.length > 0
 
   const remainingPositions = Array.from({ length: racers }, (_, i) => i + 1).filter((n) => !nums.includes(n))
@@ -173,7 +184,7 @@ export default function RaceForm({
       </label>
 
       {kind === 'war' && (
-        <OcrReader players={players} opponents={hasOpponents ? rawOpponents : []} onFill={applyOcr} />
+        <OcrReader players={shownPlayers} opponents={hasOpponents ? rawOpponents : []} onFill={applyOcr} />
       )}
 
       {hasOpponents ? (
@@ -182,14 +193,14 @@ export default function RaceForm({
           <div className="space-y-2">
             <div className="flex items-center justify-between border-b border-line pb-1">
               <span className="font-display text-sm font-bold text-kart-yellow">
-                {teamTag || t('event.yourTeam')} ({players.length})
+                {teamTag || t('event.yourTeam')} ({shownPlayers.length})
               </span>
               <span className="text-xs text-muted">
                 {filled.length}/{6 - missingHome}
               </span>
             </div>
             <div className="space-y-1.5">
-              {players.map((p) => (
+              {shownPlayers.map((p) => (
                 <label key={p.id} className="flex items-center gap-3 border-2 border-line bg-bg px-3 py-1.5">
                   <span className="flex-1 truncate text-sm font-semibold">{p.name}</span>
                   <input
@@ -248,7 +259,7 @@ export default function RaceForm({
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {players.map((p) => (
+          {shownPlayers.map((p) => (
             <label key={p.id} className="flex items-center gap-3 border-2 border-line bg-bg px-3 py-1.5">
               <span className="flex-1 truncate text-sm font-semibold">{p.name}</span>
               <input

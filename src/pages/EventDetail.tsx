@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import RaceForm from '../components/RaceForm'
+import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
 import { EmptyState } from '../components/ui'
 import { getCup, getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import {
-  addEventPlayer,
+  substitutePlayer,
   deleteEvent,
   deleteRace,
   finishEvent,
@@ -65,7 +66,7 @@ export default function EventDetail() {
     event.opponent_players && event.opponent_players.length > 0
       ? event.opponent_players
       : [1, 2, 3, 4, 5, 6].map((i) => `${event.opponent_tag || 'Rival'} ${i}`)
-  const table = isWar ? buildWarTable(players, races, opponentNames, event.penalties) : null
+  const table = isWar ? buildWarTable(players, races, opponentNames, event.penalties, event.substitutions) : null
 
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
@@ -157,6 +158,7 @@ export default function EventDetail() {
           raceNo={nextRaceNo}
           players={players}
           opponentPlayers={opponentNames}
+          substitutions={event.substitutions}
           teamTag={event.team_tag}
           opponentTag={event.opponent_tag}
           onSaved={reload}
@@ -196,11 +198,39 @@ export default function EventDetail() {
         />
       )}
 
+      {isWar && event.substitutions.length > 0 && (
+        <section className="panel space-y-2 p-4">
+          <h2 className="font-display text-xl font-bold">{t('event.sub.list')}</h2>
+          <ul className="space-y-1 text-sm">
+            {[...event.substitutions]
+              .sort((a, b) => a.race_no - b.race_no)
+              .map((s, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="w-12 font-display font-black text-muted">{s.side === 'home' ? event.team_tag : event.opponent_tag}</span>
+                  <span>{t('event.sub.item', { n: s.race_no, in: s.in, out: s.out })}</span>
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
+
       {error && <p className="text-sm text-kart-red">{error}</p>}
 
       {canEdit && (
         <div className="flex flex-wrap items-start gap-3 border-t border-line pt-6">
-          {isWar && <AddSub onAdd={(entry) => act(() => addEventPlayer(event.id, entry))} />}
+          {isWar && (
+            <SubstituteForm
+              teamTag={event.team_tag ?? 'Home'}
+              opponentTag={event.opponent_tag ?? 'Away'}
+              teamId={event.team_id}
+              opponentTeamId={event.opponent_team_id}
+              players={players}
+              opponentNames={opponentNames}
+              substitutions={event.substitutions}
+              nextRaceNo={nextRaceNo}
+              onSubstitute={(side, out, inEntry, fromRace) => act(() => substitutePlayer(event.id, side, out, inEntry, fromRace))}
+            />
+          )}
           {isWar && (
             <RenamePlayers
               players={players}
@@ -309,6 +339,7 @@ function RacesTable({
               raceNo={race.race_no}
               players={players}
               opponentPlayers={opponentNames}
+              substitutions={event.substitutions}
               teamTag={event.team_tag}
               opponentTag={event.opponent_tag}
               initial={race}
@@ -808,44 +839,6 @@ function RenamePlayers({
           {t('common.save')}
         </button>
       </div>
-    </form>
-  )
-}
-
-function AddSub({ onAdd }: { onAdd: (entry: string) => Promise<void> }) {
-  const { t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const [value, setValue] = useState('')
-
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="btn-line text-base">
-        + {t('event.addSub')}
-      </button>
-    )
-  }
-  return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault()
-        if (!value.trim()) return
-        await onAdd(value.trim())
-        setValue('')
-        setOpen(false)
-      }}
-      className="flex gap-2"
-    >
-      <input
-        autoFocus
-        maxLength={80}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={t('event.subPlaceholder')}
-        className="w-72 rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-kart-yellow"
-      />
-      <button type="submit" className="rounded-xl bg-kart-yellow px-4 py-2 text-sm font-bold text-bg">
-        {t('common.save')}
-      </button>
     </form>
   )
 }

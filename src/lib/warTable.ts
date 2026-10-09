@@ -1,6 +1,7 @@
 import type { EventPlayer, EventRace } from './events'
 import { penaltyTotals, type Penalty } from './penalties.js'
 import { pointsForPosition, scoreTeamRace, MISSING_PLAYER_POINTS } from './scoring.js'
+import { activeNames, type Substitution } from './substitutions.js'
 
 export type RaceRow = {
   race: EventRace
@@ -47,6 +48,7 @@ export function buildWarTable(
   races: EventRace[],
   opponentPlayerNames?: string[] | null,
   penalties: Penalty[] = [],
+  substitutions: Substitution[] = [],
 ): WarTable {
   let home = 0
   let away = 0
@@ -98,7 +100,8 @@ export function buildWarTable(
           }
         } else {
           // Auto-asignación de las posiciones restantes entre los 6 rivales
-          rawOpponents.slice(0, awayPositions.length).forEach((name, idx) => {
+          // Solo reparten posiciones los rivales que corren en esa carrera (con sustituciones, no todos)
+          activeNames(rawOpponents, 'away', substitutions, race.race_no).slice(0, awayPositions.length).forEach((name, idx) => {
             const pos = awayPositions[idx]
             const row = byOpponent.get(name)
             if (row && pos !== undefined) {
@@ -136,6 +139,9 @@ const LORENZI = 'https://gb2.hlorenzi.com'
 /** Nombre apto para una línea de Lorenzi: sin saltos de línea ni [ ] (se usan para la bandera) */
 const cleanName = (s: string) => s.replace(/[\r\n[\]]/g, ' ').replace(/\s+/g, ' ').trim()
 
+/** "(8)": carreras que jugó quien no jugó todas las de la war (vacío si las jugó todas) */
+const partial = (races: number, table: WarTable) => (races < table.races.length ? `(${races})` : '')
+
 /** Tag tal como aparece en el texto de Lorenzi (los escudos se asocian a él) */
 export const lorenziTag = (tag: string, fallback: string) => cleanName(tag) || fallback
 
@@ -160,7 +166,7 @@ export function lorenziText(teamTag: string, opponentTag: string, table: WarTabl
       .map(Number)
       .sort((a, b) => a - b)
       .map((raceNo) => pointsForPosition(p.positions[raceNo]))
-    lines.push(`${cleanName(p.player.name)} ${perRace.join('+')}`)
+    lines.push(`${cleanName(p.player.name)}${partial(p.races, table)} ${perRace.join('+')}`)
   }
   if (table.missingPoints) lines.push(`DC ${table.missingPoints}`)
   for (const p of table.penalties.filter((x) => x.side === 'home')) lines.push(`${cleanName(p.label) || 'Penalty'} ${p.points}`)
@@ -172,7 +178,7 @@ export function lorenziText(teamTag: string, opponentTag: string, table: WarTabl
         .map(Number)
         .sort((a, b) => a - b)
         .map((raceNo) => pointsForPosition(p.positions[raceNo]))
-      lines.push(`${cleanName(p.name)} ${perRace.join('+')}`)
+      lines.push(`${cleanName(p.name)}${partial(p.races, table)} ${perRace.join('+')}`)
     }
   } else {
     // Solo el total de las carreras: las penalties van en sus propias líneas

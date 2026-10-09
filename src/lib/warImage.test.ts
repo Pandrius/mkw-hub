@@ -31,6 +31,7 @@ const event = (over: Partial<GameEvent> = {}): GameEvent => ({
   opponent_team_id: null,
   opponent_players: null,
   penalties: [],
+  substitutions: [],
   created_by: 'u',
   created_at: '2026-10-01T20:00:00Z',
   finished_at: '2026-10-01T21:10:00Z',

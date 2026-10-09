@@ -1,5 +1,6 @@
 import { sanitizeEventDetail } from './eventSanitize'
 import type { Penalty } from './penalties'
+import type { Substitution } from './substitutions'
 import { supabase } from './supabase'
 
 export type EventKind = 'war' | 'lounge'
@@ -17,6 +18,7 @@ export type GameEvent = {
   opponent_team_id: number | null
   opponent_players: string[] | null
   penalties: Penalty[]
+  substitutions: Substitution[]
   created_by: string
   created_at: string
   finished_at: string | null
@@ -90,6 +92,26 @@ export function renameEventPlayer(eventId: string, playerId: number, entry: stri
 /** Corrige el nombre de un rival, también en los resultados de las carreras ya guardadas */
 export function renameOpponentPlayer(eventId: string, oldName: string, newName: string): Promise<void> {
   return rpc<void>('rename_opponent_player', { target: eventId, old_name: oldName, new_name: newName })
+}
+
+/**
+ * Sale un jugador y entra otro desde una carrera (por defecto la siguiente a las guardadas).
+ * Devuelve la carrera desde la que cuenta.
+ */
+export function substitutePlayer(
+  eventId: string,
+  side: Substitution['side'],
+  outName: string,
+  inEntry: string,
+  fromRace?: number,
+): Promise<number> {
+  return rpc<number>('substitute_player', {
+    target: eventId,
+    side,
+    out_name: outName,
+    in_entry: inEntry,
+    from_race: fromRace ?? null,
+  })
 }
 
 /** Sustituye la lista de penalties de la war (puntos negativos para uno de los dos equipos) */

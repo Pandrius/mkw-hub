@@ -39,6 +39,7 @@ function memoryStore(linked: Record<string, string> = { '111': 'profile-1' }) {
           opponent_name: a.opponentName,
           opponent_team_id: a.opponentTeamId,
           penalties: [],
+          substitutions: [],
           opponent_players: null,
           created_by: actor,
           created_at: '2026-10-05T20:00:00Z',
