@@ -29,7 +29,7 @@ import { buildWarTable, lorenziEditorUrl, lorenziImageUrl, lorenziTag, lorenziTe
 export default function EventDetail() {
   const { t, locale } = useI18n()
   const { eventId = '' } = useParams()
-  const { profile, enabled } = useAuth()
+  const { profile, enabled, isAdmin } = useAuth()
   const navigate = useNavigate()
   const [detail, setDetail] = useState<Detail | null | undefined>(undefined)
   const [editing, setEditing] = useState<number | null>(null)
@@ -226,6 +226,15 @@ export default function EventDetail() {
               {t('event.finish')}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Un admin puede borrar cualquier evento, también los finalizados o de otros */}
+      {!canEdit && isAdmin && (
+        <div className="flex justify-end border-t border-line pt-6">
+          <button onClick={remove} className="btn-line text-base">
+            {t('event.delete')}
+          </button>
         </div>
       )}
     </div>
