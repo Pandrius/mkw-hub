@@ -253,8 +253,8 @@ function silverMetal(ctx: Ctx, y0: number, y1: number): CanvasGradient {
 /** Color del primer equipo: oro metálico en el estilo elegante y, en el resto, el acento */
 const homePaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? gold(ctx, y0, y1) : C.accent)
 
-/** Color del segundo equipo: plata en el estilo elegante y, en el resto, el color de la tinta */
-const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? silverMetal(ctx, y0, y1) : C.ink)
+/** Color del segundo equipo: plata cromada en el estilo elegante y, en el resto, el color propio de la paleta */
+const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? silverMetal(ctx, y0, y1) : C.away)
 
 /**
  * Color de las tres mejores puntuaciones de la war: oro, plata y bronce de verdad (no el acento de la paleta, que en
@@ -407,7 +407,7 @@ function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x
   panel(ctx, x, y, COL_W, h)
   if (!ELEGANT) {
     // Franja de color del lado exterior
-    ctx.fillStyle = home ? C.accent : C.muted
+    ctx.fillStyle = home ? C.accent : C.away
     ctx.fillRect(home ? x : x + COL_W - 8, y, 8, h)
   }
 

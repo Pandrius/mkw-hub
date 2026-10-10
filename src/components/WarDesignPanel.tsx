@@ -49,6 +49,7 @@ async function readPhoto(file: File): Promise<string> {
 
 const COLOR_LABEL: Record<EditableColor, MessageKey> = {
   accent: 'design.color.accent',
+  away: 'design.color.away',
   bg: 'design.color.bg',
   surface: 'design.color.surface',
   ink: 'design.color.ink',

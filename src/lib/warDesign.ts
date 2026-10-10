@@ -13,6 +13,8 @@ export type Palette = {
   muted: string
   /** Color de acento: tu equipo, marca, franjas */
   accent: string
+  /** Color del segundo equipo (el de la derecha): complementario al acento, nunca blanco liso */
+  away: string
   red: string
   green: string
 }
@@ -24,15 +26,15 @@ export type PresetStyle = 'standard' | 'elegant'
 
 export const PRESETS: Record<PresetId, Palette> = {
   // El de siempre: asfalto y amarillo kart
-  asphalt: { bg: '#141414', surface: '#1c1c1b', surface2: '#292927', line: '#3b3b38', ink: '#f4f2ec', muted: '#a5a29a', accent: '#ffd500', red: '#e8112d', green: '#19c15a' },
+  asphalt: { bg: '#141414', surface: '#1c1c1b', surface2: '#292927', line: '#3b3b38', ink: '#f4f2ec', muted: '#a5a29a', accent: '#ffd500', away: '#38b6ff', red: '#e8112d', green: '#19c15a' },
   // Oficial: negro de invitación de gala, champán y oro, para las competiciones más importantes
-  official: { bg: '#050505', surface: '#0a0a09', surface2: '#14120d', line: '#3a3015', ink: '#f2e8cf', muted: '#a09375', accent: '#d4af37', red: '#c0364d', green: '#3da57a' },
+  official: { bg: '#050505', surface: '#0a0a09', surface2: '#14120d', line: '#3a3015', ink: '#f2e8cf', muted: '#a09375', accent: '#d4af37', away: '#a9afbb', red: '#c0364d', green: '#3da57a' },
   // Claro: todo en tonos crema, sin blancos
-  light: { bg: '#ece3cf', surface: '#f7f0df', surface2: '#e6dcc4', line: '#cfc3a6', ink: '#2b2417', muted: '#7b6f58', accent: '#c98a00', red: '#c4122b', green: '#12874a' },
+  light: { bg: '#ece3cf', surface: '#f7f0df', surface2: '#e6dcc4', line: '#cfc3a6', ink: '#2b2417', muted: '#7b6f58', accent: '#c98a00', away: '#2f6fb5', red: '#c4122b', green: '#12874a' },
   // Neón: violeta casi negro con magenta (el Océano es azul con acento celeste)
-  neon: { bg: '#0c0716', surface: '#150d24', surface2: '#20143a', line: '#3a2761', ink: '#f7f0ff', muted: '#a595c9', accent: '#ff2bd6', red: '#ff3b5c', green: '#2ee59d' },
-  sunset: { bg: '#1d1020', surface: '#2a1630', surface2: '#3a1f42', line: '#5a3560', ink: '#fff3e8', muted: '#c9a7b8', accent: '#ff8a3d', red: '#ff4d5e', green: '#4be08a' },
-  ocean: { bg: '#08141f', surface: '#0e2233', surface2: '#153247', line: '#265068', ink: '#eaf6ff', muted: '#8fb2c8', accent: '#35c7ff', red: '#ff5470', green: '#3ddc97' },
+  neon: { bg: '#0c0716', surface: '#150d24', surface2: '#20143a', line: '#3a2761', ink: '#f7f0ff', muted: '#a595c9', accent: '#ff2bd6', away: '#00e5ff', red: '#ff3b5c', green: '#2ee59d' },
+  sunset: { bg: '#1d1020', surface: '#2a1630', surface2: '#3a1f42', line: '#5a3560', ink: '#fff3e8', muted: '#c9a7b8', accent: '#ff8a3d', away: '#4fd1c5', red: '#ff4d5e', green: '#4be08a' },
+  ocean: { bg: '#08141f', surface: '#0e2233', surface2: '#153247', line: '#265068', ink: '#eaf6ff', muted: '#8fb2c8', accent: '#35c7ff', away: '#ff8a65', red: '#ff5470', green: '#3ddc97' },
 }
 
 export const PRESET_IDS = Object.keys(PRESETS) as PresetId[]
@@ -47,7 +49,7 @@ export const PRESET_STYLE: Record<PresetId, PresetStyle> = {
 }
 
 /** Colores que se pueden retocar sobre el preset */
-export const EDITABLE_COLORS = ['accent', 'bg', 'surface', 'ink'] as const
+export const EDITABLE_COLORS = ['accent', 'away', 'bg', 'surface', 'ink'] as const
 export type EditableColor = (typeof EDITABLE_COLORS)[number]
 
 export type WarDesign = {

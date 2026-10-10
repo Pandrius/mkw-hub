@@ -293,6 +293,7 @@ export const en: Record<MessageKey, string> = {
   'design.photoError': 'That image could not be read.',
   'design.colors': 'Colors',
   'design.color.accent': 'Accent',
+  'design.color.away': 'Second team',
   'design.color.bg': 'Background',
   'design.color.surface': 'Panels',
   'design.color.ink': 'Text',

@@ -99,6 +99,23 @@ describe('presets', () => {
     }
   })
 
+  it('el segundo equipo tiene color propio: ni blanco ni el del acento, y se lee sobre el fondo y los paneles', () => {
+    const contrast = (a: string, b: string) => {
+      const [hi, lo] = luminance(a) > luminance(b) ? [luminance(a), luminance(b)] : [luminance(b), luminance(a)]
+      return (hi + 0.05) / (lo + 0.05)
+    }
+    for (const id of PRESET_IDS) {
+      const p = PRESETS[id]
+      expect(p.away, id).toMatch(/^#[0-9a-f]{6}$/i)
+      expect(p.away.toLowerCase(), id).not.toBe(p.ink.toLowerCase())
+      expect(p.away.toLowerCase(), id).not.toBe('#ffffff')
+      expect(dist(p.away, p.ink), id).toBeGreaterThan(60)
+      expect(dist(p.away, p.accent), id).toBeGreaterThan(110)
+      expect(contrast(p.away, p.bg), id).toBeGreaterThanOrEqual(3)
+      expect(contrast(p.away, p.surface), id).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('el texto se lee sobre el fondo en todos los presets', () => {
     for (const id of PRESET_IDS) {
       const p = PRESETS[id]

@@ -292,6 +292,7 @@ export const es = {
   'design.photoError': 'No se pudo leer esa imagen.',
   'design.colors': 'Colores',
   'design.color.accent': 'Acento',
+  'design.color.away': 'Segundo equipo',
   'design.color.bg': 'Fondo',
   'design.color.surface': 'Paneles',
   'design.color.ink': 'Texto',
