@@ -266,6 +266,7 @@ export const en: Record<MessageKey, string> = {
   'design.title': 'Design',
   'design.presets': 'Style',
   'design.preset.asphalt': 'Asphalt',
+  'design.preset.official': 'Official',
   'design.preset.light': 'Light',
   'design.preset.neon': 'Neon',
   'design.preset.sunset': 'Sunset',

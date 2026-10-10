@@ -1,6 +1,6 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
-import { coverRect, DEFAULT_DESIGN, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
 import { fitText, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
@@ -34,7 +34,12 @@ let C: Palette = PRESETS.asphalt
 let PANEL_ALPHA = 1
 let STRIPES = true
 
-const DISPLAY = '"Big Shoulders Display", Barlow, sans-serif'
+const DISPLAY_SANS = '"Big Shoulders Display", Barlow, sans-serif'
+const DISPLAY_SERIF = '"Bodoni Moda", Didot, Georgia, serif'
+/** Tipografía de titulares y cifras del estilo con el que se está dibujando */
+let DISPLAY = DISPLAY_SANS
+/** Estilo elegante (diseño Oficial): serif, sin placas inclinadas, filetes finos y marco */
+let ELEGANT = false
 const SANS = 'Barlow, system-ui, sans-serif'
 const MONO = '"JetBrains Mono", ui-monospace, monospace'
 
@@ -49,7 +54,7 @@ const ROW_H = 36
 const diffColor = (n: number) => (n > 0 ? C.green : n < 0 ? C.red : C.muted)
 
 /** Espera a que estén cargadas las fuentes de la web (si no, el canvas usaría las del sistema) */
-export async function waitForFonts(sample: string): Promise<void> {
+export async function waitForFonts(sample: string, serif = false): Promise<void> {
   if (typeof document === 'undefined' || !document.fonts) return
   const specs = [
     `900 64px ${DISPLAY}`,
@@ -60,6 +65,7 @@ export async function waitForFonts(sample: string): Promise<void> {
     `700 14px ${MONO}`,
     `500 14px ${MONO}`,
   ]
+  if (serif) specs.push(`900 64px ${DISPLAY_SERIF}`, `700 26px ${DISPLAY_SERIF}`, `600 20px ${DISPLAY_SERIF}`)
   try {
     // load() con el texto real: las fuentes de Google van troceadas por alfabetos (unicode-range)
     await Promise.all(specs.map((f) => document.fonts.load(f, sample)))
@@ -153,11 +159,12 @@ function fittedText(
 
 /** Bloque inclinado tipo placa de kart (clip-path de .plate / .slant) */
 function slant(ctx: Ctx, x: number, y: number, w: number, h: number, cut: number, color: string) {
+  const c = ELEGANT ? 0 : cut
   ctx.fillStyle = color
   ctx.beginPath()
-  ctx.moveTo(x + cut, y)
+  ctx.moveTo(x + c, y)
   ctx.lineTo(x + w, y)
-  ctx.lineTo(x + w - cut, y + h)
+  ctx.lineTo(x + w - c, y + h)
   ctx.lineTo(x, y + h)
   ctx.closePath()
   ctx.fill()
@@ -165,6 +172,15 @@ function slant(ctx: Ctx, x: number, y: number, w: number, h: number, cut: number
 
 /** Banda de peligro amarilla y negra (.hazard) */
 function hazard(ctx: Ctx, y: number, h: number) {
+  if (ELEGANT) {
+    // Dos filetes dorados en lugar de las franjas de peligro
+    ctx.fillStyle = C.bg
+    ctx.fillRect(0, y, W, h)
+    ctx.fillStyle = C.accent
+    ctx.fillRect(0, y + 3, W, 3)
+    ctx.fillRect(0, y + 9, W, 1)
+    return
+  }
   ctx.save()
   ctx.beginPath()
   ctx.rect(0, y, W, h)
@@ -182,6 +198,41 @@ function hazard(ctx: Ctx, y: number, h: number) {
     ctx.fill()
   }
   ctx.restore()
+}
+
+/** Texto con espacio extra entre letras (versalitas de la cabecera) */
+function spaced(ctx: Ctx, s: string, x: number, y: number, font: string, color: string, spacing: number, align: CanvasTextAlign = 'left') {
+  ctx.font = font
+  ctx.fillStyle = color
+  ctx.textAlign = 'left'
+  const chars = [...s]
+  const total = chars.reduce((sum, ch) => sum + ctx.measureText(ch).width + spacing, -spacing)
+  let cx = align === 'right' ? x - total : align === 'center' ? x - total / 2 : x
+  for (const ch of chars) {
+    ctx.fillText(ch, cx, y)
+    cx += ctx.measureText(ch).width + spacing
+  }
+}
+
+/** Rombo pequeño (adorno del pie en el estilo elegante) */
+function diamond(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(cx, cy - r)
+  ctx.lineTo(cx + r, cy)
+  ctx.lineTo(cx, cy + r)
+  ctx.lineTo(cx - r, cy)
+  ctx.closePath()
+  ctx.fill()
+}
+
+/** Resplandor suave del color de acento arriba, para que el fondo liso no quede plano */
+function vignette(ctx: Ctx, H: number) {
+  const g = ctx.createRadialGradient(W / 2, H * 0.12, 40, W / 2, H * 0.12, H * 0.9)
+  g.addColorStop(0, C.accent + '26')
+  g.addColorStop(1, C.accent + '00')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
 }
 
 /** Bandera a cuadros (.checker) */
@@ -203,8 +254,13 @@ function panel(ctx: Ctx, x: number, y: number, w: number, h: number) {
   ctx.fillRect(x, y, w, h)
   ctx.globalAlpha = 1
   ctx.strokeStyle = C.line
-  ctx.lineWidth = 2
+  ctx.lineWidth = ELEGANT ? 1 : 2
   ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
+  if (ELEGANT) {
+    // Pestaña dorada en la esquina, como una cartela
+    ctx.fillStyle = C.accent
+    ctx.fillRect(x, y, 36, 2)
+  }
 }
 
 /** Logo del equipo en un cuadro, ajustado sin deformar */
@@ -227,7 +283,8 @@ function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x
   panel(ctx, x, y, COL_W, h)
   // Franja de color del lado exterior
   ctx.fillStyle = home ? C.accent : C.muted
-  ctx.fillRect(home ? x : x + COL_W - 8, y, 8, h)
+  const stripeW = ELEGANT ? 3 : 8
+  ctx.fillRect(home ? x : x + COL_W - stripeW, y, stripeW, h)
 
   // Sin logo utilizable (no hay o el servidor no permite CORS) se omite el cuadro
   const hasLogo = !!img && img.naturalWidth > 0
@@ -404,12 +461,16 @@ export function drawWarImage(
   photo: HTMLImageElement | null = null,
 ): HTMLCanvasElement {
   C = resolvePalette(design)
+  ELEGANT = PRESET_STYLE[design.preset] === 'elegant'
+  DISPLAY = ELEGANT ? DISPLAY_SERIF : DISPLAY_SANS
   STRIPES = design.stripes
   PANEL_ALPHA = photo ? 0.8 : 1
   try {
     return drawWarCanvas(data, labels, logos, design, photo)
   } finally {
     C = PRESETS.asphalt
+    ELEGANT = false
+    DISPLAY = DISPLAY_SANS
     STRIPES = true
     PANEL_ALPHA = 1
   }
@@ -453,15 +514,25 @@ function drawWarCanvas(
     ctx.fillRect(0, 0, W, H)
     ctx.globalAlpha = 1
   }
+  if (ELEGANT) vignette(ctx, H)
   hazard(ctx, 0, hazardH)
 
   // Cabecera: marca, estado y fecha
   let y = hazardH
-  text(ctx, 'MKW HUB', PAD, y + 42, `900 30px ${DISPLAY}`, C.accent)
-  ctx.font = `900 30px ${DISPLAY}`
-  const brandW = ctx.measureText('MKW HUB').width
-  slant(ctx, PAD + brandW + 14, y + 20, 64, 28, 7, C.accent)
-  text(ctx, 'WAR', PAD + brandW + 46, y + 41, `900 20px ${DISPLAY}`, readable(C.accent), 'center')
+  if (ELEGANT) {
+    // Marca sobria: nombre en marfil, un filete y "WAR" en versalitas doradas
+    text(ctx, 'MKW HUB', PAD, y + 41, `700 26px ${DISPLAY}`, C.ink)
+    const brandW = ctx.measureText('MKW HUB').width
+    ctx.fillStyle = C.accent
+    ctx.fillRect(PAD + brandW + 16, y + 20, 1, 26)
+    spaced(ctx, 'WAR', PAD + brandW + 30, y + 40, `600 15px ${SANS}`, C.accent, 4)
+  } else {
+    text(ctx, 'MKW HUB', PAD, y + 42, `900 30px ${DISPLAY}`, C.accent)
+    ctx.font = `900 30px ${DISPLAY}`
+    const brandW = ctx.measureText('MKW HUB').width
+    slant(ctx, PAD + brandW + 14, y + 20, 64, 28, 7, C.accent)
+    text(ctx, 'WAR', PAD + brandW + 46, y + 41, `900 20px ${DISPLAY}`, readable(C.accent), 'center')
+  }
 
   text(ctx, labels.date, W - PAD, y + 40, `500 15px ${MONO}`, C.muted, 'right')
   ctx.font = `500 15px ${MONO}`
@@ -469,8 +540,16 @@ function drawWarCanvas(
   ctx.font = `900 20px ${DISPLAY}`
   const statusW = ctx.measureText(labels.status).width + 30
   const statusX = W - PAD - dateW - 18 - statusW
-  slant(ctx, statusX, y + 20, statusW, 28, 7, data.inProgress ? C.accent : C.ink)
-  text(ctx, labels.status, statusX + statusW / 2, y + 41, ctx.font, readable(data.inProgress ? C.accent : C.ink), 'center')
+  if (ELEGANT) {
+    // Estado en un recuadro de filete dorado
+    ctx.strokeStyle = C.accent
+    ctx.lineWidth = 1
+    ctx.strokeRect(statusX + 0.5, y + 20.5, statusW, 28)
+    spaced(ctx, labels.status.toUpperCase(), statusX + statusW / 2, y + 40, `600 14px ${SANS}`, C.accent, 3, 'center')
+  } else {
+    slant(ctx, statusX, y + 20, statusW, 28, 7, data.inProgress ? C.accent : C.ink)
+    text(ctx, labels.status, statusX + statusW / 2, y + 41, ctx.font, readable(data.inProgress ? C.accent : C.ink), 'center')
+  }
   y += headerH
 
   // Equipos y marcador
@@ -479,8 +558,21 @@ function drawWarCanvas(
   // Placa central con la diferencia
   const badgeW = 132
   const badgeH = 72
-  slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, data.diff === 0 ? C.surface2 : diffColor(data.diff))
-  text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 20, `900 54px ${DISPLAY}`, data.diff === 0 ? C.ink : readable(diffColor(data.diff)), 'center')
+  if (ELEGANT) {
+    // Recuadro de filete con la diferencia en el color del resultado
+    const bx = W / 2 - badgeW / 2
+    const by = y + (teamH - badgeH) / 2
+    const tone = data.diff === 0 ? C.muted : diffColor(data.diff)
+    ctx.fillStyle = C.bg
+    ctx.fillRect(bx, by, badgeW, badgeH)
+    ctx.strokeStyle = tone
+    ctx.lineWidth = 2
+    ctx.strokeRect(bx + 1, by + 1, badgeW - 2, badgeH - 2)
+    text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 17, `700 44px ${DISPLAY}`, data.diff === 0 ? C.ink : tone, 'center')
+  } else {
+    slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, data.diff === 0 ? C.surface2 : diffColor(data.diff))
+    text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 20, `900 54px ${DISPLAY}`, data.diff === 0 ? C.ink : readable(diffColor(data.diff)), 'center')
+  }
   y += teamH + 24
 
   // Puntos por jugador
@@ -495,10 +587,22 @@ function drawWarCanvas(
   // Pie: bandera a cuadros y dirección de la web
   ctx.fillStyle = C.line
   ctx.fillRect(PAD, y, W - PAD * 2, 2)
-  checker(ctx, PAD, y + 18, 64, 16)
+  if (ELEGANT) {
+    for (let i = 0; i < 3; i++) diamond(ctx, PAD + 8 + i * 22, y + 26, i === 1 ? 7 : 5, C.accent)
+  } else {
+    checker(ctx, PAD, y + 18, 64, 16)
+  }
   text(ctx, labels.footer, PAD + 80, y + 32, `500 14px ${MONO}`, C.muted)
   text(ctx, 'mkw-hub.vercel.app', W - PAD, y + 32, `700 14px ${MONO}`, C.ink, 'right')
 
+  if (ELEGANT) {
+    // Marco fino alrededor de toda la imagen
+    ctx.globalAlpha = 0.5
+    ctx.strokeStyle = C.accent
+    ctx.lineWidth = 1
+    ctx.strokeRect(12.5, 12.5, W - 25, H - 25)
+    ctx.globalAlpha = 1
+  }
   return canvas
 }
 
@@ -537,6 +641,6 @@ export async function renderWarImage(
     ...Object.values(labels),
     '0123456789+-–·…',
   ].join('')
-  const [photo] = await Promise.all([loadPhoto(design.photo?.dataUrl), waitForFonts(sample)])
+  const [photo] = await Promise.all([loadPhoto(design.photo?.dataUrl), waitForFonts(sample, PRESET_STYLE[design.preset] === 'elegant')])
   return canvasToPng(drawWarImage(data, labels, logos, design, photo))
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, parseDesign, PRESETS, readable, resolvePalette } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, parseDesign, PRESET_IDS, PRESET_STYLE, PRESETS, readable, resolvePalette } from './warDesign'
 
 describe('resolvePalette', () => {
   it('sin retoques es la del preset', () => {
@@ -65,5 +65,44 @@ describe('coverRect', () => {
   })
   it('recorta por arriba y abajo una foto más alta', () => {
     expect(coverRect(1000, 2000, 500, 500)).toEqual({ sx: 0, sy: 500, sw: 1000, sh: 1000 })
+  })
+})
+
+describe('presets', () => {
+  // Distancia entre dos colores #rrggbb (0 iguales, ~441 blanco y negro)
+  const dist = (a: string, b: string) => {
+    const c = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+    return Math.hypot(c(a, 0) - c(b, 0), c(a, 1) - c(b, 1), c(a, 2) - c(b, 2))
+  }
+
+  it('todos los presets tienen un estilo y colores válidos', () => {
+    for (const id of PRESET_IDS) {
+      expect(['standard', 'elegant']).toContain(PRESET_STYLE[id])
+      for (const color of Object.values(PRESETS[id])) expect(color).toMatch(/^#[0-9a-f]{6}$/i)
+    }
+  })
+
+  it('Oficial es el estilo elegante y el resto el estándar', () => {
+    expect(PRESET_STYLE.official).toBe('elegant')
+    expect(PRESET_IDS.filter((id) => PRESET_STYLE[id] === 'elegant')).toEqual(['official'])
+  })
+
+  it('Neón y Océano no se parecen: ni el acento ni el fondo', () => {
+    expect(dist(PRESETS.neon.accent, PRESETS.ocean.accent)).toBeGreaterThan(200)
+    expect(dist(PRESETS.neon.bg, PRESETS.ocean.bg)).toBeGreaterThan(15)
+  })
+
+  it('el Claro es crema: ningún fondo ni panel es blanco puro', () => {
+    for (const color of [PRESETS.light.bg, PRESETS.light.surface, PRESETS.light.surface2]) {
+      expect(color.toLowerCase()).not.toBe('#ffffff')
+      expect(dist(color, '#ffffff')).toBeGreaterThan(15)
+    }
+  })
+
+  it('el texto se lee sobre el fondo en todos los presets', () => {
+    for (const id of PRESET_IDS) {
+      const p = PRESETS[id]
+      expect(Math.abs(luminance(p.ink) - luminance(p.bg))).toBeGreaterThan(0.5)
+    }
   })
 })

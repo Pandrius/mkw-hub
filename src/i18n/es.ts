@@ -265,6 +265,7 @@ export const es = {
   'design.title': 'Diseño',
   'design.presets': 'Estilo',
   'design.preset.asphalt': 'Asfalto',
+  'design.preset.official': 'Oficial',
   'design.preset.light': 'Claro',
   'design.preset.neon': 'Neón',
   'design.preset.sunset': 'Atardecer',

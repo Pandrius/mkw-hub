@@ -8,6 +8,7 @@ import {
   MAX_DIM,
   MAX_PHOTO_CHARS,
   PRESET_IDS,
+  PRESET_STYLE,
   PRESETS,
   resolvePalette,
   type EditableColor,
@@ -59,6 +60,8 @@ export default function WarDesignPanel() {
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const palette = resolvePalette(design)
+  // El diseño elegante no lleva franjas de peligro
+  const hasStripes = PRESET_STYLE[design.preset] === 'standard'
   const change = (patch: Partial<WarDesign>) => setDesign({ ...design, ...patch })
 
   const onPhoto = async (file: File | undefined) => {
@@ -155,15 +158,19 @@ export default function WarDesignPanel() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex min-h-11 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={design.stripes}
-            onChange={(e) => change({ stripes: e.target.checked })}
-            className="size-4 accent-kart-yellow"
-          />
-          {t('design.stripes')}
-        </label>
+        {hasStripes ? (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={design.stripes}
+              onChange={(e) => change({ stripes: e.target.checked })}
+              className="size-4 accent-kart-yellow"
+            />
+            {t('design.stripes')}
+          </label>
+        ) : (
+          <span />
+        )}
         <button type="button" onClick={() => setDesign(DEFAULT_DESIGN)} className="min-h-11 text-sm text-muted hover:text-kart-red">
           {t('design.reset')}
         </button>
