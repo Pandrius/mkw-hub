@@ -4,6 +4,7 @@ import { useI18n, type Lang } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { teamsOf } from '../lib/compare'
+import { listPendingValidations } from '../lib/events'
 import { ROLE_LABEL } from '../lib/roles'
 import { isSearchShortcut } from '../lib/search'
 import { GlobalSearch } from './GlobalSearch'
@@ -13,6 +14,8 @@ type NavEntry = {
   label: MessageKey
   /** Ruta en la que este botón no se marca como activo (la de "Mi equipo" ya se marca sola) */
   exclude?: string
+  /** Aviso con un número (wars por validar) */
+  badge?: number
 }
 
 const NAV: NavEntry[] = [
@@ -23,28 +26,55 @@ const NAV: NavEntry[] = [
   { to: '/equipos', label: 'nav.teams' },
 ]
 
-/** Equipo del usuario (el de menor id si está en varios): para ir a su página directamente desde el menú */
-function useMyTeamId(): number | null {
+/**
+ * Equipo del usuario (el de menor id si está en varios), para ir a su página directamente desde el menú, y
+ * cuántas wars que subió un rival esperan que alguien de sus equipos las valide.
+ */
+function useMyTeam(): { teamId: number | null; pending: number } {
   const { profile } = useAuth()
-  const [found, setFound] = useState<{ profileId: string; teamId: number | null } | null>(null)
+  const [found, setFound] = useState<{ profileId: string; teamIds: number[] } | null>(null)
+  const [pending, setPending] = useState(0)
   const profileId = profile?.id
 
   useEffect(() => {
     if (!profileId) return
     let cancelled = false
     teamsOf(profileId).then(
-      (teams) => {
-        const ids = teams.filter((t) => t.kind === 'team').map((t) => t.id)
-        if (!cancelled) setFound({ profileId, teamId: ids.length ? Math.min(...ids) : null })
-      },
-      () => !cancelled && setFound({ profileId, teamId: null }),
+      (teams) => !cancelled && setFound({ profileId, teamIds: teams.filter((t) => t.kind === 'team').map((t) => t.id) }),
+      () => !cancelled && setFound({ profileId, teamIds: [] }),
     )
     return () => {
       cancelled = true
     }
   }, [profileId])
 
-  return profileId && found?.profileId === profileId ? found.teamId : null
+  const teamIds = profileId && found?.profileId === profileId ? found.teamIds : []
+  const key = teamIds.join(',')
+
+  useEffect(() => {
+    if (teamIds.length === 0) return
+    let cancelled = false
+    const load = () =>
+      listPendingValidations(teamIds).then(
+        (wars) => !cancelled && setPending(wars.length),
+        () => {
+          // sin conexión o sin permisos: se deja el último número
+        },
+      )
+    void load()
+    // Se vuelve a mirar cada pocos minutos y al volver a la pestaña
+    const timer = setInterval(load, 120_000)
+    window.addEventListener('focus', load)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      window.removeEventListener('focus', load)
+    }
+    // key resume teamIds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
+  return { teamId: teamIds.length ? Math.min(...teamIds) : null, pending: teamIds.length ? pending : 0 }
 }
 
 /**
@@ -74,13 +104,13 @@ export default function Layout() {
   const [open, setOpen] = useState(false)
   const { isModerator } = useAuth()
   const { t } = useI18n()
-  const myTeamId = useMyTeamId()
+  const { teamId: myTeamId, pending: pendingWars } = useMyTeam()
   const bp = isModerator ? BREAKPOINT.xl : BREAKPOINT.lg
   const desktopFrom = isModerator ? 'xl' : 'lg'
   const base: NavEntry[] = myTeamId
     ? NAV.flatMap((item) =>
         item.to === '/equipos'
-          ? [{ ...item, exclude: `/equipos/${myTeamId}` }, { to: `/equipos/${myTeamId}`, label: 'nav.myTeam' as const }]
+          ? [{ ...item, exclude: `/equipos/${myTeamId}` }, { to: `/equipos/${myTeamId}`, label: 'nav.myTeam' as const, badge: pendingWars }]
           : [item],
       )
     : NAV
@@ -127,7 +157,7 @@ export default function Layout() {
 
           <nav className={bp.nav}>
             {nav.map((item) => (
-              <NavItem key={item.to} to={item.to} label={t(item.label)} exclude={item.exclude} desktopFrom={desktopFrom} />
+              <NavItem key={item.to} to={item.to} label={t(item.label)} exclude={item.exclude} badge={item.badge} desktopFrom={desktopFrom} />
             ))}
           </nav>
 
@@ -171,7 +201,7 @@ export default function Layout() {
               <GlobalSearch floating={false} autoFocus={focusMobileSearch} onNavigate={closeMenu} />
             </div>
             {nav.map((item) => (
-              <NavItem key={item.to} to={item.to} label={t(item.label)} exclude={item.exclude} desktopFrom={desktopFrom} onClick={closeMenu} />
+              <NavItem key={item.to} to={item.to} label={t(item.label)} exclude={item.exclude} badge={item.badge} desktopFrom={desktopFrom} onClick={closeMenu} />
             ))}
             <div className="mt-4 flex items-center justify-between gap-4">
               <AuthButton />
@@ -219,15 +249,18 @@ function NavItem({
   to,
   label,
   exclude,
+  badge,
   desktopFrom,
   onClick,
 }: {
   to: string
   label: string
   exclude?: string
+  badge?: number
   desktopFrom: 'lg' | 'xl'
   onClick?: () => void
 }) {
+  const { t } = useI18n()
   const { pathname } = useLocation()
   const excluded = !!exclude && pathname === exclude
   return (
@@ -243,6 +276,15 @@ function NavItem({
       {({ isActive: active }) => (
         <>
           {label}
+          {!!badge && (
+            <span
+              className="ml-1.5 min-w-5 rounded-full bg-kart-red px-1.5 py-0.5 text-center font-mono text-[11px] leading-none font-bold text-white"
+              title={t('nav.pendingTitle', { n: badge })}
+              aria-label={t('nav.pendingTitle', { n: badge })}
+            >
+              {badge}
+            </span>
+          )}
           {active && !excluded && (
             <span className={`absolute inset-x-2.5 bottom-0 h-1 bg-kart-yellow ${desktopFrom === 'xl' ? 'max-xl:hidden' : 'max-lg:hidden'}`} />
           )}

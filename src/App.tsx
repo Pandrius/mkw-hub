@@ -11,6 +11,7 @@ import TeamDetail from './pages/TeamDetail'
 import Teams from './pages/Teams'
 import TimeTrials from './pages/TimeTrials'
 import TrackDetail from './pages/TrackDetail'
+import ValidateWar from './pages/ValidateWar'
 import Tracks from './pages/Tracks'
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="estadisticas/:profileId" element={<Stats />} />
         <Route path="eventos/nuevo" element={<NewEvent />} />
         <Route path="eventos/:eventId" element={<EventDetail />} />
+        <Route path="eventos/:eventId/validar" element={<ValidateWar />} />
         <Route path="equipos" element={<Teams />} />
         <Route path="equipos/:teamId" element={<TeamDetail />} />
         <Route path="admin" element={<Admin />} />

@@ -161,3 +161,14 @@ body {
     animation: none;
   }
 }
+
+/* Campos de posición: sin las flechitas de subir/bajar el número (↑/↓ del teclado cambian de jugador) */
+input[data-position] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[data-position]::-webkit-outer-spin-button,
+input[data-position]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

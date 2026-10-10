@@ -28,6 +28,8 @@ export type TeamWar = {
   races: TeamWarRace[]
   /** Penalties de la war, desde el punto de vista de este equipo (home = el propio) */
   penalties?: Penalty[]
+  /** Si es la copia que subió el rival al validar una war, la war original */
+  mirrorOf?: string | null
 }
 
 export type TeamRivalMatch = {
@@ -430,7 +432,11 @@ export async function getTeamWars(teamId: number): Promise<TeamWar[]> {
 /** Igual que getTeamWars, y además las wars del rival que este equipo aún no ha confirmado */
 export async function getTeamWarsWithPending(teamId: number): Promise<{ wars: TeamWar[]; pending: MirroredWar[] }> {
   const [own, theirs] = await Promise.all([fetchWars('team_id', teamId), fetchWars('opponent_team_id', teamId)])
-  const mirrored = theirs.filter((w) => w.team_id !== null && w.team_id !== teamId).map(mirrorWar)
+  // Las copias que subió este equipo al validar no se vuelven a invertir, y las wars que ya tienen copia propia tampoco
+  const copied = new Set(own.map((w) => w.mirrorOf).filter(Boolean))
+  const mirrored = theirs
+    .filter((w) => w.team_id !== null && w.team_id !== teamId && !w.mirrorOf && !copied.has(w.id))
+    .map(mirrorWar)
   return mergeTeamWars(own, mirrored)
 }
 
@@ -440,7 +446,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
   const { data: events, error: evError } = await supabase
     .from('events')
     .select(
-      'id, team_id, team_tag, team_name, opponent_team_id, opponent_tag, opponent_name, created_at, finished_at, opponent_confirmed, penalties',
+      'id, team_id, team_tag, team_name, opponent_team_id, opponent_tag, opponent_name, created_at, finished_at, opponent_confirmed, penalties, mirror_of',
     )
     .eq(column, teamId)
     .eq('kind', 'war')
@@ -505,6 +511,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
     finished_at: ev.finished_at as string | null,
     opponent_confirmed: (ev.opponent_confirmed as boolean | null) ?? null,
     penalties: parsePenalties(ev.penalties),
+    mirrorOf: (ev.mirror_of as string | null) ?? null,
     races: racesByEvent.get(ev.id as string) ?? [],
   }))
 }

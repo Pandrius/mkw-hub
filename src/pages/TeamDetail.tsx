@@ -34,7 +34,6 @@ export default function TeamDetail() {
   const [form, setForm] = useState<TeamForm | null>(null)
   const [wars, setWars] = useState<TeamWar[]>([])
   const [pending, setPending] = useState<MirroredWar[]>([])
-  const [reloadKey, setReloadKey] = useState(0)
   const [loading, setLoading] = useState(isValidId)
   const [tab, setTab] = useState<TabId>('overview')
   const [trackSearch, setTrackSearch] = useState('')
@@ -85,7 +84,7 @@ export default function TeamDetail() {
     return () => {
       cancelled = true
     }
-  }, [id, isValidId, reloadKey])
+  }, [id, isValidId])
 
   const playerStats = useMemo(() => computeTeamPlayerStats(wars), [wars])
 
@@ -190,7 +189,7 @@ export default function TeamDetail() {
         </header>
       </div>
 
-      {isMember && pending.length > 0 && <PendingWars wars={pending} onDone={() => setReloadKey((k) => k + 1)} />}
+      {isMember && pending.length > 0 && <PendingWars wars={pending} />}
 
       {/* Pestañas de detalle */}
       <Tabs

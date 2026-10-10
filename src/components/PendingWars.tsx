@@ -1,30 +1,13 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 import { useI18n } from '../i18n'
-import { confirmOpponentWar } from '../lib/events'
 import { penaltyTotals } from '../lib/penalties'
 import { scoreTeamRace } from '../lib/scoring'
 import type { MirroredWar } from '../lib/teamStats'
 import { Plate } from './ui'
 
-/** Wars que apuntó el equipo rival y que este equipo tiene que confirmar para que cuenten */
-export function PendingWars({ wars, onDone }: { wars: MirroredWar[]; onDone: () => void }) {
+/** Wars que subió el equipo rival contra este y que alguien de este equipo tiene que revisar y validar */
+export function PendingWars({ wars }: { wars: MirroredWar[] }) {
   const { t } = useI18n()
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const decide = async (id: string, accept: boolean) => {
-    setBusy(id)
-    setError(null)
-    try {
-      await confirmOpponentWar(id, accept)
-      onDone()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.saveError'))
-    } finally {
-      setBusy(null)
-    }
-  }
 
   return (
     <section className="border-2 border-kart-yellow/60 bg-surface p-4">
@@ -44,7 +27,7 @@ export function PendingWars({ wars, onDone }: { wars: MirroredWar[]; onDone: () 
           score.away += pen.away
           return (
             <div key={w.id} className="flex flex-wrap items-center gap-3 py-3">
-              <Link to={`/eventos/${w.id}`} className="flex flex-1 items-center gap-2 hover:text-kart-yellow">
+              <div className="flex flex-1 items-center gap-2">
                 <span className="text-sm text-muted">vs</span>
                 <Plate>{w.opponent_tag ?? '?'}</Plate>
                 <span className="font-mono text-xs text-muted">{(w.finished_at ?? w.created_at).slice(0, 10)}</span>
@@ -52,20 +35,14 @@ export function PendingWars({ wars, onDone }: { wars: MirroredWar[]; onDone: () 
                   {score.home} – {score.away}
                 </span>
                 <span className="text-xs text-muted">{t('pending.loggedBy', { tag: w.opponent_tag ?? '?' })}</span>
+              </div>
+              <Link to={`/eventos/${w.id}/validar`} className="btn-yellow text-sm">
+                {t('pending.review')}
               </Link>
-              <span className="flex gap-2">
-                <button onClick={() => decide(w.id, false)} disabled={busy !== null} className="btn-line text-sm">
-                  {t('pending.reject')}
-                </button>
-                <button onClick={() => decide(w.id, true)} disabled={busy !== null} className="btn-yellow text-sm">
-                  {t('pending.confirm')}
-                </button>
-              </span>
             </div>
           )
         })}
       </div>
-      {error && <p className="mt-2 text-sm text-kart-red">{error}</p>}
     </section>
   )
 }

@@ -1,4 +1,5 @@
 import { sanitizeEventDetail } from './eventSanitize'
+import type { WarCorrections } from './mirrorWar'
 import type { Penalty } from './penalties'
 import type { Substitution } from './substitutions'
 import { supabase } from './supabase'
@@ -19,6 +20,10 @@ export type GameEvent = {
   opponent_players: string[] | null
   penalties: Penalty[]
   substitutions: Substitution[]
+  /** null = el equipo rival aún no la ha revisado, true = validada, false = rechazada */
+  opponent_confirmed?: boolean | null
+  /** Si es la copia que subió el rival al validarla, la war original */
+  mirror_of?: string | null
   created_by: string
   created_at: string
   finished_at: string | null
@@ -142,9 +147,44 @@ export function saveRace(
 export const deleteRace = (eventId: string, raceNo: number) => rpc<void>('delete_race', { target: eventId, race_no: raceNo })
 export const finishEvent = (eventId: string) => rpc<void>('finish_event', { target: eventId })
 export const deleteEvent = (eventId: string) => rpc<void>('delete_event', { target: eventId })
-/** El equipo rival confirma (o rechaza) una war apuntada por el otro equipo */
-export const confirmOpponentWar = (eventId: string, accept: boolean) =>
-  rpc<void>('confirm_opponent_war', { target: eventId, accept })
+/** El equipo rival rechaza una war apuntada por el otro equipo (para validarla, acceptOpponentWar) */
+export const rejectOpponentWar = (eventId: string) => rpc<void>('confirm_opponent_war', { target: eventId, accept: false })
+
+/**
+ * Un miembro del equipo rival valida la war: se sube de verdad desde su perspectiva, con los nombres
+ * (y las penalties) corregidos si hace falta. Solo una persona puede hacerlo. Devuelve el id de la war nueva.
+ */
+export const acceptOpponentWar = (eventId: string, c: WarCorrections) =>
+  rpc<string>('accept_opponent_war', {
+    target: eventId,
+    team_names: c.teamNames,
+    opponent_names: c.opponentNames,
+    penalty_labels: c.penaltyLabels,
+  })
+
+/** Wars finalizadas contra alguno de estos equipos que aún no ha revisado nadie (las que hay que validar) */
+export async function listPendingValidations(teamIds: number[]): Promise<GameEvent[]> {
+  if (teamIds.length === 0) return []
+  const { data, error } = await client()
+    .from('events')
+    .select('*')
+    .eq('kind', 'war')
+    .eq('status', 'finished')
+    .is('opponent_confirmed', null)
+    .is('mirror_of', null)
+    .in('opponent_team_id', teamIds)
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (error) throw error
+  return (data ?? []) as GameEvent[]
+}
+
+/** Id de la copia que se creó al validar una war (null si aún no se ha validado) */
+export async function getMirrorOf(eventId: string): Promise<{ id: string; confirmedBy: string | null } | null> {
+  const { data, error } = await client().from('events').select('id, created_by').eq('mirror_of', eventId).maybeSingle()
+  if (error) throw error
+  return data ? { id: data.id as string, confirmedBy: (data.created_by as string | null) ?? null } : null
+}
 
 export async function getEvent(eventId: string): Promise<EventDetail | null> {
   const db = client()

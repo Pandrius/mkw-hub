@@ -150,6 +150,23 @@ export default function EventDetail() {
       </header>
 
       {!isOpen && <p className="border-l-4 border-kart-yellow bg-surface px-4 py-2 text-sm">{t('event.locked')}</p>}
+      {isWar && !isOpen && event.opponent_team_id !== null && !event.mirror_of && (
+        <p
+          className={`border-l-4 bg-surface px-4 py-2 text-sm ${
+            event.opponent_confirmed ? 'border-kart-green' : event.opponent_confirmed === false ? 'border-kart-red' : 'border-line'
+          }`}
+        >
+          {t(event.opponent_confirmed ? 'event.validation.validated' : event.opponent_confirmed === false ? 'event.validation.rejected' : 'event.validation.pending', { tag: event.opponent_tag ?? '?' })}
+        </p>
+      )}
+      {isWar && event.mirror_of && (
+        <p className="border-l-4 border-kart-green bg-surface px-4 py-2 text-sm">
+          {t('event.validation.copy')}{' '}
+          <Link to={`/eventos/${event.mirror_of}`} className="font-semibold text-kart-blue hover:underline">
+            {t('event.validation.original')} →
+          </Link>
+        </p>
+      )}
       {isOpen && !canEdit && <p className="border-l-4 border-line bg-surface px-4 py-2 text-sm text-muted">{t('event.readOnly')}</p>}
 
       {canEdit && editing === null && nextRaceNo <= RACES_PER_EVENT && (
