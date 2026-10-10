@@ -48,8 +48,10 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Carreras de 11 o 10 jugadores indicando de qué equipo faltan
 - [x] Tabla automática de la war (puntos por jugador, marcador, texto para copiar)
 - [x] Las posiciones de la war cuentan en las estadísticas War de cada jugador
-- [x] Forma reciente (últimas 12 carreras frente a la media) y media por evento
-- [x] Rachas (top 6, podios, victorias, mitad de abajo) y vitrina de trofeos con nombres de Mario Kart
+- [x] Puntos por war, distribución de posiciones, regularidad, rendimiento por fase (1-4 / 5-8 / 9-12) y war frente a lounge
+- [x] Forma (últimas 12 carreras frente a las anteriores, media móvil) y rachas
+- [x] Pistas fuertes y débiles frente a la media propia, ajustadas por número de carreras
+- [x] Análisis de cada war: evolución de la diferencia, cambios de líder, fases, reparto de posiciones y rendimiento individual
 
 ### 3b. Bot de Discord
 - [x] Comandos `/evento iniciar`, `/carrera`, `/sub`, `/corregir`, `/evento ver`, `/evento finalizar`
@@ -62,8 +64,9 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Equipos y tags importados de MKC; miembros verificados por Discord ID
 - [ ] Líder/manager administra el equipo
 - [x] Wars vinculadas al equipo: solo sus miembros las editan
-- [x] Rendimiento del equipo por pista, historial contra rivales
-- [x] Forma del equipo: últimas wars, rachas, remontadas, bestia negra…
+- [x] Rendimiento del equipo por pista (+/- y % de carreras ganadas), cara a cara con cada rival
+- [x] Forma del equipo, remontadas, ventajas mantenidas, wars ajustadas y rendimiento por fase
+- [x] Jugadores del equipo: puntos por war, % de los puntos del equipo, +/- con y sin el jugador
 - [ ] Disponibilidad del equipo para organizar wars (más adelante)
 
 ### 5. Extras

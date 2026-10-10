@@ -47,22 +47,6 @@ describe('computeTeamForm', () => {
     expect(f.wars.map((w) => w.eventId)).toEqual(['a', 'b'])
   })
 
-  it('remontada: perdiendo tras la carrera 6 y ganada al final', () => {
-    const races = [BAD, BAD, EVEN, EVEN, EVEN, EVEN, GOOD, GOOD, GOOD, EVEN, EVEN, EVEN]
-    const f = computeTeamForm([war('a', 1, races, 'XYZ')])!
-    expect(f.badges.find((b) => b.id === 'comeback')?.vars).toEqual({ n: 1, deficit: 80, opp: 'XYZ' })
-  })
-
-  it('desplome: ganando a mitad y perdida', () => {
-    const races = [GOOD, GOOD, EVEN, EVEN, EVEN, EVEN, BAD, BAD, BAD, EVEN, EVEN, EVEN]
-    expect(computeTeamForm([war('a', 1, races)])!.badges.map((b) => b.id)).toContain('collapse')
-  })
-
-  it('bestia negra: el rival contra el que más se pierde', () => {
-    const f = computeTeamForm([war('a', 1, [BAD], 'NMS'), war('b', 2, [BAD], 'NMS'), war('c', 3, [GOOD], 'NMS')])!
-    expect(f.badges.find((b) => b.id === 'nemesis')?.vars).toEqual({ opp: 'NMS', w: 1, l: 2 })
-  })
-
   it('racha de carreras ganadas a través de varias wars', () => {
     const f = computeTeamForm([war('a', 1, [BAD, GOOD, GOOD]), war('b', 2, [GOOD, EVEN])])!
     expect(f.raceWinStreak).toEqual({ current: 0, best: 3 })

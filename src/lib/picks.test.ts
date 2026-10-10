@@ -12,6 +12,9 @@ const t = (trackId: string, diff: number, races: number): TeamTrackStats => ({
   avgAway: 0,
   avgPosHome: 0,
   avgPosAway: 0,
+  raceWins: 0,
+  raceWinRate: 0,
+  rating: 0,
 })
 
 describe('shrunk', () => {

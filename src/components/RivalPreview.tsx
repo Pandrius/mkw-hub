@@ -4,15 +4,11 @@ import { getTrack, getTrackColor, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { TeamWithMembers } from '../lib/compare'
 import { buildPickPlan, type PickRow, type PickSource } from '../lib/picks'
-import { computeTeamStats, getTeamWars, type TeamStats, type TeamWar } from '../lib/teamStats'
+import { computeTeamStats, getTeamWars, rivalKeyOf, type TeamStats, type TeamWar } from '../lib/teamStats'
 import { SearchBox } from './SearchBox'
 import { EmptyState, Plate } from './ui'
 
 type Rival = { key: string; id: number | null; tag: string; name: string }
-
-/** Misma clave de rival que computeTeamStats (por id de MKC o, si no hay, por tag) */
-const rivalKeyOf = (w: TeamWar) =>
-  w.opponent_team_id ? `id:${w.opponent_team_id}` : `tag:${(w.opponent_tag || w.opponent_name || 'Rival').trim().toLowerCase()}`
 
 const signed = (n: number) => (n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1))
 
