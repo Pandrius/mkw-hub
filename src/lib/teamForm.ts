@@ -18,7 +18,7 @@ export type WarOutcome = {
 export type TeamForm = {
   /** Wars de la más antigua a la más reciente */
   wars: WarOutcome[]
-  /** Últimas wars (máx. 5), de la más antigua a la más reciente */
+  /** Últimas wars (máx. 5), de la más reciente a la más antigua: al jugar otra, las anteriores se desplazan a la derecha */
   last: WarOutcome[]
   /** Racha actual: tipo y longitud */
   current: { result: 'W' | 'L' | 'T'; length: number } | null
@@ -74,7 +74,7 @@ export function computeTeamForm(wars: TeamWar[]): TeamForm | null {
 
   return {
     wars: outcomes,
-    last: outcomes.slice(-5),
+    last: outcomes.slice(-5).reverse(),
     current: { result: lastOutcome.result, length },
     winStreak: streakOf(outcomes, (o) => o.result === 'W'),
     lossStreak: streakOf(outcomes, (o) => o.result === 'L'),

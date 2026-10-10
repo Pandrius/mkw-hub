@@ -37,7 +37,9 @@ describe('computeTeamForm', () => {
     expect(f.winStreak).toEqual({ current: 0, best: 3 })
     expect(f.lossStreak).toEqual({ current: 2, best: 2 })
     expect(f.current).toEqual({ result: 'L', length: 2 })
-    expect(f.last.map((w) => w.result).join('')).toBe('WWWLL')
+    // La más reciente primero
+    expect(f.last.map((w) => w.result).join('')).toBe('LLWWW')
+    expect(f.last.map((w) => w.eventId)).toEqual(['e', 'd', 'c', 'b', 'a'])
   })
 
   it('ordena las wars por fecha aunque lleguen desordenadas', () => {
