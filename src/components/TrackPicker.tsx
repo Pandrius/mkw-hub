@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { CUPS, getCup, getTrack, type Track } from '../data/tracks'
+import { CUPS, getTrack, type Track, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { searchTracks } from '../lib/trackSearch'
 import { Plate } from './ui'
@@ -57,7 +57,7 @@ export default function TrackPicker({
         onClick={() => pick(track)}
         className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-2 ${i === active ? 'bg-surface-2' : ''}`}
       >
-        <Plate color={getCup(track.cupId)?.color}>{track.abbr ?? track.id}</Plate>
+        <Plate color={getTrackColor(track)}>{track.abbr ?? track.id}</Plate>
         <span className="text-sm font-semibold">{track.name}</span>
       </button>
     </li>

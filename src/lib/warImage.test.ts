@@ -60,13 +60,13 @@ describe('buildWarImageData', () => {
     expect(data.away.name).toBeNull()
   })
 
-  it('serie acumulada carrera a carrera con abreviaturas y color de copa', () => {
+  it('serie acumulada carrera a carrera con abreviaturas y color de la pista', () => {
     expect(data.races.map((r) => [r.raceNo, r.abbr, r.diff, r.runningDiff])).toEqual([
       [1, 'MBC', 8, 8],
       [2, 'rDKP', -8, 0],
       [3, 'pista-inventada', data.races[2].diff, data.races[2].diff],
     ])
-    expect(data.races[0].color).toBe('#ff3b3b') // copa Champiñón
+    expect(data.races[0].color).toBe('#dd9168') // el color de su captura (Mario Bros. Circuit), no el de su copa
     expect(data.races[2].color).toBe('#a5a29a') // pista desconocida: gris
     expect(data.races.at(-1)?.runningDiff).toBe(data.diff)
   })

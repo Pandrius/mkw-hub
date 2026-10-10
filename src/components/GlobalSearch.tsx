@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { useNavigate } from 'react-router'
-import { getCup, getTrack, getTrackImage, TRACKS } from '../data/tracks'
+import { getTrack, getTrackImage, TRACKS, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import {
@@ -260,7 +260,7 @@ function HitIcon({ hit }: { hit: SearchHit }) {
     return (
       <span className="flex shrink-0 items-center gap-2">
         {image && <img src={image} alt="" loading="lazy" className="h-7 w-11 border border-line object-cover" />}
-        {hit.detail && <Plate color={track && getCup(track.cupId)?.color}>{hit.detail}</Plate>}
+        {hit.detail && <Plate color={getTrackColor(track)}>{hit.detail}</Plate>}
       </span>
     )
   }

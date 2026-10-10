@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import EventList from '../components/EventList'
 import { PlayerFormPanel } from '../components/FormPanel'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
-import { getCup, getTrack } from '../data/tracks'
+import { getTrack, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
@@ -202,7 +202,7 @@ function TrackPodium({ title, tracks, color }: { title: string; tracks: TrackSta
             const track = getTrack(ts.trackId)
             return (
               <li key={ts.trackId} className="flex items-baseline gap-3">
-                <span className="w-12 font-display font-black normal-case" style={{ color: track && getCup(track.cupId)?.color }}>
+                <span className="w-12 font-display font-black normal-case" style={{ color: getTrackColor(track) }}>
                   {track?.abbr}
                 </span>
                 <Link to={`/pistas/${ts.trackId}`} className="flex-1 truncate hover:underline">
@@ -276,7 +276,7 @@ function TrackTable({ tracks }: { tracks: TrackStats[] }) {
             ) : (
               filteredTracks.map((ts) => {
                 const track = getTrack(ts.trackId)
-                const color = track ? getCup(track.cupId)?.color : undefined
+                const color = getTrackColor(track)
                 const low = ts.races < MIN_RACES_RELIABLE
                 return (
                   <tr key={ts.trackId} className="border-t border-line/60">

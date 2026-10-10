@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTrackByAbbr, getTrackImage, type Track, TRACKS } from './tracks'
+import { getTrack, getTrackByAbbr, getTrackColor, getTrackImage, type Track, TRACKS } from './tracks'
 
 describe('tracks', () => {
   it('las 30 pistas principales tienen abreviatura única', () => {
@@ -33,5 +33,60 @@ describe('tracks', () => {
     expect(getTrackByAbbr('rdkp')?.name).toBe('DK Pass')
     expect(getTrackByAbbr('BCi')?.name).toBe('Boo Cinema')
     expect(getTrackByAbbr('BC')?.name).toBe("Bowser's Castle")
+  })
+})
+
+describe('getTrackColor', () => {
+  const hue = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    const max = Math.max(r, g, b)
+    const d = max - Math.min(r, g, b)
+    if (d === 0) return 0
+    const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+    return h * 60
+  }
+  const color = (abbr: string) => getTrackColor(getTrackByAbbr(abbr))
+
+  it('todas las pistas tienen un color válido', () => {
+    for (const t of TRACKS) expect(getTrackColor(t), t.id).toMatch(/^#[0-9a-f]{6}$/i)
+  })
+
+  it('las variantes de una misma pista comparten color', () => {
+    expect(new Set(['rMC', 'rMC1', 'rMC2', 'rMC3'].map(color)).size).toBe(1)
+    expect(new Set(['rGV1', 'rGV2', 'rGV3'].map(color)).size).toBe(1)
+    expect(new Set(['rCM', 'rCM1', 'rCM2'].map(color)).size).toBe(1)
+  })
+
+  it('el color sigue a la captura de la pista, no a su copa (Dry Bones Burnout es de lava, no verde)', () => {
+    const h = hue(color('DBB')!)
+    expect(h < 20 || h > 340).toBe(true)
+    // Bowser's Castle es de fuego: tono naranja
+    expect(hue(color('BC')!)).toBeGreaterThan(15)
+    expect(hue(color('BC')!)).toBeLessThan(45)
+    // Sky-High Sundae es de cielo: tono azul
+    expect(hue(color('rSHS')!)).toBeGreaterThan(190)
+    expect(hue(color('rSHS')!)).toBeLessThan(250)
+  })
+
+  it('las pistas sin color propio usan el de su pista madre o el de su copa, y sin pista no hay color', () => {
+    expect(getTrackColor(undefined)).toBeUndefined()
+    expect(getTrackColor(null)).toBeUndefined()
+    const sinColor: Track = { id: 'x', name: 'X', cupId: 'mushroom', parentId: 'rainbow-road' }
+    expect(getTrackColor(sinColor)).toBe(getTrackColor(getTrack('rainbow-road')))
+    const sinNada: Track = { id: 'y', name: 'Y', cupId: 'leaf' }
+    expect(getTrackColor(sinNada)).toMatch(/^#[0-9a-f]{6}$/i)
+  })
+
+  it('los colores son lo bastante claros para leer texto oscuro encima', () => {
+    for (const t of TRACKS) {
+      const hex = getTrackColor(t)!
+      const lin = (i: number) => {
+        const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+      }
+      const lum = 0.2126 * lin(0) + 0.7152 * lin(1) + 0.0722 * lin(2)
+      // contraste con #141414 (luminancia ~0.007) de al menos 3:1
+      expect((lum + 0.05) / (0.0070 + 0.05), t.id).toBeGreaterThan(3)
+    }
   })
 })

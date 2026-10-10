@@ -1,6 +1,6 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
-import { coverRect, DEFAULT_DESIGN, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, luminance, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
 import { fitText, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
@@ -224,13 +224,35 @@ function spacedWidth(ctx: Ctx, s: string, font: string, spacing: number): number
   return [...s].reduce((sum, ch) => sum + ctx.measureText(ch).width + spacing, -spacing)
 }
 
-/** Oro metálico: degradado vertical del acento, claro arriba y oscuro abajo */
-function gold(ctx: Ctx, y0: number, y1: number): CanvasGradient {
+/** Metal de un color: degradado vertical claro arriba y oscuro abajo */
+function metal(ctx: Ctx, base: string, y0: number, y1: number): CanvasGradient {
   const g = ctx.createLinearGradient(0, y0, 0, y1)
-  g.addColorStop(0, mixColors(C.accent, '#ffffff', 0.55))
-  g.addColorStop(0.5, C.accent)
-  g.addColorStop(1, mixColors(C.accent, '#000000', 0.42))
+  g.addColorStop(0, mixColors(base, '#ffffff', 0.55))
+  g.addColorStop(0.5, base)
+  g.addColorStop(1, mixColors(base, '#000000', 0.42))
   return g
+}
+
+/** Oro metálico: el acento hecho metal */
+const gold = (ctx: Ctx, y0: number, y1: number) => metal(ctx, C.accent, y0, y1)
+
+/** Plata del segundo equipo en el estilo elegante (en el resto, el color de la tinta) */
+const SILVER = '#cfd4de'
+const awayFlat = () => (ELEGANT ? SILVER : C.ink)
+const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? metal(ctx, SILVER, y0, y1) : C.ink)
+
+/**
+ * Color de los tres primeros de cada equipo: oro (el acento), plata y bronce. En el estilo elegante son
+ * metales con degradado; en el resto, colores lisos (más oscuros si el fondo es claro, para que se lean).
+ */
+function medalPaint(ctx: Ctx, rank: number, y0: number, y1: number): Paint | null {
+  if (rank > 2) return null
+  const light = luminance(C.bg) > 0.5
+  if (ELEGANT) {
+    return rank === 0 ? gold(ctx, y0, y1) : metal(ctx, rank === 1 ? '#cfd4de' : '#c9803f', y0, y1)
+  }
+  if (rank === 0) return C.accent
+  return rank === 1 ? (light ? '#7f8590' : '#b9bfcb') : light ? '#94571f' : '#c47f3b'
 }
 
 /** Filete dorado que se desvanece por un extremo (`in`: nace de la nada y llega pleno; `out`: al revés) */
@@ -367,7 +389,7 @@ function logo(ctx: Ctx, img: HTMLImageElement, x: number, y: number, size: numbe
 /** Ficha de equipo: logo (si hay), tag, nombre y total. El rival va en espejo, a la derecha */
 function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x: number, y: number, h: number, home: boolean) {
   // Color del equipo: el de la izquierda en acento (oro metálico en el elegante) y el otro en tinta
-  const teamPaint: Paint = home ? (ELEGANT ? gold(ctx, y + h / 2 - 52, y + h / 2 + 12) : C.accent) : C.ink
+  const teamPaint: Paint = home ? (ELEGANT ? gold(ctx, y + h / 2 - 52, y + h / 2 + 12) : C.accent) : awayPaint(ctx, y + h / 2 - 52, y + h / 2 + 12)
   panel(ctx, x, y, COL_W, h)
   if (!ELEGANT) {
     // Franja de color del lado exterior
@@ -387,7 +409,7 @@ function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x
   ctx.font = `900 112px ${DISPLAY}`
   const totalW = ctx.measureText(String(team.total)).width
   // En el modo neutral la puntuación lleva el color de su equipo, para saber de quién es cada una
-  const totalPaint: Paint = NEUTRAL ? (home && ELEGANT ? gold(ctx, y + h / 2 - 56, y + h / 2 + 44) : teamPaint) : C.ink
+  const totalPaint: Paint = NEUTRAL ? (ELEGANT ? (home ? gold(ctx, y + h / 2 - 56, y + h / 2 + 44) : awayPaint(ctx, y + h / 2 - 56, y + h / 2 + 44)) : teamPaint) : C.ink
   text(ctx, String(team.total), totalX, y + h / 2 + 40, ctx.font, totalPaint, home ? 'right' : 'left')
 
   const nameX = home ? logoX + logoSize + logoGap : logoX - logoGap
@@ -411,7 +433,7 @@ function playersTable(
   labels: WarImageLabels,
   home: boolean,
 ) {
-  const accent = home ? C.accent : C.ink
+  const accent = home ? C.accent : awayFlat()
   const headH = 34
   panel(ctx, x, y, COL_W, headH + rows * ROW_H + 4)
   ctx.fillStyle = C.bg
@@ -470,10 +492,12 @@ function playersTable(
     const partialW = partial ? ctx.measureText(partial).width : 0
     ctx.font = `600 20px ${SANS}`
     const name = fitText(p.name, colAvg - 70 - (x + 52) - partialW, (t) => ctx.measureText(t).width)
-    text(ctx, name, x + 52, base, ctx.font, i === 0 ? accent : C.ink)
+    // Oro, plata y bronce para los tres primeros, en el nombre y en los puntos (la posición media no)
+    const medal = medalPaint(ctx, i, base - 22, base + 6)
+    text(ctx, name, x + 52, base, ctx.font, medal ?? C.ink)
     if (partial) text(ctx, partial, x + 52 + ctx.measureText(name).width, base - 1, `500 14px ${MONO}`, C.muted)
     text(ctx, fmtAvg(p.avgPos), colAvg, base - 1, `700 15px ${MONO}`, C.muted, 'right')
-    text(ctx, String(p.points), colPts, base + 1, `800 26px ${DISPLAY}`, C.ink, 'right')
+    text(ctx, String(p.points), colPts, base + 1, `800 26px ${DISPLAY}`, medal ?? C.ink, 'right')
   })
 }
 
@@ -593,7 +617,7 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
   const byNo = new Map(data.races.map((r) => [r.raceNo, r]))
   const top = y + 44
   fittedText(ctx, data.home.tag, PAD, top + 76, labelW - 10, 800, 22, DISPLAY, C.accent, 'left', 13)
-  fittedText(ctx, data.away.tag, PAD, top + 106, labelW - 10, 800, 22, DISPLAY, C.ink, 'left', 13)
+  fittedText(ctx, data.away.tag, PAD, top + 106, labelW - 10, 800, 22, DISPLAY, awayFlat(), 'left', 13)
   for (let n = 1; n <= data.slots; n++) {
     const cx = x0 + slotW * (n - 0.5)
     const r = byNo.get(n)
@@ -613,7 +637,7 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
     slant(ctx, cx - pw / 2, top + 18, pw, 24, 5, r.color)
     text(ctx, abbr, cx, top + 36, ctx.font, readable(r.color), 'center')
     text(ctx, String(r.home), cx, top + 76, `800 26px ${DISPLAY}`, C.accent, 'center')
-    text(ctx, String(r.away), cx, top + 106, `800 26px ${DISPLAY}`, C.ink, 'center')
+    text(ctx, String(r.away), cx, top + 106, `800 26px ${DISPLAY}`, awayFlat(), 'center')
     // Reparto de los puntos de la carrera entre los dos equipos
     const bw = slotW - 18
     const bx = cx - bw / 2
@@ -621,7 +645,7 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
     const aw = total > 0 ? (r.home / total) * bw : bw / 2
     ctx.fillStyle = C.accent
     ctx.fillRect(bx, top + 118, aw, 7)
-    ctx.fillStyle = C.ink
+    ctx.fillStyle = awayFlat()
     ctx.fillRect(bx + aw, top + 118, bw - aw, 7)
   }
 
@@ -629,7 +653,7 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
   const tileW = (W - PAD * 2 - GAP) / 2
   const tileY = top + 150
   const a = C.accent
-  const b = C.ink
+  const b = awayFlat()
   const dash = { text: ' – ', color: C.muted }
   const tiles: [string, { text: string; color: Paint }[]][] = [
     [

@@ -107,6 +107,35 @@ export function getTrackByAbbr(abbr: string): Track | undefined {
   return TRACKS.find((t) => t.abbr?.toLowerCase() === a)
 }
 
+/**
+ * Color de la placa de cada pista: el tono dominante de su captura (public/tracks), ajustado para que
+ * se lea el texto encima. Las variantes de una misma pista (rMC1, rMC2, rMC3; rGV1, rGV2, rGV3…)
+ * comparten color y salen de todas sus capturas juntas.
+ */
+const TRACK_COLORS: Record<string, string> = {
+  MBC: '#dd9168', CC: '#63a0e3', WS: '#d1925e', DKS: '#d54b53',
+  rDH: '#d5c071', rSGB: '#d79c6f', rWS: '#c9603c', rAF: '#ca885c',
+  rDKP: '#699cdd', SP: '#5699c9', rSHS: '#5b93ec', rWSh: '#40b3bf',
+  rKTB: '#559bf1', FO: '#d1a875', PS: '#d58f72',
+  rPB: '#d18f75', SSS: '#d1a775', rDDJ: '#e1965c', GBR: '#d79b48',
+  CCF: '#e15c4e', DD: '#339bd8', BCi: '#40bfb6', DBB: '#d02f3f',
+  rMMM: '#5fe4e7', rCM: '#da976c', rTF: '#c78653', BC: '#c77538',
+  AH: '#c6a140', rMC: '#e1c265', RR: '#6c98ce',
+  rMC1: '#e1c265', rMC2: '#e1c265', rMC3: '#e1c265',
+  rGV1: '#acd175', rGV2: '#acd175', rGV3: '#acd175',
+  rCM1: '#da976c', rCM2: '#da976c',
+  rKB1: '#ebb55c', rVL1: '#52c6f4',
+}
+
+/** Color de la placa de una pista (el de su captura; si no lo tiene, el de su pista madre y, si no, el de su copa) */
+export function getTrackColor(track: Track | undefined | null): string | undefined {
+  if (!track) return undefined
+  const own = track.abbr ? TRACK_COLORS[track.abbr] : undefined
+  if (own) return own
+  const parent = track.parentId ? getTrack(track.parentId) : undefined
+  return getTrackColor(parent) ?? getCup(track.cupId)?.color
+}
+
 export function getCup(id: string): Cup | undefined {
   return CUPS.find((c) => c.id === id)
 }

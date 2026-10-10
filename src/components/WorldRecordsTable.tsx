@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { getCup, TRACKS } from '../data/tracks'
+import { TRACKS, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { formatDate, formatTime } from '../lib/time'
@@ -47,7 +47,7 @@ export default function WorldRecordsTable() {
           <tbody>
             {TRACKS.map((track) => {
               const r = records.get(track.id)
-              const color = getCup(track.cupId)?.color
+              const color = getTrackColor(track)
               return (
                 <tr key={track.id} className="border-t border-line/60 hover:bg-surface-2/40">
                   <td className="px-4 py-2.5">

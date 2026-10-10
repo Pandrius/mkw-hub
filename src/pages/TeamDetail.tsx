@@ -4,7 +4,7 @@ import { TeamFormPanel } from '../components/FormPanel'
 import { RivalPreview } from '../components/RivalPreview'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
-import { getCup, getTrack } from '../data/tracks'
+import { getTrack, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
@@ -261,7 +261,7 @@ export default function TeamDetail() {
                       return (
                         <div key={tr.trackId} className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
+                            <Plate color={getTrackColor(trackObj)}>{trackObj?.abbr ?? tr.trackId}</Plate>
                             <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
                           </span>
                           <span className="font-mono font-bold text-kart-green text-sm">
@@ -285,7 +285,7 @@ export default function TeamDetail() {
                       return (
                         <div key={tr.trackId} className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
+                            <Plate color={getTrackColor(trackObj)}>{trackObj?.abbr ?? tr.trackId}</Plate>
                             <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
                           </span>
                           <span className="font-mono font-bold text-kart-red text-sm">
@@ -346,7 +346,7 @@ export default function TeamDetail() {
                           <tr key={tr.trackId} className="border-t border-line/60">
                             <td className="px-4 py-2">
                               <Link to={`/pistas/${tr.trackId}`} className="flex items-center gap-2 hover:text-kart-yellow">
-                                <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>
+                                <Plate color={getTrackColor(trackObj)}>
                                   {trackObj?.abbr ?? tr.trackId}
                                 </Plate>
                                 <span className="font-semibold">{trackObj?.name ?? tr.trackId}</span>
@@ -420,7 +420,7 @@ export default function TeamDetail() {
                         <td className="px-4 py-2">
                           {p.bestTrack && (
                             <span className="flex items-center gap-2">
-                              <Plate color={getCup(best?.cupId ?? 'mushroom')?.color}>{best?.abbr ?? p.bestTrack.trackId}</Plate>
+                              <Plate color={getTrackColor(best)}>{best?.abbr ?? p.bestTrack.trackId}</Plate>
                               <span className="font-mono text-xs text-muted">
                                 {p.bestTrack.avgPoints} ({p.bestTrack.races}c)
                               </span>
@@ -430,7 +430,7 @@ export default function TeamDetail() {
                         <td className="px-4 py-2">
                           {p.worstTrack && (
                             <span className="flex items-center gap-2">
-                              <Plate color={getCup(worst?.cupId ?? 'mushroom')?.color}>{worst?.abbr ?? p.worstTrack.trackId}</Plate>
+                              <Plate color={getTrackColor(worst)}>{worst?.abbr ?? p.worstTrack.trackId}</Plate>
                               <span className="font-mono text-xs text-muted">
                                 {p.worstTrack.avgPoints} ({p.worstTrack.races}c)
                               </span>

@@ -1,4 +1,4 @@
-import { getCup, getTrack, TRACKS } from '../data/tracks'
+import { getTrack, TRACKS, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { chartGeometry, formatDiff, recentPbs, type PbHistory, type PbResult, type PbStep } from '../lib/pbHistory'
 import { formatDate, formatTime } from '../lib/time'
@@ -7,7 +7,7 @@ import { Plate } from './ui'
 /** Placa con la abreviatura (o el nombre) de la pista */
 function TrackPlate({ trackId }: { trackId: string }) {
   const track = getTrack(trackId)
-  return <Plate color={track ? getCup(track.cupId)?.color : undefined}>{track?.abbr ?? track?.name ?? trackId}</Plate>
+  return <Plate color={getTrackColor(track)}>{track?.abbr ?? track?.name ?? trackId}</Plate>
 }
 
 /** Aviso tras guardar un tiempo propio: ¡nuevo PB!, empate o cuánto faltó. */
