@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SearchBox } from '../components/SearchBox'
 import { EmptyState, PageHeader } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
@@ -181,12 +182,24 @@ export default function Admin() {
           >
             {syncingMkc ? t('admin.syncing') : `↻ ${t('admin.syncMkcRosters')}`}
           </button>
-          <input
-            type="search"
+          <SearchBox
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
+            suggestions={filtered
+              .filter((r) => r.username.toLowerCase() !== query.trim().toLowerCase())
+              .slice(0, 8)
+              .map((r) => ({
+                key: r.id,
+                label: r.username,
+                icon: r.avatar_url ? (
+                  <img src={r.avatar_url} alt="" loading="lazy" className="size-7 shrink-0 border-2 border-line object-cover" />
+                ) : undefined,
+                detail: t(FULL_ROLE_LABEL[getUserFullRole(r)]),
+              }))}
+            onPick={(s) => setQuery(s.label)}
             placeholder={t('admin.search')}
-            className="field sm:w-64"
+            className="field"
+            wrapperClassName="relative w-full sm:w-64"
           />
         </div>
       </PageHeader>

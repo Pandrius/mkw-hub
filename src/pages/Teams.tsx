@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { SearchBox } from '../components/SearchBox'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { useI18n } from '../i18n'
@@ -14,7 +15,6 @@ export default function Teams() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'with_members'>('all')
   const [search, setSearch] = useState('')
-  const [searchFocused, setSearchFocused] = useState(false)
   const [notFoundQuery, setNotFoundQuery] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<string | null>(null)
@@ -210,18 +210,25 @@ export default function Teams() {
         />
         <div className="relative w-full sm:w-80">
           <form onSubmit={handleSearchSubmit} className="flex w-full items-center gap-2">
-            <input
-              type="search"
+            <SearchBox
               value={search}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              onChange={(e) => {
-                setSearch(e.target.value)
+              onChange={(v) => {
+                setSearch(v)
                 if (notFoundQuery) setNotFoundQuery(null)
               }}
+              suggestions={quickSearchMatches.map((tm) => ({
+                key: String(tm.id),
+                label: tm.name,
+                icon: (
+                  <>
+                    <TeamLogo logoUrl={tm.logo_url} tag={tm.tag} name={tm.name} size="sm" />
+                    <Plate>{tm.tag}</Plate>
+                  </>
+                ),
+                detail: tm.parent_name && tm.parent_name !== tm.name ? tm.parent_name : undefined,
+              }))}
+              onPick={(s) => navigate(`/equipos/${s.key}`)}
               placeholder={t('teams.search')}
-              className="field w-full"
-              autoComplete="off"
             />
             <button
               type="submit"
@@ -232,30 +239,6 @@ export default function Teams() {
               {t('teams.searchBtn')}
             </button>
           </form>
-
-          {/* Autocompletado del buscador con logo y tag */}
-          {searchFocused && quickSearchMatches.length > 0 && (
-            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border-2 border-line bg-surface shadow-xl">
-              {quickSearchMatches.map((tm) => (
-                <li key={tm.id}>
-                  <Link
-                    to={`/equipos/${tm.id}`}
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface-2 transition-colors border-b border-line/40 last:border-b-0"
-                  >
-                    <TeamLogo logoUrl={tm.logo_url} tag={tm.tag} name={tm.name} size="sm" />
-                    <Plate>{tm.tag}</Plate>
-                    <div className="flex flex-col min-w-0">
-                      <span className="truncate font-semibold">{tm.name}</span>
-                      {tm.parent_name && tm.parent_name !== tm.name && (
-                        <span className="truncate text-[10px] text-muted font-mono">{tm.parent_name}</span>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
 

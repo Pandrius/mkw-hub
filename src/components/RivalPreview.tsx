@@ -5,6 +5,7 @@ import { useI18n } from '../i18n'
 import type { TeamWithMembers } from '../lib/compare'
 import { buildPickPlan, type PickRow, type PickSource } from '../lib/picks'
 import { computeTeamStats, getTeamWars, type TeamStats, type TeamWar } from '../lib/teamStats'
+import { SearchBox } from './SearchBox'
 import { EmptyState, Plate } from './ui'
 
 type Rival = { key: string; id: number | null; tag: string; name: string }
@@ -90,31 +91,18 @@ export function RivalPreview({
             {r.tag}
           </button>
         ))}
-        <div className="relative w-full sm:w-64">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('preview.searchRival')}
-            className="field w-full text-sm"
-            aria-label={t('preview.searchRival')}
-          />
-          {matches.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full border border-line bg-surface shadow-lg">
-              {matches.map((tm) => (
-                <li key={tm.id}>
-                  <button
-                    onClick={() => choose({ key: `id:${tm.id}`, id: tm.id, tag: tm.tag, name: tm.name })}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2"
-                  >
-                    <Plate>{tm.tag}</Plate>
-                    <span className="truncate">{tm.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SearchBox
+          value={search}
+          onChange={setSearch}
+          suggestions={matches.map((tm) => ({ key: String(tm.id), label: tm.name, icon: <Plate>{tm.tag}</Plate> }))}
+          onPick={(s) => {
+            const tm = matches.find((m) => String(m.id) === s.key)
+            if (tm) choose({ key: `id:${tm.id}`, id: tm.id, tag: tm.tag, name: tm.name })
+          }}
+          placeholder={t('preview.searchRival')}
+          className="field w-full text-sm"
+          wrapperClassName="relative w-full sm:w-64"
+        />
       </div>
 
       {!rival ? (

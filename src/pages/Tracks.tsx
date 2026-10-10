@@ -1,29 +1,35 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { SearchBox } from '../components/SearchBox'
+import { trackSuggestion } from '../components/trackSuggestion'
 import { PageHeader, Plate } from '../components/ui'
 import { CUPS, TRACKS, getTrack, getTrackImage } from '../data/tracks'
 import { useI18n } from '../i18n'
+import { searchTracks } from '../lib/trackSearch'
 
 export default function Tracks() {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
+  // Mismo orden que las sugerencias: abreviatura exacta, empieza por…, contiene…
+  const matches = useMemo(() => searchTracks(query), [query])
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return q
-      ? TRACKS.filter((tr) => tr.name.toLowerCase().includes(q) || tr.abbr?.toLowerCase().startsWith(q))
-      : TRACKS
-  }, [query])
+    const ids = new Set(matches.map((tr) => tr.id))
+    return TRACKS.filter((tr) => ids.has(tr.id))
+  }, [matches])
 
   return (
     <>
       <PageHeader title={t('nav.tracks')} subtitle={t('tracks.subtitle')} kicker={t('tracks.kicker', { tracks: TRACKS.length, cups: CUPS.length })}>
-        <input
-          type="search"
+        <SearchBox
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
+          suggestions={matches.slice(0, 8).map(trackSuggestion)}
+          onPick={(s) => navigate(`/pistas/${s.key}`)}
           placeholder={t('tracks.search')}
-          className="field py-3 text-base sm:w-72"
+          className="field py-3 text-base"
+          wrapperClassName="relative w-full sm:w-72"
         />
       </PageHeader>
 
