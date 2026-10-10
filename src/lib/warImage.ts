@@ -187,6 +187,22 @@ export function neutralizeWarImage(data: WarImageData): { data: WarImageData; sw
   }
 }
 
+/**
+ * Medallas de la war: oro, plata y bronce para los tres que más puntos han hecho de entre los jugadores de
+ * los dos equipos juntos (0 = oro, 1 = plata, 2 = bronce). Los empates comparten medalla: con dos primeros,
+ * no hay plata y el siguiente es bronce. Solo tienen entrada los jugadores con medalla.
+ */
+export function medalRanks(data: Pick<WarImageData, 'home' | 'away'>): Map<WarImagePlayer, number> {
+  const all = [...data.home.players, ...data.away.players]
+  const medals = new Map<WarImagePlayer, number>()
+  for (const p of all) {
+    // Puesto = jugadores con más puntos que él
+    const rank = all.filter((q) => q.points > p.points).length
+    if (rank < 3) medals.set(p, rank)
+  }
+  return medals
+}
+
 /** ¿Los rivales tienen nombres de verdad (indicados al crear la war o apuntados en alguna carrera)? */
 export function hasRealOpponents(event: GameEvent, races: { opponent_results?: unknown[] | null }[]): boolean {
   return (event.opponent_players?.some((n) => n.trim()) ?? false) || races.some((r) => (r.opponent_results?.length ?? 0) > 0)

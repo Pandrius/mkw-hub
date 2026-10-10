@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EventPlayer, EventRace, GameEvent } from './events'
-import { buildWarImageData, fitText, hasRealOpponents, neutralizeWarImage, niceScale, raceStats, signed, warImageFileName } from './warImage'
+import { buildWarImageData, fitText, hasRealOpponents, medalRanks, neutralizeWarImage, niceScale, raceStats, signed, warImageFileName } from './warImage'
 import { buildWarTable } from './warTable'
 
 const players: EventPlayer[] = ['A', 'B', 'C', 'D', 'E', 'F', 'Sub'].map((name, i) => ({
@@ -210,5 +210,45 @@ describe('modo neutral', () => {
   it('con el mismo tag no intercambia nada', () => {
     const same = { ...data, home: { ...data.home, tag: 'X', total: 5 }, away: { ...data.away, tag: 'X', total: 5 } }
     expect(neutralizeWarImage(same).swapped).toBe(false)
+  })
+})
+
+describe('medalRanks', () => {
+  const p = (name: string, points: number) => ({ name, points, races: 12, avgPos: null })
+  const team = (players: ReturnType<typeof p>[]) => ({ tag: 'T', name: null, total: 0, players, missingPoints: 0, penalties: [] })
+
+  it('reparte oro, plata y bronce entre los jugadores de los dos equipos juntos', () => {
+    const a = [p('A1', 97), p('A2', 85), p('A3', 78)]
+    const b = [p('B1', 112), p('B2', 108), p('B3', 96)]
+    const medals = medalRanks({ home: team(a), away: team(b) })
+    // Los tres mejores de la war: 112 (B1), 108 (B2), 97 (A1); los demás, sin medalla
+    expect([...medals].map(([pl, rank]) => [pl.name, rank])).toEqual(expect.arrayContaining([['B1', 0], ['B2', 1], ['A1', 2]]))
+    expect(medals.size).toBe(3)
+    expect(medals.has(a[1])).toBe(false)
+    expect(medals.has(b[2])).toBe(false)
+  })
+
+  it('un equipo puede quedarse sin medallas', () => {
+    const medals = medalRanks({
+      home: team([p('A1', 10), p('A2', 9)]),
+      away: team([p('B1', 50), p('B2', 40), p('B3', 30)]),
+    })
+    expect(medals.size).toBe(3)
+    expect([...medals.keys()].every((pl) => pl.name.startsWith('B'))).toBe(true)
+  })
+
+  it('los empates comparten medalla y se salta la siguiente', () => {
+    const x = p('X', 80)
+    const y = p('Y', 80)
+    const medals = medalRanks({ home: team([x, p('Z', 70), p('W', 60)]), away: team([y, p('V', 50)]) })
+    expect(medals.get(x)).toBe(0)
+    expect(medals.get(y)).toBe(0)
+    // Con dos oros, el siguiente es bronce (no hay plata)
+    expect([...medals].find(([pl]) => pl.name === 'Z')?.[1]).toBe(2)
+    expect([...medals].some(([pl]) => pl.name === 'W')).toBe(false)
+  })
+
+  it('sin jugadores no hay medallas', () => {
+    expect(medalRanks({ home: team([]), away: team([]) }).size).toBe(0)
   })
 })

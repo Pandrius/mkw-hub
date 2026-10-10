@@ -1,7 +1,7 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
 import { coverRect, DEFAULT_DESIGN, luminance, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
-import { fitText, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
+import { fitText, medalRanks, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
  * Dibujo de la imagen de la war con Canvas 2D, a mano y sin dependencias.
@@ -236,20 +236,36 @@ function metal(ctx: Ctx, base: string, y0: number, y1: number): CanvasGradient {
 /** Oro metálico: el acento hecho metal */
 const gold = (ctx: Ctx, y0: number, y1: number) => metal(ctx, C.accent, y0, y1)
 
-/** Plata del segundo equipo en el estilo elegante (en el resto, el color de la tinta) */
-const SILVER = '#cfd4de'
+/**
+ * Plata cromada del estilo elegante: más oscura que el oro y con un reflejo claro en el centro, como un
+ * metal pulido (el oro es un degradado suave de claro a oscuro).
+ */
+function silverMetal(ctx: Ctx, y0: number, y1: number): CanvasGradient {
+  const g = ctx.createLinearGradient(0, y0, 0, y1)
+  g.addColorStop(0, '#f2f4f8')
+  g.addColorStop(0.32, '#aab0bd')
+  g.addColorStop(0.52, '#eef1f6')
+  g.addColorStop(0.74, '#868d9b')
+  g.addColorStop(1, '#b4bac6')
+  return g
+}
+
+/** Plata lisa, para los sitios sin degradado (barras, cifras pequeñas) */
+const SILVER = '#a9afbb'
+
+/** Color del segundo equipo: plata en el estilo elegante y, en el resto, el color de la tinta */
 const awayFlat = () => (ELEGANT ? SILVER : C.ink)
-const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? metal(ctx, SILVER, y0, y1) : C.ink)
+const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? silverMetal(ctx, y0, y1) : C.ink)
 
 /**
- * Color de los tres primeros de cada equipo: oro (el acento), plata y bronce. En el estilo elegante son
+ * Color de las tres mejores puntuaciones de la war: oro (el acento), plata y bronce. En el estilo elegante son
  * metales con degradado; en el resto, colores lisos (más oscuros si el fondo es claro, para que se lean).
  */
 function medalPaint(ctx: Ctx, rank: number, y0: number, y1: number): Paint | null {
   if (rank > 2) return null
   const light = luminance(C.bg) > 0.5
   if (ELEGANT) {
-    return rank === 0 ? gold(ctx, y0, y1) : metal(ctx, rank === 1 ? '#cfd4de' : '#c9803f', y0, y1)
+    return rank === 0 ? gold(ctx, y0, y1) : rank === 1 ? silverMetal(ctx, y0, y1) : metal(ctx, '#c9803f', y0, y1)
   }
   if (rank === 0) return C.accent
   return rank === 1 ? (light ? '#7f8590' : '#b9bfcb') : light ? '#94571f' : '#c47f3b'
@@ -432,6 +448,7 @@ function playersTable(
   totalRaces: number,
   labels: WarImageLabels,
   home: boolean,
+  medals: Map<WarImagePlayer, number>,
 ) {
   const accent = home ? C.accent : awayFlat()
   const headH = 34
@@ -492,8 +509,8 @@ function playersTable(
     const partialW = partial ? ctx.measureText(partial).width : 0
     ctx.font = `600 20px ${SANS}`
     const name = fitText(p.name, colAvg - 70 - (x + 52) - partialW, (t) => ctx.measureText(t).width)
-    // Oro, plata y bronce para los tres primeros, en el nombre y en los puntos (la posición media no)
-    const medal = medalPaint(ctx, i, base - 22, base + 6)
+    // Oro, plata y bronce para las tres mejores puntuaciones de la war (entre los dos equipos), en el nombre y en los puntos
+    const medal = medalPaint(ctx, medals.get(p) ?? 3, base - 22, base + 6)
     text(ctx, name, x + 52, base, ctx.font, medal ?? C.ink)
     if (partial) text(ctx, partial, x + 52 + ctx.measureText(name).width, base - 1, `500 14px ${MONO}`, C.muted)
     text(ctx, fmtAvg(p.avgPos), colAvg, base - 1, `700 15px ${MONO}`, C.muted, 'right')
@@ -803,8 +820,9 @@ function drawWarCanvas(
 
   // Puntos por jugador
   const totalRaces = data.races.length
-  playersTable(ctx, data.home, PAD, y, rows, totalRaces, labels, true)
-  playersTable(ctx, data.away, PAD + COL_W + GAP, y, rows, totalRaces, labels, false)
+  const medals = medalRanks(data)
+  playersTable(ctx, data.home, PAD, y, rows, totalRaces, labels, true, medals)
+  playersTable(ctx, data.away, PAD + COL_W + GAP, y, rows, totalRaces, labels, false, medals)
   y += tableH + 36
 
   // Gráfico de diferencia acumulada
