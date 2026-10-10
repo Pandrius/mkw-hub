@@ -6,6 +6,7 @@ import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
 import PerspectiveToggle from '../components/PerspectiveToggle'
 import WarDesignPanel from '../components/WarDesignPanel'
+import WarAnalysisPanel from '../components/WarAnalysisPanel'
 import WarImagePreview from '../components/WarImagePreview'
 import { EmptyState } from '../components/ui'
 import { getTrack, getTrackColor } from '../data/tracks'
@@ -240,6 +241,10 @@ export default function EventDetail() {
               ))}
           </ul>
         </section>
+      )}
+
+      {table && table.races.length > 0 && (
+        <WarAnalysisPanel table={table} teamTag={event.team_tag ?? 'Home'} opponentTag={event.opponent_tag ?? 'Away'} />
       )}
 
       {error && <p className="text-sm text-kart-red">{error}</p>}

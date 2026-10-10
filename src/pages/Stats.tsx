@@ -1,20 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import EventList from '../components/EventList'
-import { PlayerFormPanel } from '../components/FormPanel'
+import { PlayerAnalyticsView } from '../components/PlayerAnalyticsView'
 import { SearchBox, type Suggestion } from '../components/SearchBox'
-import { trackSuggestion } from '../components/trackSuggestion'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
-import { getTrack, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
-import { getPlayerResults, type PlayerResult } from '../lib/events'
-import { computePlayerForm, getPlayerTimeline, type TimedResult } from '../lib/form'
-import { bestAndWorst, computeStats, MIN_RACES_RELIABLE, type StatsFilter, type TrackStats } from '../lib/stats'
+import { getPlayerTimeline, type TimedResult } from '../lib/form'
+import { computePlayerAnalytics } from '../lib/playerAnalytics'
+import type { StatsFilter } from '../lib/stats'
 import { rankHits, REMOTE_MIN_LENGTH, sanitizeTerm, searchRemote, type SearchHit } from '../lib/search'
 import { supabase } from '../lib/supabase'
-import { filterRowsByTrack } from '../lib/trackSearch'
 
 export default function Stats() {
   const { t, locale } = useI18n()
@@ -113,7 +110,6 @@ export default function Stats() {
 function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) {
   const { t, locale } = useI18n()
   const [filter, setFilter] = useState<StatsFilter>('all')
-  const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [owner, setOwner] = useState<Pick<Profile, 'username' | 'avatar_url' | 'country_code'> | null>(null)
   const [teams, setTeams] = useState<Entity[]>([])
   const [timeline, setTimeline] = useState<TimedResult[] | null>(null)
@@ -122,14 +118,12 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
   useEffect(() => {
     let cancelled = false
     Promise.all([
-      getPlayerResults(profileId),
       supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', profileId).maybeSingle(),
       teamsOf(profileId),
       getPlayerTimeline(profileId),
     ]).then(
-      ([res, prof, tms, tl]) => {
+      ([prof, tms, tl]) => {
         if (cancelled) return
-        setResults(res)
         setOwner(prof.data)
         setTeams(tms)
         setTimeline(tl)
@@ -141,13 +135,10 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
     }
   }, [profileId])
 
-  const stats = useMemo(() => (results ? computeStats(results, filter) : null), [results, filter])
-  const form = useMemo(() => (timeline ? computePlayerForm(timeline, filter) : null), [timeline, filter])
+  const analytics = useMemo(() => (timeline ? computePlayerAnalytics(timeline, filter) : null), [timeline, filter])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
-  if (!stats) return <p className="text-muted">{t('common.loading')}</p>
-
-  const { best, worst } = bestAndWorst(stats)
+  if (!timeline) return <p className="text-muted">{t('common.loading')}</p>
 
   return (
     <div className="space-y-8">
@@ -186,170 +177,12 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label={t('stats.average')} value={stats.average?.toFixed(2) ?? '—'} highlight />
-        <Metric label={t('stats.avgPoints')} value={stats.avgPoints?.toFixed(2) ?? '—'} highlight />
-        <Metric label={t('stats.races')} value={stats.races} />
-        <Metric label={t('stats.events')} value={stats.events} />
-      </div>
-
-      {stats.races === 0 ? (
-        <EmptyState title={t('stats.noData')} />
-      ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2">
-            <TrackPodium title={t('stats.bestTracks')} tracks={best} color="var(--color-kart-green)" />
-            <TrackPodium title={t('stats.worstTracks')} tracks={worst} color="var(--color-kart-red)" />
-          </div>
-          <PlayerFormPanel form={form} />
-          <TrackTable tracks={stats.tracks} />
-        </>
-      )}
+      {!analytics ? <EmptyState title={t('stats.noData')} /> : <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />}
 
       <section>
         <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>
         <EventList profileId={profileId} />
       </section>
     </div>
-  )
-}
-
-function Metric({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
-  return (
-    <div className="panel p-4">
-      <p className={`time text-3xl sm:text-4xl ${highlight ? 'text-kart-yellow' : ''}`}>{value}</p>
-      <p className="text-xs sm:text-sm text-muted">{label}</p>
-    </div>
-  )
-}
-
-function TrackPodium({ title, tracks, color }: { title: string; tracks: TrackStats[]; color: string }) {
-  const { t } = useI18n()
-  return (
-    <div className="panel p-5">
-      <h3 className="font-display text-lg font-bold" style={{ color }}>
-        {title}
-      </h3>
-      {tracks.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">{t('stats.notEnough', { n: MIN_RACES_RELIABLE })}</p>
-      ) : (
-        <ol className="mt-3 space-y-2">
-          {tracks.map((ts) => {
-            const track = getTrack(ts.trackId)
-            return (
-              <li key={ts.trackId} className="flex items-baseline gap-3">
-                <span className="w-12 font-display font-black normal-case" style={{ color: getTrackColor(track) }}>
-                  {track?.abbr}
-                </span>
-                <Link to={`/pistas/${ts.trackId}`} className="flex-1 truncate hover:underline">
-                  {track?.name ?? ts.trackId}
-                </Link>
-                <div className="text-right">
-                  <span className="time text-base sm:text-lg font-bold">{ts.average.toFixed(2)}</span>
-                  <span className="time ml-2 text-xs sm:text-sm font-semibold text-kart-yellow">
-                    ({ts.avgPoints.toFixed(1)} pts)
-                  </span>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
-      )}
-    </div>
-  )
-}
-
-function TrackTable({ tracks }: { tracks: TrackStats[] }) {
-  const { t } = useI18n()
-  const [trackSearch, setTrackSearch] = useState('')
-
-  const { rows: filteredTracks, suggestions } = useMemo(
-    () => filterRowsByTrack(tracks, (ts) => ts.trackId, trackSearch),
-    [tracks, trackSearch],
-  )
-
-  return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-xl font-bold">{t('stats.byTrack')}</h3>
-        <SearchBox
-          value={trackSearch}
-          onChange={setTrackSearch}
-          suggestions={suggestions.slice(0, 8).map(trackSuggestion)}
-          onPick={(s) => setTrackSearch(s.label)}
-          placeholder={t('stats.searchTrack')}
-          className="field w-full text-sm"
-          wrapperClassName="relative w-full sm:w-72"
-        />
-      </div>
-      <div className="overflow-hidden panel">
-        <table className="w-full text-sm">
-          <thead className="bg-bg text-left font-display text-xs sm:text-sm tracking-wider text-kart-yellow">
-            <tr>
-              <th className="px-3 sm:px-4 py-2.5 font-extrabold">{t('stats.colTrack')}</th>
-              <th className="px-2 sm:px-4 py-2.5 text-right font-extrabold">{t('stats.colAvg')}</th>
-              <th className="px-2 sm:px-4 py-2.5 text-right font-extrabold text-kart-yellow">{t('stats.colAvgPts')}</th>
-              <th className="hidden w-1/4 px-4 py-2.5 lg:table-cell" />
-              <th className="hidden px-3 sm:px-4 py-2.5 text-right font-extrabold sm:table-cell">{t('stats.colRaces')}</th>
-              <th className="hidden px-3 sm:px-4 py-2.5 text-right font-extrabold md:table-cell">{t('stats.colBest')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTracks.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-sm text-muted">
-                  {t('stats.noTracksFound')}
-                </td>
-              </tr>
-            ) : (
-              filteredTracks.map((ts) => {
-                const track = getTrack(ts.trackId)
-                const color = getTrackColor(track)
-                const low = ts.races < MIN_RACES_RELIABLE
-                return (
-                  <tr key={ts.trackId} className="border-t border-line/60">
-                    <td className="px-3 sm:px-4 py-2">
-                      <Link to={`/pistas/${ts.trackId}`} className="flex items-baseline gap-1.5 sm:gap-2 hover:underline">
-                        <span className="w-9 sm:w-12 shrink-0 font-display text-xs sm:text-sm font-black normal-case" style={{ color }}>
-                          {track?.abbr}
-                        </span>
-                        <span className="max-w-[120px] sm:max-w-none truncate text-xs sm:text-sm font-medium">
-                          {track?.name ?? ts.trackId}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="time px-2 sm:px-4 py-2 text-right text-sm sm:text-base font-bold tabular-nums">
-                      {ts.average.toFixed(2)}
-                      {low && (
-                        <span title={t('stats.lowSample')} className="ml-0.5 text-xs text-muted">
-                          *
-                        </span>
-                      )}
-                    </td>
-                    <td className="time px-2 sm:px-4 py-2 text-right text-sm sm:text-base font-bold tabular-nums text-kart-yellow">
-                      {ts.avgPoints.toFixed(2)}
-                    </td>
-                    <td className="hidden px-4 py-2 lg:table-cell">
-                      {/* Barra: más larga cuanto mejor (1.º = llena, 12.º = casi vacía) */}
-                      <div className="h-2 rounded-full bg-surface-2">
-                        <div
-                          className="h-2 rounded-full"
-                          style={{ width: `${Math.max(4, ((12 - ts.average + 1) / 12) * 100)}%`, background: color, opacity: low ? 0.4 : 1 }}
-                        />
-                      </div>
-                    </td>
-                    <td className="hidden px-3 sm:px-4 py-2 text-right tabular-nums text-muted sm:table-cell">{ts.races}</td>
-                    <td className="hidden px-3 sm:px-4 py-2 text-right tabular-nums md:table-cell">{ts.best}</td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-        <p className="border-t border-line px-4 py-2 text-xs text-muted">
-          * {t('stats.lowSample')} ({'<'} {MIN_RACES_RELIABLE})
-        </p>
-      </div>
-    </section>
   )
 }

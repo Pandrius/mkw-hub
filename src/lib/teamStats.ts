@@ -1,5 +1,6 @@
 import { mirrorPenalties, parsePenalties, penaltyTotals, type Penalty } from './penalties'
-import { pointsForPosition, scoreTeamRace } from './scoring'
+import { pointsForPosition } from './scoring'
+import { mean, pct, round1, round2, shrink, stdDev } from './statMath'
 import { supabase } from './supabase'
 
 /** Resultado de un jugador del equipo en una carrera de war */
@@ -66,6 +67,11 @@ export type TeamTrackStats = {
   diff: number // avgHome - avgAway (+/- diferencial de puntos medios)
   avgPosHome: number
   avgPosAway: number
+  /** Carreras ganadas (más puntos que el rival) en la pista */
+  raceWins: number
+  raceWinRate: number
+  /** +/- por carrera ajustado por muestra: con pocas carreras se acerca a 0 (ordena favorables y desfavorables) */
+  rating: number
 }
 
 export type TeamStats = {
@@ -84,6 +90,10 @@ export type TeamStats = {
   bestTracks: TeamTrackStats[]
   worstTracks: TeamTrackStats[]
 }
+
+/** Clave de un rival: por id de MKC o, si no hay, por tag */
+export const rivalKeyOf = (w: Pick<TeamWar, 'opponent_team_id' | 'opponent_tag' | 'opponent_name'>) =>
+  w.opponent_team_id ? `id:${w.opponent_team_id}` : `tag:${(w.opponent_tag || w.opponent_name || 'Rival').trim().toLowerCase()}`
 
 /** Calcula estadísticas completas para un equipo a partir de sus wars finalizadas (función pura) */
 export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
@@ -104,6 +114,7 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
       positionsHomeSum: number
       positionsAwaySum: number
       racersCount: number
+      raceWins: number
     }
   >()
 
@@ -112,7 +123,7 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
     let warAwayScore = 0
 
     for (const r of war.races) {
-      const score = scoreTeamRace(r.positions, r.missing_home, r.missing_away)
+      const score = raceScore(r)
       warHomeScore += score.home
       warAwayScore += score.away
       totalRaces += 1
@@ -125,8 +136,10 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
         positionsHomeSum: 0,
         positionsAwaySum: 0,
         racersCount: 0,
+        raceWins: 0,
       }
       currentTrack.races += 1
+      if (score.home > score.away) currentTrack.raceWins += 1
       currentTrack.pointsHome += score.home
       currentTrack.pointsAway += score.away
 
@@ -163,9 +176,7 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
     }
 
     // Histórico contra rivales
-    const oppKey = war.opponent_team_id
-      ? `id:${war.opponent_team_id}`
-      : `tag:${(war.opponent_tag || war.opponent_name || 'Rival').trim().toLowerCase()}`
+    const oppKey = rivalKeyOf(war)
 
     const oppTag = war.opponent_tag?.trim() || war.opponent_name?.trim() || 'Rival'
     const oppName = war.opponent_name?.trim() || war.opponent_tag?.trim() || 'Rival'
@@ -232,12 +243,16 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
         diff,
         avgPosHome,
         avgPosAway,
+        raceWins: data.raceWins,
+        raceWinRate: pct(data.raceWins, data.races),
+        rating: round2(shrink(data.pointsHome - data.pointsAway, data.races)),
       }
     })
     .sort((a, b) => b.diff - a.diff)
 
-  const bestTracks = tracks.filter((t) => t.diff > 0).slice(0, 3)
-  const worstTracks = [...tracks].filter((t) => t.diff < 0).reverse().slice(0, 3)
+  const byRating = [...tracks].sort((a, b) => b.rating - a.rating)
+  const bestTracks = byRating.filter((t) => t.rating > 0).slice(0, 3)
+  const worstTracks = byRating.filter((t) => t.rating < 0).reverse().slice(0, 3)
 
   const warsCount = wars.length
   const winRate = warsCount > 0 ? Number(((wins / warsCount) * 100).toFixed(1)) : 0
@@ -269,11 +284,44 @@ export type TeamPlayerStats = {
   races: number
   points: number
   avgPoints: number // puntos por carrera
+  /** Puntos de media por 12 carreras */
+  perWar: number
   avgPos: number
   top3Rate: number // % de carreras en el podio
+  /** % de los puntos del equipo en las carreras que ha corrido (con 6 jugadores, lo neutro es ~17 %) */
+  share: number
+  /** % de carreras en las que fue el mejor clasificado del equipo */
+  leadRate: number
+  /** Desviación típica de sus puntos por carrera (más baja = más regular) */
+  sdPoints: number
+  /** +/- del equipo por carrera con él en pista y sin él (null si no hay carreras suficientes sin él) */
+  onOff: { with: number; without: number; withoutRaces: number } | null
+  /** Puntos por carrera en sus últimas 12 carreras menos los de antes (null si hay pocas) */
+  formDelta: number | null
   bestTrack: { trackId: string; avgPoints: number; races: number } | null
   /** Pista con menos puntos de media (null si solo ha corrido una) */
   worstTrack: { trackId: string; avgPoints: number; races: number } | null
+}
+
+/** Carreras mínimas del equipo sin un jugador para comparar el +/- con y sin él */
+export const MIN_OFF_RACES = 6
+/** Carreras de la forma reciente de un jugador del equipo */
+export const PLAYER_RECENT_RACES = 12
+
+/**
+ * Puntos de cada equipo en una carrera sin validarla: los nuestros son los de nuestras posiciones,
+ * los del rival los de las posiciones que quedan, y cada ausente suma 1 a su equipo.
+ */
+export function raceScore(r: Pick<TeamWarRace, 'positions' | 'missing_home' | 'missing_away'>): { home: number; away: number } {
+  const racers = 12 - r.missing_home - r.missing_away
+  const taken = new Set(r.positions)
+  let home = r.missing_home
+  let away = r.missing_away
+  for (let p = 1; p <= racers; p++) {
+    if (taken.has(p)) home += pointsForPosition(p)
+    else away += pointsForPosition(p)
+  }
+  return { home, away }
 }
 
 /**
@@ -286,34 +334,56 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
     name: string
     profileId: string | null
     wars: Set<string>
-    races: number
-    points: number
     positions: number
     top3: number
+    lead: number
+    teamPoints: number
+    /** Puntos de cada carrera con su orden en el tiempo */
+    timeline: { order: string; pts: number }[]
+    /** Carreras (id) en las que ha corrido, para el +/- sin él */
+    ran: Set<string>
+    onDiffs: number[]
     tracks: Map<string, { points: number; races: number }>
   }
   const map = new Map<string, Acc>()
+  const keyOf = (res: TeamWarResult) => (res.profileId ? `id:${res.profileId}` : `name:${res.name.trim().toLowerCase()}`)
+  /** Todas las carreras con resultados por jugador: id y +/- */
+  const allRaces: { id: string; diff: number }[] = []
 
   for (const war of wars) {
     for (const race of war.races) {
-      for (const res of race.results ?? []) {
-        const key = res.profileId ? `id:${res.profileId}` : `name:${res.name.trim().toLowerCase()}`
-        const acc = map.get(key) ?? {
+      const results = race.results ?? []
+      if (!results.length) continue
+      const score = raceScore(race)
+      const raceId = `${war.id}#${race.race_no}`
+      const order = `${war.created_at}#${String(race.race_no).padStart(2, '0')}`
+      allRaces.push({ id: raceId, diff: score.home - score.away })
+      const bestPos = Math.min(...results.map((r) => r.position))
+
+      for (const res of results) {
+        const key = keyOf(res)
+        const acc: Acc = map.get(key) ?? {
           name: res.name,
           profileId: res.profileId,
           wars: new Set<string>(),
-          races: 0,
-          points: 0,
           positions: 0,
           top3: 0,
+          lead: 0,
+          teamPoints: 0,
+          timeline: [],
+          ran: new Set<string>(),
+          onDiffs: [],
           tracks: new Map(),
         }
         const pts = pointsForPosition(res.position)
         acc.wars.add(war.id)
-        acc.races += 1
-        acc.points += pts
         acc.positions += res.position
         if (res.position <= 3) acc.top3 += 1
+        if (res.position === bestPos) acc.lead += 1
+        acc.teamPoints += score.home
+        acc.timeline.push({ order, pts })
+        if (!acc.ran.has(raceId)) acc.onDiffs.push(score.home - score.away)
+        acc.ran.add(raceId)
         const tr = acc.tracks.get(race.track_id) ?? { points: 0, races: 0 }
         tr.points += pts
         tr.races += 1
@@ -327,6 +397,9 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
 
   return [...map.entries()]
     .map(([key, a]) => {
+      const pts = a.timeline.sort((x, y) => x.order.localeCompare(y.order)).map((x) => x.pts)
+      const races = pts.length
+      const points = pts.reduce((x, y) => x + y, 0)
       // Mejor pista: la de más puntos de media, con al menos 2 carreras si las hay
       const tracks = [...a.tracks.entries()].map(([trackId, t]) => ({
         trackId,
@@ -339,16 +412,29 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
       // La peor: la de menos puntos de media; con una sola pista no hay "peor"
       const worst = [...pool].sort((x, y) => x.avgPoints - y.avgPoints || y.races - x.races)[0] ?? null
       const worstTrack = worst && bestTrack && worst.trackId !== bestTrack.trackId ? worst : null
+
+      const off = allRaces.filter((r) => !a.ran.has(r.id))
+      const recent = pts.slice(-PLAYER_RECENT_RACES)
+      const before = pts.slice(0, -PLAYER_RECENT_RACES)
       return {
         key,
         name: a.name,
         profileId: a.profileId,
         wars: a.wars.size,
-        races: a.races,
-        points: a.points,
-        avgPoints: round(a.points / a.races),
-        avgPos: round(a.positions / a.races),
-        top3Rate: Math.round((a.top3 / a.races) * 100),
+        races,
+        points,
+        avgPoints: round(points / races),
+        perWar: Math.round((points / races) * 12),
+        avgPos: round(a.positions / races),
+        top3Rate: pct(a.top3, races),
+        share: a.teamPoints ? round1((points / a.teamPoints) * 100) : 0,
+        leadRate: pct(a.lead, races),
+        sdPoints: round(stdDev(pts)),
+        onOff:
+          off.length >= MIN_OFF_RACES
+            ? { with: round(mean(a.onDiffs)), without: round(mean(off.map((r) => r.diff))), withoutRaces: off.length }
+            : null,
+        formDelta: recent.length === PLAYER_RECENT_RACES && before.length >= MIN_OFF_RACES ? round(mean(recent) - mean(before)) : null,
         bestTrack,
         worstTrack,
       }

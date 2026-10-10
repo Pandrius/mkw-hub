@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeTeamPlayerStats, computeTeamStats, mergeTeamWars, mirrorWar, type TeamWar } from './teamStats'
+import { computeTeamPlayerStats, computeTeamStats, mergeTeamWars, mirrorWar, raceScore, type TeamWar } from './teamStats'
 
 describe('computeTeamStats', () => {
   const dummyWars: TeamWar[] = [
@@ -156,6 +156,37 @@ describe('computeTeamStats', () => {
     ])
     expect(p.bestTrack?.trackId).toBe('rainbow-road')
     expect(p.worstTrack).toBeNull()
+  })
+
+  it('puntos de una carrera sin validar: posiciones propias, las que quedan y ausentes', () => {
+    expect(raceScore({ positions: [1, 2, 3, 4, 5, 6], missing_home: 0, missing_away: 0 })).toEqual({ home: 61, away: 21 })
+    // 11 jugadores: falta uno nuestro (1 punto) y el rival se reparte del 6.º al 11.º
+    expect(raceScore({ positions: [1, 2, 3, 4, 5], missing_home: 1, missing_away: 0 })).toEqual({ home: 55, away: 27 })
+  })
+
+  it('cuota de puntos del equipo, veces mejor del equipo y +/- con y sin el jugador', () => {
+    const six = (n: number, names: string[], positions: number[]) => ({
+      track_id: 'rainbow-road',
+      race_no: n,
+      missing_home: 0,
+      missing_away: 0,
+      positions,
+      results: positions.map((p, i) => res(names[i], p)),
+    })
+    const core = ['A', 'B', 'C', 'D', 'E']
+    // 6 carreras con "Sub" (todas perdidas, -40) y 6 con "Star" (todas ganadas, +40)
+    const races = [
+      ...Array.from({ length: 6 }, (_, i) => six(i + 1, [...core, 'Sub'], [7, 8, 9, 10, 11, 12])),
+      ...Array.from({ length: 6 }, (_, i) => six(i + 7, ['Star', ...core], [1, 2, 3, 4, 5, 6])),
+    ]
+    const players = computeTeamPlayerStats([war('w1', races)])
+    const star = players.find((p) => p.name === 'Star')!
+    expect(star.share).toBe(24.6) // 15 de 61 en cada carrera
+    expect(star.leadRate).toBe(100)
+    expect(star.perWar).toBe(180)
+    expect(star.onOff).toEqual({ with: 40, without: -40, withoutRaces: 6 })
+    // Los que corrieron todas no tienen carreras "sin ellos"
+    expect(players.find((p) => p.name === 'A')!.onOff).toBeNull()
   })
 
   it('devuelve estadísticas vacías para un equipo sin wars', () => {
