@@ -1,6 +1,6 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
-import { coverRect, DEFAULT_DESIGN, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
 import { fitText, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
@@ -21,6 +21,8 @@ export type WarImageLabels = {
   /** Nombre por defecto de una penalty sin nombre */
   penalty: string
   runningDiff: string
+  /** Nombre de la competición, que el diseño Oficial muestra arriba en lugar de "WAR" (vacío si no hay) */
+  competition: string
   /** Modo neutral */
   raceByRace: string
   racesWon: string
@@ -133,8 +135,10 @@ export async function loadTeamLogos(teamId: number | null, opponentTeamId: numbe
 }
 
 type Ctx = CanvasRenderingContext2D
+/** Color liso o degradado (el oro del diseño Oficial) */
+type Paint = string | CanvasGradient
 
-function text(ctx: Ctx, s: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') {
+function text(ctx: Ctx, s: string, x: number, y: number, font: string, color: Paint, align: CanvasTextAlign = 'left') {
   ctx.font = font
   ctx.fillStyle = color
   ctx.textAlign = align
@@ -151,7 +155,7 @@ function fittedText(
   weight: number,
   size: number,
   family: string,
-  color: string,
+  color: Paint,
   align: CanvasTextAlign = 'left',
   minSize = size,
 ) {
@@ -179,15 +183,8 @@ function slant(ctx: Ctx, x: number, y: number, w: number, h: number, cut: number
 
 /** Banda de peligro amarilla y negra (.hazard) */
 function hazard(ctx: Ctx, y: number, h: number) {
-  if (ELEGANT) {
-    // Dos filetes dorados en lugar de las franjas de peligro
-    ctx.fillStyle = C.bg
-    ctx.fillRect(0, y, W, h)
-    ctx.fillStyle = C.accent
-    ctx.fillRect(0, y + 3, W, 3)
-    ctx.fillRect(0, y + 9, W, 1)
-    return
-  }
+  // El estilo elegante no lleva franjas: lo enmarca el marco dorado
+  if (ELEGANT) return
   ctx.save()
   ctx.beginPath()
   ctx.rect(0, y, W, h)
@@ -208,7 +205,7 @@ function hazard(ctx: Ctx, y: number, h: number) {
 }
 
 /** Texto con espacio extra entre letras (versalitas de la cabecera) */
-function spaced(ctx: Ctx, s: string, x: number, y: number, font: string, color: string, spacing: number, align: CanvasTextAlign = 'left') {
+function spaced(ctx: Ctx, s: string, x: number, y: number, font: string, color: Paint, spacing: number, align: CanvasTextAlign = 'left') {
   ctx.font = font
   ctx.fillStyle = color
   ctx.textAlign = 'left'
@@ -219,6 +216,93 @@ function spaced(ctx: Ctx, s: string, x: number, y: number, font: string, color: 
     ctx.fillText(ch, cx, y)
     cx += ctx.measureText(ch).width + spacing
   }
+}
+
+/** Ancho que ocupa un texto con espacio extra entre letras */
+function spacedWidth(ctx: Ctx, s: string, font: string, spacing: number): number {
+  ctx.font = font
+  return [...s].reduce((sum, ch) => sum + ctx.measureText(ch).width + spacing, -spacing)
+}
+
+/** Oro metálico: degradado vertical del acento, claro arriba y oscuro abajo */
+function gold(ctx: Ctx, y0: number, y1: number): CanvasGradient {
+  const g = ctx.createLinearGradient(0, y0, 0, y1)
+  g.addColorStop(0, mixColors(C.accent, '#ffffff', 0.55))
+  g.addColorStop(0.5, C.accent)
+  g.addColorStop(1, mixColors(C.accent, '#000000', 0.42))
+  return g
+}
+
+/** Filete dorado que se desvanece por un extremo (`in`: nace de la nada y llega pleno; `out`: al revés) */
+function rule(ctx: Ctx, x0: number, x1: number, y: number, fade: 'in' | 'out') {
+  if (x1 - x0 < 4) return
+  const g = ctx.createLinearGradient(x0, 0, x1, 0)
+  g.addColorStop(0, fade === 'in' ? C.accent + '00' : C.accent)
+  g.addColorStop(1, fade === 'in' ? C.accent : C.accent + '00')
+  ctx.fillStyle = g
+  ctx.fillRect(x0, y, x1 - x0, 1)
+}
+
+/** Filete con un rombo en el centro, a cada lado un filete que se desvanece (separador de invitación) */
+function ornament(ctx: Ctx, cx: number, y: number, halfW: number) {
+  rule(ctx, cx - halfW, cx - 22, y, 'in')
+  rule(ctx, cx + 22, cx + halfW, y, 'out')
+  diamond(ctx, cx, y + 0.5, 5, C.accent)
+  diamond(ctx, cx - 13, y + 0.5, 2.5, C.accent)
+  diamond(ctx, cx + 13, y + 0.5, 2.5, C.accent)
+}
+
+/** Título de sección: a la izquierda con una barra (estándar) o centrado entre filetes dorados (elegante) */
+function sectionTitle(ctx: Ctx, label: string, y: number) {
+  if (!ELEGANT) {
+    slant(ctx, PAD, y, 12, 26, 0, C.accent)
+    text(ctx, label.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
+    return
+  }
+  const font = `700 19px ${DISPLAY}`
+  const title = label.toUpperCase()
+  const w = spacedWidth(ctx, title, font, 6)
+  spaced(ctx, title, W / 2, y + 22, font, gold(ctx, y + 6, y + 26), 6, 'center')
+  rule(ctx, PAD, W / 2 - w / 2 - 22, y + 15, 'in')
+  rule(ctx, W / 2 + w / 2 + 22, W - PAD, y + 15, 'out')
+}
+
+/** Esquinas en L doradas (marcos de las cartelas del estilo elegante) */
+function brackets(ctx: Ctx, x: number, y: number, w: number, h: number, len = 16) {
+  ctx.strokeStyle = C.accent
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]] as const) {
+    ctx.moveTo(cx + dx * len, cy)
+    ctx.lineTo(cx, cy)
+    ctx.lineTo(cx, cy + dy * len)
+  }
+  ctx.stroke()
+}
+
+/** Rombo con la cifra dentro, doble filete dorado (sustituye a la placa inclinada en el estilo elegante) */
+function diamondBadge(ctx: Ctx, cx: number, cy: number, r: number, label: string, tone: string) {
+  const path = (rad: number) => {
+    ctx.beginPath()
+    ctx.moveTo(cx, cy - rad)
+    ctx.lineTo(cx + rad, cy)
+    ctx.lineTo(cx, cy + rad)
+    ctx.lineTo(cx - rad, cy)
+    ctx.closePath()
+  }
+  path(r)
+  ctx.fillStyle = C.bg
+  ctx.fill()
+  ctx.strokeStyle = gold(ctx, cy - r, cy + r)
+  ctx.lineWidth = 2
+  ctx.stroke()
+  path(r - 8)
+  ctx.globalAlpha = 0.5
+  ctx.strokeStyle = C.accent
+  ctx.lineWidth = 1
+  ctx.stroke()
+  ctx.globalAlpha = 1
+  fittedText(ctx, label, cx, cy + 12, r * 1.05, 700, 36, DISPLAY, tone, 'center', 20)
 }
 
 /** Rombo pequeño (adorno del pie en el estilo elegante) */
@@ -236,7 +320,7 @@ function diamond(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
 /** Resplandor suave del color de acento arriba, para que el fondo liso no quede plano */
 function vignette(ctx: Ctx, H: number) {
   const g = ctx.createRadialGradient(W / 2, H * 0.12, 40, W / 2, H * 0.12, H * 0.9)
-  g.addColorStop(0, C.accent + '26')
+  g.addColorStop(0, C.accent + '30')
   g.addColorStop(1, C.accent + '00')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
@@ -263,11 +347,7 @@ function panel(ctx: Ctx, x: number, y: number, w: number, h: number) {
   ctx.strokeStyle = C.line
   ctx.lineWidth = ELEGANT ? 1 : 2
   ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
-  if (ELEGANT) {
-    // Pestaña dorada en la esquina, como una cartela
-    ctx.fillStyle = C.accent
-    ctx.fillRect(x, y, 36, 2)
-  }
+  if (ELEGANT) brackets(ctx, x + 1, y + 1, w - 2, h - 2)
 }
 
 /** Logo del equipo en un cuadro, ajustado sin deformar */
@@ -286,12 +366,14 @@ function logo(ctx: Ctx, img: HTMLImageElement, x: number, y: number, size: numbe
 
 /** Ficha de equipo: logo (si hay), tag, nombre y total. El rival va en espejo, a la derecha */
 function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x: number, y: number, h: number, home: boolean) {
-  const accent = home ? C.accent : C.ink
+  // Color del equipo: el de la izquierda en acento (oro metálico en el elegante) y el otro en tinta
+  const teamPaint: Paint = home ? (ELEGANT ? gold(ctx, y + h / 2 - 52, y + h / 2 + 12) : C.accent) : C.ink
   panel(ctx, x, y, COL_W, h)
-  // Franja de color del lado exterior
-  ctx.fillStyle = home ? C.accent : C.muted
-  const stripeW = ELEGANT ? 3 : 8
-  ctx.fillRect(home ? x : x + COL_W - stripeW, y, stripeW, h)
+  if (!ELEGANT) {
+    // Franja de color del lado exterior
+    ctx.fillStyle = home ? C.accent : C.muted
+    ctx.fillRect(home ? x : x + COL_W - 8, y, 8, h)
+  }
 
   // Sin logo utilizable (no hay o el servidor no permite CORS) se omite el cuadro
   const hasLogo = !!img && img.naturalWidth > 0
@@ -304,13 +386,15 @@ function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x
   const totalX = home ? x + COL_W - 84 : x + 84
   ctx.font = `900 112px ${DISPLAY}`
   const totalW = ctx.measureText(String(team.total)).width
-  text(ctx, String(team.total), totalX, y + h / 2 + 40, ctx.font, C.ink, home ? 'right' : 'left')
+  // En el modo neutral la puntuación lleva el color de su equipo, para saber de quién es cada una
+  const totalPaint: Paint = NEUTRAL ? (home && ELEGANT ? gold(ctx, y + h / 2 - 56, y + h / 2 + 44) : teamPaint) : C.ink
+  text(ctx, String(team.total), totalX, y + h / 2 + 40, ctx.font, totalPaint, home ? 'right' : 'left')
 
   const nameX = home ? logoX + logoSize + logoGap : logoX - logoGap
   const nameMax = COL_W - 28 - logoSize - logoGap - 84 - totalW - 20
   const align = home ? 'left' : 'right'
   // Sin nombre, el tag baja para quedar centrado
-  fittedText(ctx, team.tag, nameX, y + h / 2 + (team.name ? 8 : 22), nameMax, 900, 60, DISPLAY, accent, align, 32)
+  fittedText(ctx, team.tag, nameX, y + h / 2 + (team.name ? 8 : 22), nameMax, 900, 60, DISPLAY, teamPaint, align, 32)
   if (team.name) fittedText(ctx, team.name, nameX, y + h / 2 + 40, nameMax, 600, 20, SANS, C.muted, align)
 }
 
@@ -342,8 +426,8 @@ function playersTable(
   text(ctx, team.tag, x + 20, y + 23, `900 17px ${DISPLAY}`, accent)
   const tagW = ctx.measureText(team.tag).width
   text(ctx, ` · ${labels.player.toUpperCase()}`, x + 20 + tagW, y + 23, head, C.muted)
-  text(ctx, labels.avgPos.toUpperCase(), colAvg, y + 23, head, C.muted, 'right')
-  text(ctx, labels.points.toUpperCase(), colPts, y + 23, head, C.muted, 'right')
+  text(ctx, labels.avgPos.toUpperCase(), colAvg, y + 23, head, ELEGANT ? C.accent : C.muted, 'right')
+  text(ctx, labels.points.toUpperCase(), colPts, y + 23, head, ELEGANT ? C.accent : C.muted, 'right')
 
   const list: (WarImagePlayer | 'missing' | WarImageTeam['penalties'][number])[] = [...team.players]
   if (team.missingPoints > 0) list.push('missing')
@@ -356,7 +440,11 @@ function playersTable(
 
   list.forEach((p, i) => {
     const ry = y + headH + i * ROW_H
-    if (i % 2 === 1) {
+    if (ELEGANT) {
+      // Un filete fino entre filas, como en una carta de gala
+      ctx.fillStyle = C.line
+      ctx.fillRect(x + 18, ry, COL_W - 36, 1)
+    } else if (i % 2 === 1) {
       ctx.fillStyle = C.surface2
       ctx.globalAlpha = 0.45
       ctx.fillRect(x + 2, ry, COL_W - 4, ROW_H)
@@ -405,8 +493,7 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
   const yOf = (v: number) => plotTop + ((max - v) / (max - min)) * plotH
   const zero = yOf(0)
 
-  slant(ctx, PAD, y, 12, 26, 0, C.accent)
-  text(ctx, labels.runningDiff.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
+  sectionTitle(ctx, labels.runningDiff, y)
 
   // Rejilla y eje
   ctx.lineWidth = 1
@@ -467,10 +554,37 @@ const BOARD_H = 262
  * dos equipos (cada fila con su tag y su color, nada de verde o rojo) y dos cifras que no dependen de qué
  * equipo suba la war: carreras ganadas y puntos medios.
  */
+/** Texto hecho de tramos de distinto color (cada equipo con el suyo), encogido hasta que quepa */
+function coloredRuns(
+  ctx: Ctx,
+  parts: { text: string; color: Paint }[],
+  x: number,
+  y: number,
+  maxWidth: number,
+  weight: number,
+  size: number,
+  family: string,
+  minSize: number,
+) {
+  const widthAt = (px: number) => {
+    ctx.font = `${weight} ${px}px ${family}`
+    return parts.reduce((sum, p) => sum + ctx.measureText(p.text).width, 0)
+  }
+  let px = size
+  while (px > minSize && widthAt(px) > maxWidth) px -= 2
+  ctx.font = `${weight} ${px}px ${family}`
+  ctx.textAlign = 'left'
+  let cx = x
+  for (const p of parts) {
+    ctx.fillStyle = p.color
+    ctx.fillText(p.text, cx, y)
+    cx += ctx.measureText(p.text).width
+  }
+}
+
 function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabels): number {
   const stats = raceStats(data)
-  slant(ctx, PAD, y, 12, 26, 0, C.accent)
-  text(ctx, labels.raceByRace.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
+  sectionTitle(ctx, labels.raceByRace, y)
 
   // Cada fila de cifras lleva el tag de su equipo en su color, para saber de quién es cada número
   const labelW = 70
@@ -514,15 +628,35 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
   // Dos cifras neutrales para que el bloque no quede vacío
   const tileW = (W - PAD * 2 - GAP) / 2
   const tileY = top + 150
-  const tiles: [string, string][] = [
-    [labels.racesWon, `${data.home.tag} ${stats.winsHome} – ${stats.winsAway} ${data.away.tag}${stats.ties ? `  ·  ${stats.ties} ${labels.tied}` : ''}`],
-    [labels.avgRace, data.races.length ? `${data.home.tag} ${stats.avgHome.toFixed(1)} – ${stats.avgAway.toFixed(1)} ${data.away.tag}` : '–'],
+  const a = C.accent
+  const b = C.ink
+  const dash = { text: ' – ', color: C.muted }
+  const tiles: [string, { text: string; color: Paint }[]][] = [
+    [
+      labels.racesWon,
+      [
+        { text: `${data.home.tag} ${stats.winsHome}`, color: a },
+        dash,
+        { text: `${stats.winsAway} ${data.away.tag}`, color: b },
+        ...(stats.ties ? [{ text: `  ·  ${stats.ties} ${labels.tied}`, color: C.muted }] : []),
+      ],
+    ],
+    [
+      labels.avgRace,
+      data.races.length
+        ? [
+            { text: `${data.home.tag} ${stats.avgHome.toFixed(1)}`, color: a },
+            dash,
+            { text: `${stats.avgAway.toFixed(1)} ${data.away.tag}`, color: b },
+          ]
+        : [{ text: '–', color: C.ink }],
+    ],
   ]
-  tiles.forEach(([label, value], i) => {
+  tiles.forEach(([label, parts], i) => {
     const tx = PAD + i * (tileW + GAP)
     panel(ctx, tx, tileY, tileW, 68)
     text(ctx, label.toUpperCase(), tx + 16, tileY + 24, `500 12px ${MONO}`, C.muted)
-    fittedText(ctx, value, tx + 16, tileY + 54, tileW - 32, 800, 28, DISPLAY, C.ink, 'left', 18)
+    coloredRuns(ctx, parts, tx + 16, tileY + 54, tileW - 32, 800, 28, DISPLAY, 18)
   })
   return BOARD_H
 }
@@ -565,12 +699,12 @@ function drawWarCanvas(
     data.home.players.length + (data.home.missingPoints > 0 ? 1 : 0) + data.home.penalties.length,
     data.away.players.length + data.away.penalties.length,
   )
-  const hazardH = 14
-  const headerH = 64
+  const hazardH = ELEGANT ? 30 : 14
+  const headerH = ELEGANT ? 160 : 64
   const teamH = 160
   const tableH = 34 + rows * ROW_H + 4
   const chartH = NEUTRAL ? BOARD_H : 40 + 220 + 14 + 72
-  const footerH = 56
+  const footerH = ELEGANT ? 92 : 56
   const H = hazardH + headerH + teamH + 24 + tableH + 36 + chartH + 24 + footerH
 
   const canvas = document.createElement('canvas')
@@ -594,36 +728,31 @@ function drawWarCanvas(
   if (ELEGANT) vignette(ctx, H)
   hazard(ctx, 0, hazardH)
 
-  // Cabecera: marca, estado y fecha
+  // Cabecera: marca, estado y fecha (en el elegante, el título centrado de una invitación)
   let y = hazardH
   if (ELEGANT) {
-    // Marca sobria: nombre en marfil, un filete y "WAR" en versalitas doradas
-    text(ctx, 'MKW HUB', PAD, y + 41, `700 26px ${DISPLAY}`, C.ink)
-    const brandW = ctx.measureText('MKW HUB').width
-    ctx.fillStyle = C.accent
-    ctx.fillRect(PAD + brandW + 16, y + 20, 1, 26)
-    spaced(ctx, 'WAR', PAD + brandW + 30, y + 40, `600 15px ${SANS}`, C.accent, 4)
+    // El nombre de la competición, o "WAR" si no hay, en dorado y lo más grande que quepa
+    const title = (labels.competition.trim() || 'WAR').toUpperCase()
+    spaced(ctx, 'MKW HUB', PAD + 14, y + 38, `600 13px ${SANS}`, C.muted, 5)
+    spaced(ctx, labels.date, W - PAD - 14, y + 38, `500 13px ${SANS}`, C.muted, 3, 'right')
+    let size = 48
+    while (size > 24 && spacedWidth(ctx, title, `700 ${size}px ${DISPLAY}`, 9) > 760) size -= 2
+    spaced(ctx, title, W / 2, y + 96, `700 ${size}px ${DISPLAY}`, gold(ctx, y + 96 - size * 0.75, y + 102), 9, 'center')
+    ornament(ctx, W / 2, y + 118, 330)
+    spaced(ctx, labels.status.toUpperCase(), W / 2, y + 146, `600 13px ${SANS}`, C.accent, 7, 'center')
   } else {
     text(ctx, 'MKW HUB', PAD, y + 42, `900 30px ${DISPLAY}`, C.accent)
     ctx.font = `900 30px ${DISPLAY}`
     const brandW = ctx.measureText('MKW HUB').width
     slant(ctx, PAD + brandW + 14, y + 20, 64, 28, 7, C.accent)
     text(ctx, 'WAR', PAD + brandW + 46, y + 41, `900 20px ${DISPLAY}`, readable(C.accent), 'center')
-  }
 
-  text(ctx, labels.date, W - PAD, y + 40, `500 15px ${MONO}`, C.muted, 'right')
-  ctx.font = `500 15px ${MONO}`
-  const dateW = ctx.measureText(labels.date).width
-  ctx.font = `900 20px ${DISPLAY}`
-  const statusW = ctx.measureText(labels.status).width + 30
-  const statusX = W - PAD - dateW - 18 - statusW
-  if (ELEGANT) {
-    // Estado en un recuadro de filete dorado
-    ctx.strokeStyle = C.accent
-    ctx.lineWidth = 1
-    ctx.strokeRect(statusX + 0.5, y + 20.5, statusW, 28)
-    spaced(ctx, labels.status.toUpperCase(), statusX + statusW / 2, y + 40, `600 14px ${SANS}`, C.accent, 3, 'center')
-  } else {
+    text(ctx, labels.date, W - PAD, y + 40, `500 15px ${MONO}`, C.muted, 'right')
+    ctx.font = `500 15px ${MONO}`
+    const dateW = ctx.measureText(labels.date).width
+    ctx.font = `900 20px ${DISPLAY}`
+    const statusW = ctx.measureText(labels.status).width + 30
+    const statusX = W - PAD - dateW - 18 - statusW
     slant(ctx, statusX, y + 20, statusW, 28, 7, data.inProgress ? C.accent : C.ink)
     text(ctx, labels.status, statusX + statusW / 2, y + 41, ctx.font, readable(data.inProgress ? C.accent : C.ink), 'center')
   }
@@ -632,35 +761,16 @@ function drawWarCanvas(
   // Equipos y marcador
   teamPanel(ctx, data.home, logos.home, PAD, y, teamH, true)
   teamPanel(ctx, data.away, logos.away, PAD + COL_W + GAP, y, teamH, false)
-  // Placa central con la diferencia
+  // Placa central con la diferencia (en el modo neutral, la distancia sin signo como en Lorenzi: ±80)
   const badgeW = 132
   const badgeH = 72
-  if (NEUTRAL) {
-    // Sin signo ni colores de resultado: la distancia entre los dos, como en Lorenzi (±80)
-    if (ELEGANT) {
-      const bx = W / 2 - badgeW / 2
-      const by = y + (teamH - badgeH) / 2
-      ctx.fillStyle = C.bg
-      ctx.fillRect(bx, by, badgeW, badgeH)
-      ctx.strokeStyle = C.accent
-      ctx.lineWidth = 1
-      ctx.strokeRect(bx + 0.5, by + 0.5, badgeW - 1, badgeH - 1)
-      fittedText(ctx, `±${Math.abs(data.diff)}`, W / 2, y + teamH / 2 + 15, badgeW - 24, 700, 44, DISPLAY, C.ink, 'center', 26)
-    } else {
-      slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, C.surface2)
-      fittedText(ctx, `±${Math.abs(data.diff)}`, W / 2, y + teamH / 2 + 20, badgeW - 24, 900, 54, DISPLAY, C.ink, 'center', 28)
-    }
-  } else if (ELEGANT) {
-    // Recuadro de filete con la diferencia en el color del resultado
-    const bx = W / 2 - badgeW / 2
-    const by = y + (teamH - badgeH) / 2
-    const tone = data.diff === 0 ? C.muted : diffColor(data.diff)
-    ctx.fillStyle = C.bg
-    ctx.fillRect(bx, by, badgeW, badgeH)
-    ctx.strokeStyle = tone
-    ctx.lineWidth = 2
-    ctx.strokeRect(bx + 1, by + 1, badgeW - 2, badgeH - 2)
-    text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 17, `700 44px ${DISPLAY}`, data.diff === 0 ? C.ink : tone, 'center')
+  if (ELEGANT) {
+    const label = NEUTRAL ? `±${Math.abs(data.diff)}` : signed(data.diff)
+    const tone = NEUTRAL || data.diff === 0 ? C.ink : diffColor(data.diff)
+    diamondBadge(ctx, W / 2, y + teamH / 2, 62, label, tone)
+  } else if (NEUTRAL) {
+    slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, C.surface2)
+    fittedText(ctx, `±${Math.abs(data.diff)}`, W / 2, y + teamH / 2 + 20, badgeW - 24, 900, 54, DISPLAY, C.ink, 'center', 28)
   } else {
     slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, data.diff === 0 ? C.surface2 : diffColor(data.diff))
     text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 20, `900 54px ${DISPLAY}`, data.diff === 0 ? C.ink : readable(diffColor(data.diff)), 'center')
@@ -676,24 +786,30 @@ function drawWarCanvas(
   // Gráfico de diferencia acumulada
   y += (NEUTRAL ? raceBoard(ctx, data, y, labels) : runningChart(ctx, data, y, labels)) + 24
 
-  // Pie: bandera a cuadros y dirección de la web
-  ctx.fillStyle = C.line
-  ctx.fillRect(PAD, y, W - PAD * 2, 2)
+  // Pie: bandera a cuadros y dirección de la web (en el elegante, un separador y dos líneas centradas)
   if (ELEGANT) {
-    for (let i = 0; i < 3; i++) diamond(ctx, PAD + 8 + i * 22, y + 26, i === 1 ? 7 : 5, C.accent)
+    ornament(ctx, W / 2, y + 8, 440)
+    spaced(ctx, labels.footer.toUpperCase(), W / 2, y + 44, `500 11px ${SANS}`, C.muted, 4, 'center')
+    spaced(ctx, 'MKW-HUB.VERCEL.APP', W / 2, y + 66, `600 12px ${SANS}`, C.accent, 5, 'center')
   } else {
+    ctx.fillStyle = C.line
+    ctx.fillRect(PAD, y, W - PAD * 2, 2)
     checker(ctx, PAD, y + 18, 64, 16)
+    text(ctx, labels.footer, PAD + 80, y + 32, `500 14px ${MONO}`, C.muted)
+    text(ctx, 'mkw-hub.vercel.app', W - PAD, y + 32, `700 14px ${MONO}`, C.ink, 'right')
   }
-  text(ctx, labels.footer, PAD + 80, y + 32, `500 14px ${MONO}`, C.muted)
-  text(ctx, 'mkw-hub.vercel.app', W - PAD, y + 32, `700 14px ${MONO}`, C.ink, 'right')
 
   if (ELEGANT) {
-    // Marco fino alrededor de toda la imagen
-    ctx.globalAlpha = 0.5
+    // Doble marco dorado alrededor de toda la imagen, con un rombo en cada esquina
+    ctx.strokeStyle = gold(ctx, 0, H)
+    ctx.lineWidth = 2
+    ctx.strokeRect(14, 14, W - 28, H - 28)
+    ctx.globalAlpha = 0.55
     ctx.strokeStyle = C.accent
     ctx.lineWidth = 1
-    ctx.strokeRect(12.5, 12.5, W - 25, H - 25)
+    ctx.strokeRect(22.5, 22.5, W - 45, H - 45)
     ctx.globalAlpha = 1
+    for (const [cx, cy] of [[14, 14], [W - 14, 14], [14, H - 14], [W - 14, H - 14]] as const) diamond(ctx, cx, cy, 6, C.accent)
   }
   return canvas
 }

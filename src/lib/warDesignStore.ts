@@ -39,3 +39,41 @@ export function setDesign(next: WarDesign): void {
 }
 
 export const resetDesign = () => setDesign(DEFAULT_DESIGN)
+
+/*
+ * Nombre de la competición de cada war (lo muestra el diseño Oficial). Va por war, no con el diseño:
+ * cada war tiene su torneo. Se guarda también en este navegador, solo las últimas.
+ */
+const COMPETITIONS_KEY = 'mkwhub.warCompetitions'
+const MAX_COMPETITIONS = 60
+export const MAX_COMPETITION_CHARS = 60
+
+function loadCompetitions(): Record<string, string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COMPETITIONS_KEY) ?? '{}') as unknown
+    if (!raw || typeof raw !== 'object') return {}
+    return Object.fromEntries(
+      Object.entries(raw as Record<string, unknown>).filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, (v as string).slice(0, MAX_COMPETITION_CHARS)]),
+    )
+  } catch {
+    return {}
+  }
+}
+
+let competitions = loadCompetitions()
+
+export const getCompetition = (eventId: string): string => competitions[eventId] ?? ''
+
+export function setCompetition(eventId: string, name: string): void {
+  const clean = name.slice(0, MAX_COMPETITION_CHARS)
+  const next = { ...competitions }
+  delete next[eventId] // al reescribirla pasa a ser la más reciente
+  if (clean.trim()) next[eventId] = clean
+  competitions = Object.fromEntries(Object.entries(next).slice(-MAX_COMPETITIONS))
+  try {
+    localStorage.setItem(COMPETITIONS_KEY, JSON.stringify(competitions))
+  } catch {
+    // almacenamiento lleno o no disponible
+  }
+  for (const l of listeners) l()
+}

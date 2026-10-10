@@ -25,8 +25,8 @@ export type PresetStyle = 'standard' | 'elegant'
 export const PRESETS: Record<PresetId, Palette> = {
   // El de siempre: asfalto y amarillo kart
   asphalt: { bg: '#141414', surface: '#1c1c1b', surface2: '#292927', line: '#3b3b38', ink: '#f4f2ec', muted: '#a5a29a', accent: '#ffd500', red: '#e8112d', green: '#19c15a' },
-  // Oficial: azul noche, marfil y oro, para las competiciones importantes
-  official: { bg: '#090c14', surface: '#0e1320', surface2: '#151c2e', line: '#2a3350', ink: '#f4efe2', muted: '#8b94ab', accent: '#c9a45c', red: '#c0364d', green: '#3da57a' },
+  // Oficial: negro de invitación de gala, champán y oro, para las competiciones más importantes
+  official: { bg: '#050505', surface: '#0a0a09', surface2: '#14120d', line: '#3a3015', ink: '#f2e8cf', muted: '#a09375', accent: '#d4af37', red: '#c0364d', green: '#3da57a' },
   // Claro: todo en tonos crema, sin blancos
   light: { bg: '#ece3cf', surface: '#f7f0df', surface2: '#e6dcc4', line: '#cfc3a6', ink: '#2b2417', muted: '#7b6f58', accent: '#c98a00', red: '#c4122b', green: '#12874a' },
   // Neón: violeta casi negro con magenta (el Océano es azul con acento celeste)
@@ -79,6 +79,13 @@ export function resolvePalette(design: WarDesign): Palette {
     if (color && HEX.test(color)) palette[key] = color
   }
   return palette
+}
+
+/** Mezcla dos colores #rrggbb: t = 0 es el primero, t = 1 el segundo */
+export function mixColors(a: string, b: string, t: number): string {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+  const out = [0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0'))
+  return `#${out.join('')}`
 }
 
 /** Luminosidad relativa de un color #rrggbb (0 oscuro, 1 claro) */

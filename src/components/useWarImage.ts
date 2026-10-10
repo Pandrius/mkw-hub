@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useWarDesign } from './useWarDesign'
+import { useCompetition, useWarDesign } from './useWarDesign'
 import { RACES_PER_EVENT, type EventRace, type GameEvent } from '../lib/events'
 import { formatDate } from '../lib/time'
 import { buildWarImageData, hasRealOpponents, warImageFileName } from '../lib/warImage'
@@ -10,6 +10,7 @@ import type { WarTable } from '../lib/warTable'
 export function useWarImage(event: GameEvent, races: EventRace[], table: WarTable) {
   const { t, locale } = useI18n()
   const [design] = useWarDesign()
+  const [competition] = useCompetition(event.id)
 
   const data = buildWarImageData(event, table, hasRealOpponents(event, races))
   const labels: WarImageLabels = {
@@ -21,6 +22,7 @@ export function useWarImage(event: GameEvent, races: EventRace[], table: WarTabl
     missing: t('event.missingPts'),
     penalty: t('event.penaltyDefault'),
     runningDiff: t('warImg.runningDiff'),
+    competition: competition.trim(),
     raceByRace: t('warImg.raceByRace'),
     racesWon: t('warImg.racesWon'),
     avgRace: t('warImg.avgRace'),

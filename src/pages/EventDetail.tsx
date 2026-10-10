@@ -464,7 +464,7 @@ function WarTableCard({
         </span>
       </header>
 
-      {designOpen && <WarDesignPanel />}
+      {designOpen && <WarDesignPanel eventId={event.id} />}
 
       {/* La misma imagen que se descarga o se copia: marcador, escudos, diferencia por pista y posiciones medias */}
       <WarImagePreview event={event} races={races} table={table} />

@@ -14,7 +14,8 @@ import {
   type EditableColor,
   type WarDesign,
 } from '../lib/warDesign'
-import { useWarDesign } from './useWarDesign'
+import { MAX_COMPETITION_CHARS } from '../lib/warDesignStore'
+import { useCompetition, useWarDesign } from './useWarDesign'
 
 const PHOTO_MAX_SIDE = 1600
 
@@ -54,9 +55,10 @@ const COLOR_LABEL: Record<EditableColor, MessageKey> = {
 }
 
 /** Editor del diseño de las tablas: estilo, foto de fondo y colores propios (se guarda en este navegador) */
-export default function WarDesignPanel() {
+export default function WarDesignPanel({ eventId }: { eventId: string }) {
   const { t } = useI18n()
   const [design, setDesign] = useWarDesign()
+  const [competition, setCompetition] = useCompetition(eventId)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const palette = resolvePalette(design)
@@ -107,6 +109,21 @@ export default function WarDesignPanel() {
           })}
         </div>
       </div>
+
+      {!hasStripes && (
+        <div>
+          <p className={section}>{t('design.competition')}</p>
+          <input
+            type="text"
+            value={competition}
+            maxLength={MAX_COMPETITION_CHARS}
+            onChange={(e) => setCompetition(e.target.value)}
+            placeholder={t('design.competitionPlaceholder')}
+            className="field mt-2 max-w-xl"
+          />
+          <p className="mt-1 text-xs text-muted">{t('design.competitionHint')}</p>
+        </div>
+      )}
 
       <div>
         <p className={section}>{t('design.photo')}</p>

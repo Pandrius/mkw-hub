@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, parseDesign, PRESET_IDS, PRESET_STYLE, PRESETS, readable, resolvePalette } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, mixColors, parseDesign, PRESET_IDS, PRESET_STYLE, PRESETS, readable, resolvePalette } from './warDesign'
 
 describe('resolvePalette', () => {
   it('sin retoques es la del preset', () => {
@@ -112,5 +112,19 @@ describe('neutral', () => {
     expect(DEFAULT_DESIGN.neutral).toBe(false)
     expect(parseDesign({ neutral: true }).neutral).toBe(true)
     expect(parseDesign({ neutral: 'sí' }).neutral).toBe(false)
+  })
+})
+
+describe('mixColors', () => {
+  it('mezcla dos colores', () => {
+    expect(mixColors('#000000', '#ffffff', 0)).toBe('#000000')
+    expect(mixColors('#000000', '#ffffff', 1)).toBe('#ffffff')
+    expect(mixColors('#000000', '#ffffff', 0.5)).toBe('#808080')
+    expect(mixColors('#d4af37', '#ffffff', 0.55)).toMatch(/^#[0-9a-f]{6}$/)
+  })
+  it('aclarar es más luminoso y oscurecer menos que el original', () => {
+    const gold = '#d4af37'
+    expect(luminance(mixColors(gold, '#ffffff', 0.5))).toBeGreaterThan(luminance(gold))
+    expect(luminance(mixColors(gold, '#000000', 0.5))).toBeLessThan(luminance(gold))
   })
 })
