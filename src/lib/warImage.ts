@@ -133,6 +133,59 @@ export function buildWarImageData(event: GameEvent, table: WarTable, showOpponen
   }
 }
 
+/** Cifras de la war sin perspectiva: no dependen de qué equipo sea "el nuestro" */
+export type RaceStats = {
+  /** Carreras ganadas por el equipo de la izquierda, empatadas y ganadas por el de la derecha */
+  winsHome: number
+  ties: number
+  winsAway: number
+  /** Mayor puntuación de un equipo en una sola carrera */
+  best: { score: number; raceNo: number; abbr: string; side: 'home' | 'away' } | null
+  /** Puntos medios por carrera de cada equipo */
+  avgHome: number
+  avgAway: number
+}
+
+export function raceStats(data: Pick<WarImageData, 'races'>): RaceStats {
+  const stats: RaceStats = { winsHome: 0, ties: 0, winsAway: 0, best: null, avgHome: 0, avgAway: 0 }
+  for (const r of data.races) {
+    if (r.home > r.away) stats.winsHome++
+    else if (r.away > r.home) stats.winsAway++
+    else stats.ties++
+    const score = Math.max(r.home, r.away)
+    if (!stats.best || score > stats.best.score) {
+      stats.best = { score, raceNo: r.raceNo, abbr: r.abbr, side: r.home >= r.away ? 'home' : 'away' }
+    }
+    stats.avgHome += r.home
+    stats.avgAway += r.away
+  }
+  if (data.races.length > 0) {
+    stats.avgHome /= data.races.length
+    stats.avgAway /= data.races.length
+  }
+  return stats
+}
+
+/**
+ * Versión neutral: los equipos por orden alfabético de tag (no según quién subió la war) y la
+ * diferencia vista desde el nuevo equipo de la izquierda. `swapped` indica si se han intercambiado
+ * (para intercambiar también los logos).
+ */
+export function neutralizeWarImage(data: WarImageData): { data: WarImageData; swapped: boolean } {
+  const swapped = data.away.tag.trim().localeCompare(data.home.tag.trim(), undefined, { sensitivity: 'base' }) < 0
+  if (!swapped) return { data, swapped: false }
+  return {
+    swapped: true,
+    data: {
+      ...data,
+      home: data.away,
+      away: data.home,
+      diff: -data.diff,
+      races: data.races.map((r) => ({ ...r, home: r.away, away: r.home, diff: -r.diff, runningDiff: -r.runningDiff })),
+    },
+  }
+}
+
 /** ¿Los rivales tienen nombres de verdad (indicados al crear la war o apuntados en alguna carrera)? */
 export function hasRealOpponents(event: GameEvent, races: { opponent_results?: unknown[] | null }[]): boolean {
   return (event.opponent_players?.some((n) => n.trim()) ?? false) || races.some((r) => (r.opponent_results?.length ?? 0) > 0)

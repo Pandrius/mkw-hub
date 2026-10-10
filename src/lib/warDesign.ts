@@ -58,9 +58,14 @@ export type WarDesign = {
   photo: { dataUrl: string; dim: number } | null
   /** Franjas amarillas y negras de la cabecera (si no, una barra lisa) */
   stripes: boolean
+  /**
+   * Imagen neutral: igual para los dos equipos, sin diferencias ni quién va ganando y con los equipos
+   * en orden alfabético, en lugar de verla desde el equipo que la sube
+   */
+  neutral: boolean
 }
 
-export const DEFAULT_DESIGN: WarDesign = { preset: 'asphalt', colors: {}, photo: null, stripes: true }
+export const DEFAULT_DESIGN: WarDesign = { preset: 'asphalt', colors: {}, photo: null, stripes: true, neutral: false }
 
 const HEX = /^#[0-9a-f]{6}$/i
 export const MAX_PHOTO_CHARS = 1_500_000
@@ -107,7 +112,7 @@ export function parseDesign(raw: unknown): WarDesign {
     p && typeof p.dataUrl === 'string' && /^data:image\/(png|jpe?g|webp);base64,/.test(p.dataUrl) && p.dataUrl.length <= MAX_PHOTO_CHARS
       ? { dataUrl: p.dataUrl, dim: typeof p.dim === 'number' && p.dim >= 0 ? Math.min(p.dim, MAX_DIM) : 0.55 }
       : null
-  return { preset, colors, photo, stripes: r.stripes !== false }
+  return { preset, colors, photo, stripes: r.stripes !== false, neutral: r.neutral === true }
 }
 
 /** Tamaño de una imagen reducida para que ninguno de sus lados pase de `max` (sin agrandar nunca) */

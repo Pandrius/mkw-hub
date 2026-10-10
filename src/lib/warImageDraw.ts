@@ -1,7 +1,7 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
 import { coverRect, DEFAULT_DESIGN, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
-import { fitText, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
+import { fitText, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
  * Dibujo de la imagen de la war con Canvas 2D, a mano y sin dependencias.
@@ -21,6 +21,13 @@ export type WarImageLabels = {
   /** Nombre por defecto de una penalty sin nombre */
   penalty: string
   runningDiff: string
+  /** Modo neutral */
+  raceByRace: string
+  racesWon: string
+  bestRace: string
+  avgRace: string
+  tied: string
+  vs: string
   noOpponents: string
   footer: string
 }
@@ -33,6 +40,8 @@ let C: Palette = PRESETS.asphalt
 /** Opacidad de los paneles: con foto de fondo se dejan algo transparentes para que se vea */
 let PANEL_ALPHA = 1
 let STRIPES = true
+/** Modo neutral: sin diferencias ni colores de ganar o perder */
+let NEUTRAL = false
 
 const DISPLAY_SANS = '"Big Shoulders Display", Barlow, sans-serif'
 const DISPLAY_SERIF = '"Bodoni Moda", Didot, Georgia, serif'
@@ -452,6 +461,82 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
   return labelsY + 72 - y
 }
 
+/** Alto del bloque carrera a carrera del modo neutral */
+const BOARD_H = 262
+
+/**
+ * Modo neutral: en lugar de la diferencia acumulada, el marcador de cada carrera con los puntos de los
+ * dos equipos (mismos colores de equipo que arriba, nada de verde o rojo) y unas cifras que no dependen
+ * de qué equipo suba la war: carreras ganadas, mejor carrera y puntos medios.
+ */
+function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabels): number {
+  const stats = raceStats(data)
+  slant(ctx, PAD, y, 12, 26, 0, C.accent)
+  text(ctx, labels.raceByRace.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
+
+  // Leyenda: qué color es cada equipo
+  let lx = W - PAD
+  for (const [tag, color] of [[data.away.tag, C.ink], [data.home.tag, C.accent]] as const) {
+    ctx.font = `800 16px ${DISPLAY}`
+    const w = ctx.measureText(tag).width
+    text(ctx, tag, lx, y + 21, ctx.font, color, 'right')
+    ctx.fillStyle = color
+    ctx.fillRect(lx - w - 18, y + 9, 10, 10)
+    lx -= w + 40
+  }
+
+  const x0 = PAD
+  const slotW = (W - PAD * 2) / data.slots
+  const byNo = new Map(data.races.map((r) => [r.raceNo, r]))
+  const top = y + 44
+  for (let n = 1; n <= data.slots; n++) {
+    const cx = x0 + slotW * (n - 0.5)
+    const r = byNo.get(n)
+    text(ctx, String(n), cx, top + 10, `500 12px ${MONO}`, r ? C.muted : C.line, 'center')
+    if (!r) {
+      // Carrera aún sin jugar: hueco punteado
+      ctx.strokeStyle = C.line
+      ctx.lineWidth = 1
+      ctx.setLineDash([3, 4])
+      ctx.strokeRect(cx - slotW / 2 + 8.5, top + 20.5, slotW - 17, 100)
+      ctx.setLineDash([])
+      continue
+    }
+    ctx.font = `900 17px ${DISPLAY}`
+    const abbr = fitText(r.abbr, slotW - 18, (t) => ctx.measureText(t).width)
+    const pw = Math.min(slotW - 6, ctx.measureText(abbr).width + 18)
+    slant(ctx, cx - pw / 2, top + 18, pw, 24, 5, r.color)
+    text(ctx, abbr, cx, top + 36, ctx.font, readable(r.color), 'center')
+    text(ctx, String(r.home), cx, top + 76, `800 26px ${DISPLAY}`, C.accent, 'center')
+    text(ctx, String(r.away), cx, top + 106, `800 26px ${DISPLAY}`, C.ink, 'center')
+    // Reparto de los puntos de la carrera entre los dos equipos
+    const bw = slotW - 18
+    const bx = cx - bw / 2
+    const total = r.home + r.away
+    const aw = total > 0 ? (r.home / total) * bw : bw / 2
+    ctx.fillStyle = C.accent
+    ctx.fillRect(bx, top + 118, aw, 7)
+    ctx.fillStyle = C.ink
+    ctx.fillRect(bx + aw, top + 118, bw - aw, 7)
+  }
+
+  // Tres cifras neutrales para que el bloque no quede vacío
+  const tileW = (W - PAD * 2 - GAP * 2) / 3
+  const tileY = top + 150
+  const tiles: [string, string][] = [
+    [labels.racesWon, `${data.home.tag} ${stats.winsHome} – ${stats.winsAway} ${data.away.tag}${stats.ties ? `  ·  ${stats.ties} ${labels.tied}` : ''}`],
+    [labels.bestRace, stats.best ? `${stats.best.score} · ${stats.best.abbr} · ${stats.best.side === 'home' ? data.home.tag : data.away.tag}` : '–'],
+    [labels.avgRace, data.races.length ? `${stats.avgHome.toFixed(1)} – ${stats.avgAway.toFixed(1)}` : '–'],
+  ]
+  tiles.forEach(([label, value], i) => {
+    const tx = PAD + i * (tileW + GAP)
+    panel(ctx, tx, tileY, tileW, 68)
+    text(ctx, label.toUpperCase(), tx + 16, tileY + 24, `500 12px ${MONO}`, C.muted)
+    fittedText(ctx, value, tx + 16, tileY + 54, tileW - 32, 800, 28, DISPLAY, C.ink, 'left', 18)
+  })
+  return BOARD_H
+}
+
 /** Dibuja la imagen completa en un canvas nuevo (a 2x) */
 export function drawWarImage(
   data: WarImageData,
@@ -464,6 +549,7 @@ export function drawWarImage(
   ELEGANT = PRESET_STYLE[design.preset] === 'elegant'
   DISPLAY = ELEGANT ? DISPLAY_SERIF : DISPLAY_SANS
   STRIPES = design.stripes
+  NEUTRAL = design.neutral
   PANEL_ALPHA = photo ? 0.8 : 1
   try {
     return drawWarCanvas(data, labels, logos, design, photo)
@@ -472,6 +558,7 @@ export function drawWarImage(
     ELEGANT = false
     DISPLAY = DISPLAY_SANS
     STRIPES = true
+    NEUTRAL = false
     PANEL_ALPHA = 1
   }
 }
@@ -492,7 +579,7 @@ function drawWarCanvas(
   const headerH = 64
   const teamH = 160
   const tableH = 34 + rows * ROW_H + 4
-  const chartH = 40 + 220 + 14 + 72
+  const chartH = NEUTRAL ? BOARD_H : 40 + 220 + 14 + 72
   const footerH = 56
   const H = hazardH + headerH + teamH + 24 + tableH + 36 + chartH + 24 + footerH
 
@@ -558,7 +645,22 @@ function drawWarCanvas(
   // Placa central con la diferencia
   const badgeW = 132
   const badgeH = 72
-  if (ELEGANT) {
+  if (NEUTRAL) {
+    // Sin diferencia ni colores de resultado: un "VS" igual para los dos
+    if (ELEGANT) {
+      const bx = W / 2 - badgeW / 2
+      const by = y + (teamH - badgeH) / 2
+      ctx.fillStyle = C.bg
+      ctx.fillRect(bx, by, badgeW, badgeH)
+      ctx.strokeStyle = C.accent
+      ctx.lineWidth = 1
+      ctx.strokeRect(bx + 0.5, by + 0.5, badgeW - 1, badgeH - 1)
+      text(ctx, labels.vs, W / 2, y + teamH / 2 + 15, `700 40px ${DISPLAY}`, C.ink, 'center')
+    } else {
+      slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, C.surface2)
+      text(ctx, labels.vs, W / 2, y + teamH / 2 + 18, `900 46px ${DISPLAY}`, C.ink, 'center')
+    }
+  } else if (ELEGANT) {
     // Recuadro de filete con la diferencia en el color del resultado
     const bx = W / 2 - badgeW / 2
     const by = y + (teamH - badgeH) / 2
@@ -582,7 +684,7 @@ function drawWarCanvas(
   y += tableH + 36
 
   // Gráfico de diferencia acumulada
-  y += runningChart(ctx, data, y, labels) + 24
+  y += (NEUTRAL ? raceBoard(ctx, data, y, labels) : runningChart(ctx, data, y, labels)) + 24
 
   // Pie: bandera a cuadros y dirección de la web
   ctx.fillStyle = C.line
@@ -642,5 +744,10 @@ export async function renderWarImage(
     '0123456789+-–·…',
   ].join('')
   const [photo] = await Promise.all([loadPhoto(design.photo?.dataUrl), waitForFonts(sample, PRESET_STYLE[design.preset] === 'elegant')])
+  if (design.neutral) {
+    // Equipos por orden alfabético, no según quién suba la war (y cada logo con su equipo)
+    const n = neutralizeWarImage(data)
+    return canvasToPng(drawWarImage(n.data, labels, n.swapped ? { home: logos.away, away: logos.home } : logos, design, photo))
+  }
   return canvasToPng(drawWarImage(data, labels, logos, design, photo))
 }

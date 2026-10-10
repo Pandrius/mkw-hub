@@ -106,3 +106,11 @@ describe('presets', () => {
     }
   })
 })
+
+describe('neutral', () => {
+  it('por defecto la imagen no es neutral y se conserva si se guarda', () => {
+    expect(DEFAULT_DESIGN.neutral).toBe(false)
+    expect(parseDesign({ neutral: true }).neutral).toBe(true)
+    expect(parseDesign({ neutral: 'sí' }).neutral).toBe(false)
+  })
+})
