@@ -59,13 +59,19 @@ export type WarDesign = {
   /** Franjas amarillas y negras de la cabecera (si no, una barra lisa) */
   stripes: boolean
   /**
-   * Imagen neutral: igual para los dos equipos, sin diferencias ni quién va ganando y con los equipos
-   * en orden alfabético, en lugar de verla desde el equipo que la sube
+   * Perspectiva de la imagen. Neutral (por defecto): igual para los dos equipos, gana el de la izquierda y
+   * sin diferencias ni colores de resultado. Si no, vista desde el equipo de la izquierda (el que la subió)
    */
   neutral: boolean
 }
 
-export const DEFAULT_DESIGN: WarDesign = { preset: 'asphalt', colors: {}, photo: null, stripes: true, neutral: false }
+/**
+ * Versión del formato guardado. La 2 es la primera en la que lo neutral es el valor por defecto: lo guardado
+ * antes (sin versión) guardaba "no neutral" simplemente porque era lo normal, así que se descarta ese valor.
+ */
+export const DESIGN_VERSION = 2
+
+export const DEFAULT_DESIGN: WarDesign = { preset: 'asphalt', colors: {}, photo: null, stripes: true, neutral: true }
 
 const HEX = /^#[0-9a-f]{6}$/i
 export const MAX_PHOTO_CHARS = 1_500_000
@@ -79,6 +85,18 @@ export function resolvePalette(design: WarDesign): Palette {
     if (color && HEX.test(color)) palette[key] = color
   }
   return palette
+}
+
+/**
+ * Color de las medallas de la war (0 oro, 1 plata, 2 bronce). Son los de los metales de verdad, no los de la
+ * paleta: en todos los diseños el primero es dorado, el segundo plateado y el tercero bronce. Más oscuros si el
+ * fondo es claro, para que se lean.
+ */
+export function medalColor(rank: number, lightBackground: boolean): string | null {
+  if (rank === 0) return lightBackground ? '#b07d00' : '#f2c230'
+  if (rank === 1) return lightBackground ? '#7f8590' : '#b9bfcb'
+  if (rank === 2) return lightBackground ? '#94571f' : '#c47f3b'
+  return null
 }
 
 /** Mezcla dos colores #rrggbb: t = 0 es el primero, t = 1 el segundo */
@@ -119,7 +137,8 @@ export function parseDesign(raw: unknown): WarDesign {
     p && typeof p.dataUrl === 'string' && /^data:image\/(png|jpe?g|webp);base64,/.test(p.dataUrl) && p.dataUrl.length <= MAX_PHOTO_CHARS
       ? { dataUrl: p.dataUrl, dim: typeof p.dim === 'number' && p.dim >= 0 ? Math.min(p.dim, MAX_DIM) : 0.55 }
       : null
-  return { preset, colors, photo, stripes: r.stripes !== false, neutral: r.neutral === true }
+  const neutral = r.v === DESIGN_VERSION ? r.neutral !== false : true
+  return { preset, colors, photo, stripes: r.stripes !== false, neutral }
 }
 
 /** Tamaño de una imagen reducida para que ninguno de sus lados pase de `max` (sin agrandar nunca) */

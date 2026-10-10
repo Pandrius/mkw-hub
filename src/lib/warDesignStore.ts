@@ -1,4 +1,4 @@
-import { DEFAULT_DESIGN, parseDesign, type WarDesign } from './warDesign'
+import { DEFAULT_DESIGN, DESIGN_VERSION, parseDesign, type WarDesign } from './warDesign'
 
 /*
  * Diseño elegido para las tablas, guardado en este navegador. Es un almacén mínimo (React lo lee con
@@ -31,7 +31,7 @@ export function subscribeDesign(listener: () => void): () => void {
 export function setDesign(next: WarDesign): void {
   current = next
   try {
-    localStorage.setItem(KEY, JSON.stringify(next))
+    localStorage.setItem(KEY, JSON.stringify({ ...next, v: DESIGN_VERSION }))
   } catch {
     // almacenamiento lleno o no disponible
   }

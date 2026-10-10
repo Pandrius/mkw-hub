@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import PerspectiveToggle from '../components/PerspectiveToggle'
 import WarImagePreview from '../components/WarImagePreview'
 import { EmptyState, PageHeader, Plate } from '../components/ui'
 import { useI18n } from '../i18n'
@@ -140,7 +141,12 @@ export default function ValidateWar() {
       {rejected && <p className="border-l-4 border-kart-red bg-surface px-4 py-3 text-sm">{t('validate.rejected')}</p>}
 
       <section className="overflow-hidden panel">
-        <h2 className="border-b border-line px-5 py-3 font-display text-xl font-bold">{t('validate.preview')}</h2>
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <h2 className="font-display text-xl font-bold">{t('validate.preview')}</h2>
+          <span className="text-sm font-semibold">
+            <PerspectiveToggle />
+          </span>
+        </header>
         <WarImagePreview event={mirrored.event} races={mirrored.races} table={table} />
       </section>
 

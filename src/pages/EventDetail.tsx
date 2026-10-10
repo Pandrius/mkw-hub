@@ -4,7 +4,7 @@ import EditableName from '../components/EditableName'
 import RaceForm from '../components/RaceForm'
 import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
-import { useWarDesign } from '../components/useWarDesign'
+import PerspectiveToggle from '../components/PerspectiveToggle'
 import WarDesignPanel from '../components/WarDesignPanel'
 import WarImagePreview from '../components/WarImagePreview'
 import { EmptyState } from '../components/ui'
@@ -439,7 +439,6 @@ function WarTableCard({
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const [designOpen, setDesignOpen] = useState(false)
-  const [design, setDesign] = useWarDesign()
   const text = lorenziText(teamTag, opponentTag, table)
 
   const copy = async () => {
@@ -461,14 +460,7 @@ function WarTableCard({
         <span className="flex flex-wrap gap-4 text-sm font-semibold">
           {/* Tabla propia en PNG para compartir en Discord */}
           <WarImageButtons event={event} races={races} table={table} />
-          <button
-            onClick={() => setDesign({ ...design, neutral: !design.neutral })}
-            aria-pressed={design.neutral}
-            title={t('design.neutralHint')}
-            className={design.neutral ? 'bg-kart-yellow px-2 font-bold text-bg' : 'text-kart-blue hover:underline'}
-          >
-            ⚖ {t('design.neutral')}
-          </button>
+          <PerspectiveToggle />
           <button onClick={() => setDesignOpen((o) => !o)} aria-expanded={designOpen} className="text-kart-blue hover:underline">
             🎨 {t('design.title')}
           </button>

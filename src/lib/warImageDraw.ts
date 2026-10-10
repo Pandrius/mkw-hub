@@ -1,6 +1,6 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
-import { coverRect, DEFAULT_DESIGN, luminance, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, luminance, medalColor, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
 import { fitText, medalRanks, neutralizeWarImage, raceStats, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
@@ -257,17 +257,16 @@ const homePaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? gold(c
 const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? silverMetal(ctx, y0, y1) : C.ink)
 
 /**
- * Color de las tres mejores puntuaciones de la war: oro (el acento), plata y bronce. En el estilo elegante son
- * metales con degradado; en el resto, colores lisos (más oscuros si el fondo es claro, para que se lean).
+ * Color de las tres mejores puntuaciones de la war: oro, plata y bronce de verdad (no el acento de la paleta, que en
+ * otros diseños es rosa, azul o naranja). En el estilo elegante son metales con degradado; en el resto, colores lisos
+ * (más oscuros si el fondo es claro, para que se lean).
  */
 function medalPaint(ctx: Ctx, rank: number, y0: number, y1: number): Paint | null {
   if (rank > 2) return null
-  const light = luminance(C.bg) > 0.5
   if (ELEGANT) {
-    return rank === 0 ? gold(ctx, y0, y1) : rank === 1 ? silverMetal(ctx, y0, y1) : metal(ctx, '#c9803f', y0, y1)
+    return rank === 0 ? metal(ctx, '#d4af37', y0, y1) : rank === 1 ? silverMetal(ctx, y0, y1) : metal(ctx, '#c9803f', y0, y1)
   }
-  if (rank === 0) return C.accent
-  return rank === 1 ? (light ? '#7f8590' : '#b9bfcb') : light ? '#94571f' : '#c47f3b'
+  return medalColor(rank, luminance(C.bg) > 0.5)
 }
 
 /** Filete dorado que se desvanece por un extremo (`in`: nace de la nada y llega pleno; `out`: al revés) */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, mixColors, parseDesign, PRESET_IDS, PRESET_STYLE, PRESETS, readable, resolvePalette } from './warDesign'
+import { coverRect, DEFAULT_DESIGN, DESIGN_VERSION, fitWithin, luminance, medalColor, mixColors, parseDesign, PRESET_IDS, PRESET_STYLE, PRESETS, readable, resolvePalette } from './warDesign'
 
 describe('resolvePalette', () => {
   it('sin retoques es la del preset', () => {
@@ -107,11 +107,61 @@ describe('presets', () => {
   })
 })
 
-describe('neutral', () => {
-  it('por defecto la imagen no es neutral y se conserva si se guarda', () => {
-    expect(DEFAULT_DESIGN.neutral).toBe(false)
-    expect(parseDesign({ neutral: true }).neutral).toBe(true)
-    expect(parseDesign({ neutral: 'sí' }).neutral).toBe(false)
+describe('perspectiva neutral', () => {
+  it('es la de por defecto', () => {
+    expect(DEFAULT_DESIGN.neutral).toBe(true)
+    expect(parseDesign(null).neutral).toBe(true)
+    expect(parseDesign({}).neutral).toBe(true)
+  })
+
+  it('lo guardado con la versión actual se respeta, también si se eligió la del equipo', () => {
+    expect(parseDesign({ v: DESIGN_VERSION, neutral: false }).neutral).toBe(false)
+    expect(parseDesign({ v: DESIGN_VERSION, neutral: true }).neutral).toBe(true)
+    expect(parseDesign({ v: DESIGN_VERSION }).neutral).toBe(true)
+  })
+
+  it('lo guardado antes de que lo neutral fuera lo normal se pasa a neutral', () => {
+    // Antes se guardaba "neutral: false" aunque nadie lo hubiera elegido
+    expect(parseDesign({ preset: 'official', neutral: false }).neutral).toBe(true)
+    expect(parseDesign({ preset: 'official', neutral: false }).preset).toBe('official')
+  })
+})
+
+describe('medalColor', () => {
+  const hue = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    const max = Math.max(r, g, b)
+    const d = max - Math.min(r, g, b)
+    if (d === 0) return 0
+    return (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60
+  }
+  const sat = (hex: string) => {
+    const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    return (Math.max(...v) - Math.min(...v)) / (Math.max(...v) || 1)
+  }
+
+  it('el oro es dorado, la plata gris y el bronce marrón anaranjado, en fondo oscuro y claro', () => {
+    for (const light of [false, true]) {
+      const [gold, silver, bronze] = [0, 1, 2].map((r) => medalColor(r, light)!)
+      expect(hue(gold)).toBeGreaterThan(35)
+      expect(hue(gold)).toBeLessThan(55)
+      expect(sat(silver)).toBeLessThan(0.15)
+      expect(hue(bronze)).toBeGreaterThan(20)
+      expect(hue(bronze)).toBeLessThan(40)
+      expect(sat(bronze)).toBeGreaterThan(0.4)
+    }
+  })
+
+  it('no depende de la paleta: en ningún diseño el oro es el color de acento', () => {
+    for (const id of PRESET_IDS) {
+      const light = luminance(PRESETS[id].bg) > 0.5
+      expect(medalColor(0, light)!.toLowerCase()).not.toBe(PRESETS[id].accent.toLowerCase())
+    }
+  })
+
+  it('solo hay tres medallas', () => {
+    expect(medalColor(3, false)).toBeNull()
+    expect(medalColor(-1, false)).toBeNull()
   })
 })
 
