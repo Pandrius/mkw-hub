@@ -262,6 +262,7 @@ export const en: Record<MessageKey, string> = {
   'event.sub.confirm': 'Make the change',
   'event.sub.list': 'Substitutions',
   'event.sub.item': 'Race {n}: {in} comes in for {out}',
+  'event.searchTrack': 'Search track (name or abbreviation)…',
   'event.noMatches': 'No matches: what you type will be used',
   'event.player': 'Player',
   'event.points': 'Points',

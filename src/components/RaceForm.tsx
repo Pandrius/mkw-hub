@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { CUPS, TRACKS } from '../data/tracks'
+import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { saveRace, type EventKind, type EventPlayer, type EventRace, type OpponentResult } from '../lib/events'
 import { scoreTeamRace } from '../lib/scoring'
 import { activeNames, isActiveInRace, type Substitution } from '../lib/substitutions'
 import OcrReader, { type OcrFill } from './OcrReader'
+import TrackPicker from './TrackPicker'
 
 type Props = {
   eventId: string
@@ -22,7 +22,6 @@ type Props = {
   onCancel?: () => void
 }
 
-const input = 'field'
 
 /** Formulario de una carrera: pista y posición de cada jugador propio y rival. */
 export default function RaceForm({
@@ -39,6 +38,7 @@ export default function RaceForm({
   onCancel,
 }: Props) {
   const { t } = useI18n()
+  const formRef = useRef<HTMLFormElement>(null)
   const [trackId, setTrackId] = useState(initial?.track_id ?? '')
   const [positions, setPositions] = useState<Record<number, string>>(() =>
     Object.fromEntries((initial?.race_results ?? []).map((r) => [r.player_id, String(r.position)])),
@@ -155,7 +155,7 @@ export default function RaceForm({
   }
 
   return (
-    <form onSubmit={submit} onKeyDown={moveBetweenPlayers} className="space-y-4 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
+    <form ref={formRef} onSubmit={submit} onKeyDown={moveBetweenPlayers} className="space-y-4 rounded-2xl border border-kart-yellow/60 bg-surface p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-display text-lg font-bold">
           {initial ? t('event.editRace', { n: raceNo }) : t('event.addRace', { n: raceNo })}
@@ -167,21 +167,18 @@ export default function RaceForm({
         )}
       </div>
 
-      <label className="block">
+      <div>
         <span className="mb-1 block text-sm text-muted">{t('event.track')}</span>
-        <select value={trackId} onChange={(e) => setTrackId(e.target.value)} className={input} autoFocus={!initial}>
-          <option value="">{t('event.chooseTrack')}</option>
-          {CUPS.map((cup) => (
-            <optgroup key={cup.id} label={t(`cup.${cup.id}`)}>
-              {TRACKS.filter((tr) => tr.cupId === cup.id).map((tr) => (
-                <option key={tr.id} value={tr.id}>
-                  {tr.abbr} · {tr.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+        <TrackPicker
+          value={trackId}
+          autoFocus={!initial}
+          onChange={(id) => {
+            setTrackId(id)
+            // Con la pista elegida, el cursor pasa al primer jugador para ir apuntando posiciones
+            setTimeout(() => formRef.current?.querySelector<HTMLInputElement>('input[data-position]')?.focus(), 0)
+          }}
+        />
+      </div>
 
       {kind === 'war' && (
         <OcrReader players={shownPlayers} opponents={hasOpponents ? rawOpponents : []} onFill={applyOcr} />

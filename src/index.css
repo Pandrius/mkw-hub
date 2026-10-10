@@ -139,7 +139,7 @@ body {
   }
 
   .field {
-    @apply w-full border-2 border-line bg-bg px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-kart-yellow;
+    @apply w-full border-2 border-line bg-bg px-3 py-2 text-base outline-none placeholder:text-muted focus:border-kart-yellow sm:text-sm;
   }
 }
 

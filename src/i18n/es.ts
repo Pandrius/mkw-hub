@@ -261,6 +261,7 @@ export const es = {
   'event.sub.confirm': 'Hacer el cambio',
   'event.sub.list': 'Sustituciones',
   'event.sub.item': 'Carrera {n}: entra {in} por {out}',
+  'event.searchTrack': 'Buscar pista (nombre o abreviatura)…',
   'event.noMatches': 'Sin coincidencias: se usará lo que escribas',
   'event.player': 'Jugador',
   'event.points': 'Puntos',
