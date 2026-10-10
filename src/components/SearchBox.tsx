@@ -140,7 +140,7 @@ export function SearchBox({
           >
             {s.icon}
             <span className="min-w-0 flex-1 truncate font-semibold">{s.label}</span>
-            {s.detail != null && <span className="shrink-0 font-mono text-xs text-muted">{s.detail}</span>}
+            {s.detail != null && <span className="max-w-[40%] truncate font-mono text-xs text-muted">{s.detail}</span>}
           </li>
         ))}
         {showLoading && <li className="px-3 py-3 text-sm text-muted">{loadingText}</li>}
