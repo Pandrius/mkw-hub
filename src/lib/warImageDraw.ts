@@ -250,11 +250,10 @@ function silverMetal(ctx: Ctx, y0: number, y1: number): CanvasGradient {
   return g
 }
 
-/** Plata lisa, para los sitios sin degradado (barras, cifras pequeñas) */
-const SILVER = '#a9afbb'
+/** Color del primer equipo: oro metálico en el estilo elegante y, en el resto, el acento */
+const homePaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? gold(ctx, y0, y1) : C.accent)
 
 /** Color del segundo equipo: plata en el estilo elegante y, en el resto, el color de la tinta */
-const awayFlat = () => (ELEGANT ? SILVER : C.ink)
 const awayPaint = (ctx: Ctx, y0: number, y1: number): Paint => (ELEGANT ? silverMetal(ctx, y0, y1) : C.ink)
 
 /**
@@ -450,7 +449,7 @@ function playersTable(
   home: boolean,
   medals: Map<WarImagePlayer, number>,
 ) {
-  const accent = home ? C.accent : awayFlat()
+  const accent: Paint = home ? homePaint(ctx, y + 8, y + 27) : awayPaint(ctx, y + 8, y + 27)
   const headH = 34
   panel(ctx, x, y, COL_W, headH + rows * ROW_H + 4)
   ctx.fillStyle = C.bg
@@ -579,8 +578,7 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
     ctx.font = `900 17px ${DISPLAY}`
     const abbr = fitText(r.abbr, slotW - 18, (t) => ctx.measureText(t).width)
     const pw = Math.min(slotW - 6, ctx.measureText(abbr).width + 18)
-    slant(ctx, cx - pw / 2, labelsY + 18, pw, 24, 5, r.color)
-    text(ctx, abbr, cx, labelsY + 36, ctx.font, readable(r.color), 'center')
+    trackPlate(ctx, abbr, cx, labelsY + 18, pw, r.color, r.textColor)
     // Resultado de esa carrera
     text(ctx, signed(r.diff), cx, labelsY + 62, `700 14px ${MONO}`, diffColor(r.diff), 'center')
   }
@@ -595,6 +593,25 @@ const BOARD_H = 262
  * dos equipos (cada fila con su tag y su color, nada de verde o rojo) y dos cifras que no dependen de qué
  * equipo suba la war: carreras ganadas y puntos medios.
  */
+/** Placa con la abreviatura de una pista: fondo y letras de los colores de la pista (esmaltada y con filete en el estilo elegante) */
+function trackPlate(ctx: Ctx, abbr: string, cx: number, y: number, w: number, bg: string, fg: string) {
+  const h = 24
+  if (ELEGANT) {
+    const g = ctx.createLinearGradient(0, y, 0, y + h)
+    g.addColorStop(0, mixColors(bg, '#ffffff', 0.24))
+    g.addColorStop(0.55, bg)
+    g.addColorStop(1, mixColors(bg, '#000000', 0.22))
+    ctx.fillStyle = g
+    ctx.fillRect(cx - w / 2, y, w, h)
+    ctx.strokeStyle = mixColors(bg, '#000000', 0.5)
+    ctx.lineWidth = 1
+    ctx.strokeRect(cx - w / 2 + 0.5, y + 0.5, w - 1, h - 1)
+  } else {
+    slant(ctx, cx - w / 2, y, w, h, 5, bg)
+  }
+  text(ctx, abbr, cx, y + 18, `900 17px ${DISPLAY}`, fg, 'center')
+}
+
 /** Texto hecho de tramos de distinto color (cada equipo con el suyo), encogido hasta que quepa */
 function coloredRuns(
   ctx: Ctx,
@@ -633,8 +650,8 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
   const slotW = (W - PAD - x0) / data.slots
   const byNo = new Map(data.races.map((r) => [r.raceNo, r]))
   const top = y + 44
-  fittedText(ctx, data.home.tag, PAD, top + 76, labelW - 10, 800, 22, DISPLAY, C.accent, 'left', 13)
-  fittedText(ctx, data.away.tag, PAD, top + 106, labelW - 10, 800, 22, DISPLAY, awayFlat(), 'left', 13)
+  fittedText(ctx, data.home.tag, PAD, top + 76, labelW - 10, 800, 22, DISPLAY, homePaint(ctx, top + 56, top + 80), 'left', 13)
+  fittedText(ctx, data.away.tag, PAD, top + 106, labelW - 10, 800, 22, DISPLAY, awayPaint(ctx, top + 86, top + 110), 'left', 13)
   for (let n = 1; n <= data.slots; n++) {
     const cx = x0 + slotW * (n - 0.5)
     const r = byNo.get(n)
@@ -651,26 +668,26 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
     ctx.font = `900 17px ${DISPLAY}`
     const abbr = fitText(r.abbr, slotW - 18, (t) => ctx.measureText(t).width)
     const pw = Math.min(slotW - 6, ctx.measureText(abbr).width + 18)
-    slant(ctx, cx - pw / 2, top + 18, pw, 24, 5, r.color)
-    text(ctx, abbr, cx, top + 36, ctx.font, readable(r.color), 'center')
-    text(ctx, String(r.home), cx, top + 76, `800 26px ${DISPLAY}`, C.accent, 'center')
-    text(ctx, String(r.away), cx, top + 106, `800 26px ${DISPLAY}`, awayFlat(), 'center')
+    trackPlate(ctx, abbr, cx, top + 18, pw, r.color, r.textColor)
+    text(ctx, String(r.home), cx, top + 76, `800 26px ${DISPLAY}`, homePaint(ctx, top + 54, top + 80), 'center')
+    text(ctx, String(r.away), cx, top + 106, `800 26px ${DISPLAY}`, awayPaint(ctx, top + 84, top + 110), 'center')
     // Reparto de los puntos de la carrera entre los dos equipos
     const bw = slotW - 18
     const bx = cx - bw / 2
     const total = r.home + r.away
     const aw = total > 0 ? (r.home / total) * bw : bw / 2
-    ctx.fillStyle = C.accent
+    ctx.fillStyle = homePaint(ctx, top + 118, top + 125)
     ctx.fillRect(bx, top + 118, aw, 7)
-    ctx.fillStyle = awayFlat()
+    ctx.fillStyle = awayPaint(ctx, top + 118, top + 125)
     ctx.fillRect(bx + aw, top + 118, bw - aw, 7)
   }
 
   // Dos cifras neutrales para que el bloque no quede vacío
   const tileW = (W - PAD * 2 - GAP) / 2
   const tileY = top + 150
-  const a = C.accent
-  const b = awayFlat()
+  // Estadísticas de abajo: cada equipo con su metal en el estilo elegante
+  const a = homePaint(ctx, tileY + 30, tileY + 58)
+  const b = awayPaint(ctx, tileY + 30, tileY + 58)
   const dash = { text: ' – ', color: C.muted }
   const tiles: [string, { text: string; color: Paint }[]][] = [
     [

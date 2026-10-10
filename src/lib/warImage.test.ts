@@ -67,6 +67,7 @@ describe('buildWarImageData', () => {
       [3, 'pista-inventada', data.races[2].diff, data.races[2].diff],
     ])
     expect(data.races[0].color).toBe('#dd9168') // el color de su captura (Mario Bros. Circuit), no el de su copa
+    expect(data.races[0].textColor).toBe('#102937') // y las letras, el segundo color de la placa
     expect(data.races[2].color).toBe('#a5a29a') // pista desconocida: gris
     expect(data.races.at(-1)?.runningDiff).toBe(data.diff)
   })

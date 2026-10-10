@@ -108,32 +108,49 @@ export function getTrackByAbbr(abbr: string): Track | undefined {
 }
 
 /**
- * Color de la placa de cada pista: el tono dominante de su captura (public/tracks), ajustado para que
- * se lea el texto encima. Las variantes de una misma pista (rMC1, rMC2, rMC3; rGV1, rGV2, rGV3…)
- * comparten color y salen de todas sus capturas juntas.
+ * Colores de la placa de cada pista, sacados de su captura (public/tracks): el fondo es el tono dominante y las
+ * letras un tono oscuro (o claro, si el fondo es oscuro) de otro color de la misma captura, con contraste
+ * suficiente para leerse. Las variantes de una misma pista (rMC1, rMC2, rMC3; rGV1, rGV2, rGV3…) comparten
+ * los dos colores y salen de todas sus capturas juntas.
  */
-const TRACK_COLORS: Record<string, string> = {
-  MBC: '#dd9168', CC: '#63a0e3', WS: '#d1925e', DKS: '#d54b53',
-  rDH: '#d5c071', rSGB: '#d79c6f', rWS: '#c9603c', rAF: '#ca885c',
-  rDKP: '#699cdd', SP: '#5699c9', rSHS: '#5b93ec', rWSh: '#40b3bf',
-  rKTB: '#559bf1', FO: '#d1a875', PS: '#d58f72',
-  rPB: '#d18f75', SSS: '#d1a775', rDDJ: '#e1965c', GBR: '#d79b48',
-  CCF: '#e15c4e', DD: '#339bd8', BCi: '#40bfb6', DBB: '#d02f3f',
-  rMMM: '#5fe4e7', rCM: '#da976c', rTF: '#c78653', BC: '#c77538',
-  AH: '#c6a140', rMC: '#e1c265', RR: '#6c98ce',
-  rMC1: '#e1c265', rMC2: '#e1c265', rMC3: '#e1c265',
-  rGV1: '#acd175', rGV2: '#acd175', rGV3: '#acd175',
-  rCM1: '#da976c', rCM2: '#da976c',
-  rKB1: '#ebb55c', rVL1: '#52c6f4',
+type PlateColors = { bg: string; fg: string }
+const plate = (bg: string, fg: string): PlateColors => ({ bg, fg })
+
+const MC = plate('#e1c265', '#371710')
+const GV = plate('#acd175', '#101a37')
+const CM = plate('#da976c', '#102837')
+
+const TRACK_PLATES: Record<string, PlateColors> = {
+  MBC: plate('#dd9168', '#102937'), CC: plate('#63a0e3', '#371f10'), WS: plate('#d1925e', '#102637'), DKS: plate('#d54b53', '#080e1c'),
+  rDH: plate('#d5c071', '#101837'), rSGB: plate('#d79c6f', '#102737'), rWS: plate('#c9603c', '#08171c'), rAF: plate('#ca885c', '#102837'),
+  rDKP: plate('#699cdd', '#372610'), SP: plate('#5699c9', '#28240b'), rSHS: plate('#5b93ec', '#28220b'), rWSh: plate('#40b3bf', '#371410'),
+  rKTB: plate('#559bf1', '#372610'), FO: plate('#d1a875', '#102637'), PS: plate('#d58f72', '#102c37'),
+  rPB: plate('#d18f75', '#102c37'), SSS: plate('#d1a775', '#102c37'), rDDJ: plate('#e1965c', '#102637'), GBR: plate('#d79b48', '#102637'),
+  CCF: plate('#e15c4e', '#281e0b'), DD: plate('#339bd8', '#371e10'), BCi: plate('#40bfb6', '#371013'), DBB: plate('#d02f3f', '#ebfaf8'),
+  rMMM: plate('#5fe4e7', '#1a3710'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#c77538', '#0b1b28'),
+  AH: plate('#c6a140', '#102f37'), rMC: MC, RR: plate('#6c98ce', '#37101f'),
+  rMC1: MC, rMC2: MC, rMC3: MC,
+  rGV1: GV, rGV2: GV, rGV3: GV,
+  rCM1: CM, rCM2: CM,
+  rKB1: plate('#ebb55c', '#213710'), rVL1: plate('#52c6f4', '#371b10'),
 }
 
-/** Color de la placa de una pista (el de su captura; si no lo tiene, el de su pista madre y, si no, el de su copa) */
+function getPlate(track: Track | undefined | null): PlateColors | undefined {
+  if (!track) return undefined
+  const own = track.abbr ? TRACK_PLATES[track.abbr] : undefined
+  if (own) return own
+  return track.parentId ? getPlate(getTrack(track.parentId)) : undefined
+}
+
+/** Color de fondo de la placa de una pista (el de su captura; si no lo tiene, el de su pista madre y, si no, el de su copa) */
 export function getTrackColor(track: Track | undefined | null): string | undefined {
   if (!track) return undefined
-  const own = track.abbr ? TRACK_COLORS[track.abbr] : undefined
-  if (own) return own
-  const parent = track.parentId ? getTrack(track.parentId) : undefined
-  return getTrackColor(parent) ?? getCup(track.cupId)?.color
+  return getPlate(track)?.bg ?? getCup(track.cupId)?.color
+}
+
+/** Color de las letras de la placa de una pista (casi negro si la pista no tiene par de colores propio) */
+export function getTrackTextColor(track: Track | undefined | null): string {
+  return getPlate(track)?.fg ?? '#141414'
 }
 
 export function getCup(id: string): Cup | undefined {

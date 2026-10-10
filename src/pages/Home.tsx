@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Flag, Plate } from '../components/ui'
-import { getTrack, TRACKS, getTrackColor } from '../data/tracks'
+import { getTrack, TRACKS, getTrackColor, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
@@ -114,7 +114,7 @@ function RecordTicker({ records }: { records: WorldRecord[] }) {
     <div className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
       {items.map(({ track, record }) => (
         <span key={track.id} className="flex items-center gap-2 px-5 whitespace-nowrap">
-          <Plate color={getTrackColor(track)}>{track.abbr}</Plate>
+          <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>{track.abbr}</Plate>
           <span className="time text-kart-yellow">{formatTime(record!.time_ms)}</span>
           <span className="font-semibold">{record!.player_name}</span>
         </span>

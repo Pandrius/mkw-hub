@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getTrack, getTrackByAbbr, getTrackColor, getTrackImage, type Track, TRACKS } from './tracks'
+import { getTrack, getTrackByAbbr, getTrackColor, getTrackImage, getTrackTextColor, type Track, TRACKS } from './tracks'
 
 describe('tracks', () => {
   it('las 30 pistas principales tienen abreviatura única', () => {
@@ -77,16 +77,34 @@ describe('getTrackColor', () => {
     expect(getTrackColor(sinNada)).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
-  it('los colores son lo bastante claros para leer texto oscuro encima', () => {
-    for (const t of TRACKS) {
-      const hex = getTrackColor(t)!
-      const lin = (i: number) => {
-        const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
-        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
-      }
-      const lum = 0.2126 * lin(0) + 0.7152 * lin(1) + 0.0722 * lin(2)
-      // contraste con #141414 (luminancia ~0.007) de al menos 3:1
-      expect((lum + 0.05) / (0.0070 + 0.05), t.id).toBeGreaterThan(3)
+  it('cada placa tiene dos colores y las letras se leen sobre el fondo (contraste de al menos 4,5)', () => {
+    const lin = (hex: string, i: number) => {
+      const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
     }
+    const lum = (hex: string) => 0.2126 * lin(hex, 0) + 0.7152 * lin(hex, 1) + 0.0722 * lin(hex, 2)
+    for (const t of TRACKS) {
+      const bg = getTrackColor(t)!
+      const fg = getTrackTextColor(t)
+      expect(fg, t.id).toMatch(/^#[0-9a-f]{6}$/i)
+      expect(fg.toLowerCase(), t.id).not.toBe(bg.toLowerCase())
+      const [hi, lo] = lum(bg) > lum(fg) ? [lum(bg), lum(fg)] : [lum(fg), lum(bg)]
+      expect((hi + 0.05) / (lo + 0.05), t.id).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('las variantes comparten también el color de las letras', () => {
+    for (const group of [['rMC', 'rMC1', 'rMC2', 'rMC3'], ['rGV1', 'rGV2', 'rGV3'], ['rCM', 'rCM1', 'rCM2']]) {
+      expect(new Set(group.map((a) => getTrackTextColor(getTrackByAbbr(a)))).size).toBe(1)
+    }
+  })
+
+  it('Dry Bones Burnout lleva letras claras sobre su fondo rojo oscuro', () => {
+    expect(getTrackTextColor(getTrackByAbbr('DBB'))).toBe('#ebfaf8')
+  })
+
+  it('sin par de colores propio las letras son casi negras', () => {
+    expect(getTrackTextColor(undefined)).toBe('#141414')
+    expect(getTrackTextColor({ id: 'y', name: 'Y', cupId: 'leaf' })).toBe('#141414')
   })
 })

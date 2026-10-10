@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { TRACKS, getTrackColor } from '../data/tracks'
+import { TRACKS, getTrackColor, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { BestTime } from '../lib/compare'
 import { formatTime } from '../lib/time'
@@ -89,7 +89,7 @@ function GoalCard({ goal: g }: { goal: TrackGoal }) {
     >
       <div className="flex items-center gap-2">
         <Link to={`/pistas/${g.trackId}`} className="flex min-w-0 flex-1 items-center gap-2 hover:text-kart-yellow">
-          <Plate color={getTrackColor(track)}>{track?.abbr ?? g.trackId}</Plate>
+          <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>{track?.abbr ?? g.trackId}</Plate>
           <span className="truncate text-sm font-semibold">{track?.name ?? g.trackId}</span>
         </Link>
         <span className="time text-base">{formatTime(g.timeMs)}</span>

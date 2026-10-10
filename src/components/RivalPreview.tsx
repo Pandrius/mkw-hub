@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { getTrack, getTrackColor } from '../data/tracks'
+import { getTrack, getTrackColor, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { TeamWithMembers } from '../lib/compare'
 import { buildPickPlan, type PickRow, type PickSource } from '../lib/picks'
@@ -189,7 +189,7 @@ function PickList({ title, rows, color }: { title: string; rows: PickRow[]; colo
             return (
               <li key={row.trackId}>
                 <div className="flex items-center gap-2">
-                  <Plate color={getTrackColor(track)}>{track?.abbr ?? row.trackId}</Plate>
+                  <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>{track?.abbr ?? row.trackId}</Plate>
                   <Link to={`/pistas/${row.trackId}`} className="flex-1 truncate font-semibold hover:underline">
                     {track?.name ?? row.trackId}
                   </Link>

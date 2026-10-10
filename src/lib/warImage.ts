@@ -1,4 +1,4 @@
-import { getTrack, getTrackColor } from '../data/tracks'
+import { getTrack, getTrackColor, getTrackTextColor } from '../data/tracks'
 import { RACES_PER_EVENT, type GameEvent } from './events'
 import type { WarTable } from './warTable'
 
@@ -31,8 +31,10 @@ export type WarImageRace = {
   raceNo: number
   /** Abreviatura de la pista (o su id si no está en la lista) */
   abbr: string
-  /** Color de la copa, para la placa de la abreviatura */
+  /** Color de fondo de la placa de la abreviatura (el de la pista) */
   color: string
+  /** Color de las letras de la placa */
+  textColor: string
   home: number
   away: number
   diff: number
@@ -91,7 +93,8 @@ export function buildWarImageData(event: GameEvent, table: WarTable, showOpponen
     return {
       raceNo: r.race.race_no,
       abbr: track?.abbr ?? r.race.track_id,
-      color: (getTrackColor(track)) || FALLBACK_COLOR,
+      color: getTrackColor(track) ?? FALLBACK_COLOR,
+      textColor: getTrackTextColor(track),
       home: r.home,
       away: r.away,
       diff: r.diff,
