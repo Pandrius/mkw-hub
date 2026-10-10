@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest'
+import { coverRect, DEFAULT_DESIGN, fitWithin, luminance, parseDesign, PRESETS, readable, resolvePalette } from './warDesign'
+
+describe('resolvePalette', () => {
+  it('sin retoques es la del preset', () => {
+    expect(resolvePalette(DEFAULT_DESIGN)).toEqual(PRESETS.asphalt)
+    expect(resolvePalette({ ...DEFAULT_DESIGN, preset: 'neon' })).toEqual(PRESETS.neon)
+  })
+  it('los colores propios van por encima y los inválidos se ignoran', () => {
+    const p = resolvePalette({ ...DEFAULT_DESIGN, colors: { accent: '#ff0000', bg: 'rojo' as string } })
+    expect(p.accent).toBe('#ff0000')
+    expect(p.bg).toBe(PRESETS.asphalt.bg)
+  })
+})
+
+describe('readable', () => {
+  it('texto oscuro sobre fondos claros y claro sobre oscuros', () => {
+    expect(readable('#ffd500')).toBe('#141414')
+    expect(readable('#ffffff')).toBe('#141414')
+    expect(readable('#141414')).toBe('#ffffff')
+    expect(readable('#0b0b1a')).toBe('#ffffff')
+  })
+  it('luminance va de 0 a 1', () => {
+    expect(luminance('#000000')).toBe(0)
+    expect(luminance('#ffffff')).toBeCloseTo(1, 5)
+  })
+})
+
+describe('parseDesign', () => {
+  it('lo roto o desconocido vuelve al diseño por defecto', () => {
+    expect(parseDesign(null)).toEqual(DEFAULT_DESIGN)
+    expect(parseDesign('x')).toEqual(DEFAULT_DESIGN)
+    expect(parseDesign({ preset: 'inventado' }).preset).toBe('asphalt')
+  })
+  it('conserva lo válido y descarta lo demás', () => {
+    const d = parseDesign({
+      preset: 'ocean',
+      colors: { accent: '#AABBCC', ink: 'no', otro: '#000000' },
+      photo: { dataUrl: 'data:image/jpeg;base64,AAAA', dim: 5 },
+      stripes: false,
+    })
+    expect(d.preset).toBe('ocean')
+    expect(d.colors).toEqual({ accent: '#aabbcc' })
+    expect(d.photo).toEqual({ dataUrl: 'data:image/jpeg;base64,AAAA', dim: 0.9 })
+    expect(d.stripes).toBe(false)
+  })
+  it('no acepta como foto algo que no sea una imagen en base64', () => {
+    expect(parseDesign({ photo: { dataUrl: 'https://evil.com/a.png', dim: 0.5 } }).photo).toBeNull()
+    expect(parseDesign({ photo: { dataUrl: 'data:text/html;base64,AAAA', dim: 0.5 } }).photo).toBeNull()
+    expect(parseDesign({ photo: { dataUrl: 'data:image/svg+xml;base64,AAAA', dim: 0.5 } }).photo).toBeNull()
+  })
+})
+
+describe('fitWithin', () => {
+  it('reduce manteniendo la proporción y nunca agranda', () => {
+    expect(fitWithin(4000, 2000, 1600)).toEqual({ width: 1600, height: 800 })
+    expect(fitWithin(800, 600, 1600)).toEqual({ width: 800, height: 600 })
+  })
+})
+
+describe('coverRect', () => {
+  it('recorta por los lados una foto más ancha que el lienzo', () => {
+    // Lienzo cuadrado, foto 2:1 → se ve la parte central
+    expect(coverRect(2000, 1000, 500, 500)).toEqual({ sx: 500, sy: 0, sw: 1000, sh: 1000 })
+  })
+  it('recorta por arriba y abajo una foto más alta', () => {
+    expect(coverRect(1000, 2000, 500, 500)).toEqual({ sx: 0, sy: 500, sw: 1000, sh: 1000 })
+  })
+})

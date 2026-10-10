@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n'
+import { useWarDesign } from './useWarDesign'
 import { RACES_PER_EVENT, type EventRace, type GameEvent } from '../lib/events'
 import { formatDate } from '../lib/time'
 import { buildWarImageData, hasRealOpponents, warImageFileName } from '../lib/warImage'
@@ -8,6 +9,7 @@ import type { WarTable } from '../lib/warTable'
 /** Datos, textos y generador de la imagen de la war (los usan la vista previa y los botones de descarga) */
 export function useWarImage(event: GameEvent, races: EventRace[], table: WarTable) {
   const { t, locale } = useI18n()
+  const [design] = useWarDesign()
 
   const data = buildWarImageData(event, table, hasRealOpponents(event, races))
   const labels: WarImageLabels = {
@@ -27,6 +29,7 @@ export function useWarImage(event: GameEvent, races: EventRace[], table: WarTabl
     data,
     labels,
     fileName: warImageFileName(data),
-    render: async () => renderWarImage(data, labels, await loadTeamLogos(event.team_id, event.opponent_team_id)),
+    design,
+    render: async () => renderWarImage(data, labels, await loadTeamLogos(event.team_id, event.opponent_team_id), design),
   }
 }

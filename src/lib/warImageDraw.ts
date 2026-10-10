@@ -1,5 +1,6 @@
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
+import { coverRect, DEFAULT_DESIGN, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
 import { fitText, signed, type WarImageData, type WarImagePlayer, type WarImageTeam } from './warImage'
 
 /*
@@ -27,17 +28,11 @@ export type WarImageLabels = {
 /** Logos ya cargados (null si no hay o no se pudieron cargar) */
 export type WarImageLogos = { home: HTMLImageElement | null; away: HTMLImageElement | null }
 
-const C = {
-  bg: '#141414',
-  surface: '#1c1c1b',
-  surface2: '#292927',
-  line: '#3b3b38',
-  ink: '#f4f2ec',
-  muted: '#a5a29a',
-  yellow: '#ffd500',
-  red: '#e8112d',
-  green: '#19c15a',
-}
+/** Paleta del diseño con el que se está dibujando (la fija drawWarImage) */
+let C: Palette = PRESETS.asphalt
+/** Opacidad de los paneles: con foto de fondo se dejan algo transparentes para que se vea */
+let PANEL_ALPHA = 1
+let STRIPES = true
 
 const DISPLAY = '"Big Shoulders Display", Barlow, sans-serif'
 const SANS = 'Barlow, system-ui, sans-serif'
@@ -174,10 +169,10 @@ function hazard(ctx: Ctx, y: number, h: number) {
   ctx.beginPath()
   ctx.rect(0, y, W, h)
   ctx.clip()
-  ctx.fillStyle = C.bg
+  ctx.fillStyle = STRIPES ? C.bg : C.accent
   ctx.fillRect(0, y, W, h)
-  ctx.fillStyle = C.yellow
-  for (let x = -h; x < W + h; x += 28) {
+  ctx.fillStyle = C.accent
+  for (let x = STRIPES ? -h : W + h; x < W + h; x += 28) {
     ctx.beginPath()
     ctx.moveTo(x, y + h)
     ctx.lineTo(x + h, y)
@@ -204,7 +199,9 @@ function checker(ctx: Ctx, x: number, y: number, w: number, h: number, size = 8)
 /** Panel plano con borde de 2px (.panel) */
 function panel(ctx: Ctx, x: number, y: number, w: number, h: number) {
   ctx.fillStyle = C.surface
+  ctx.globalAlpha = PANEL_ALPHA
   ctx.fillRect(x, y, w, h)
+  ctx.globalAlpha = 1
   ctx.strokeStyle = C.line
   ctx.lineWidth = 2
   ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
@@ -226,10 +223,10 @@ function logo(ctx: Ctx, img: HTMLImageElement, x: number, y: number, size: numbe
 
 /** Ficha de equipo: logo (si hay), tag, nombre y total. El rival va en espejo, a la derecha */
 function teamPanel(ctx: Ctx, team: WarImageTeam, img: HTMLImageElement | null, x: number, y: number, h: number, home: boolean) {
-  const accent = home ? C.yellow : C.ink
+  const accent = home ? C.accent : C.ink
   panel(ctx, x, y, COL_W, h)
   // Franja de color del lado exterior
-  ctx.fillStyle = home ? C.yellow : C.muted
+  ctx.fillStyle = home ? C.accent : C.muted
   ctx.fillRect(home ? x : x + COL_W - 8, y, 8, h)
 
   // Sin logo utilizable (no hay o el servidor no permite CORS) se omite el cuadro
@@ -266,11 +263,13 @@ function playersTable(
   labels: WarImageLabels,
   home: boolean,
 ) {
-  const accent = home ? C.yellow : C.ink
+  const accent = home ? C.accent : C.ink
   const headH = 34
   panel(ctx, x, y, COL_W, headH + rows * ROW_H + 4)
   ctx.fillStyle = C.bg
+  ctx.globalAlpha = PANEL_ALPHA
   ctx.fillRect(x + 2, y + 2, COL_W - 4, headH - 2)
+  ctx.globalAlpha = 1
 
   const colPts = x + COL_W - 20
   const colAvg = x + COL_W - 110
@@ -342,7 +341,7 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
   const yOf = (v: number) => plotTop + ((max - v) / (max - min)) * plotH
   const zero = yOf(0)
 
-  slant(ctx, PAD, y, 12, 26, 0, C.yellow)
+  slant(ctx, PAD, y, 12, 26, 0, C.accent)
   text(ctx, labels.runningDiff.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
 
   // Rejilla y eje
@@ -389,7 +388,7 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
     const abbr = fitText(r.abbr, slotW - 18, (t) => ctx.measureText(t).width)
     const pw = Math.min(slotW - 6, ctx.measureText(abbr).width + 18)
     slant(ctx, cx - pw / 2, labelsY + 18, pw, 24, 5, r.color)
-    text(ctx, abbr, cx, labelsY + 36, ctx.font, C.bg, 'center')
+    text(ctx, abbr, cx, labelsY + 36, ctx.font, readable(r.color), 'center')
     // Resultado de esa carrera
     text(ctx, signed(r.diff), cx, labelsY + 62, `700 14px ${MONO}`, diffColor(r.diff), 'center')
   }
@@ -397,7 +396,32 @@ function runningChart(ctx: Ctx, data: WarImageData, y: number, labels: WarImageL
 }
 
 /** Dibuja la imagen completa en un canvas nuevo (a 2x) */
-export function drawWarImage(data: WarImageData, labels: WarImageLabels, logos: WarImageLogos): HTMLCanvasElement {
+export function drawWarImage(
+  data: WarImageData,
+  labels: WarImageLabels,
+  logos: WarImageLogos,
+  design: WarDesign = DEFAULT_DESIGN,
+  photo: HTMLImageElement | null = null,
+): HTMLCanvasElement {
+  C = resolvePalette(design)
+  STRIPES = design.stripes
+  PANEL_ALPHA = photo ? 0.8 : 1
+  try {
+    return drawWarCanvas(data, labels, logos, design, photo)
+  } finally {
+    C = PRESETS.asphalt
+    STRIPES = true
+    PANEL_ALPHA = 1
+  }
+}
+
+function drawWarCanvas(
+  data: WarImageData,
+  labels: WarImageLabels,
+  logos: WarImageLogos,
+  design: WarDesign,
+  photo: HTMLImageElement | null,
+): HTMLCanvasElement {
   const rows = Math.max(
     1,
     data.home.players.length + (data.home.missingPoints > 0 ? 1 : 0) + data.home.penalties.length,
@@ -420,15 +444,24 @@ export function drawWarImage(data: WarImageData, labels: WarImageLabels, logos: 
 
   ctx.fillStyle = C.bg
   ctx.fillRect(0, 0, W, H)
+  if (photo && photo.naturalWidth > 0) {
+    // Foto a toda la imagen (recortada, sin deformar) y una capa del color de fondo para que se lea el texto
+    const { sx, sy, sw, sh } = coverRect(photo.naturalWidth, photo.naturalHeight, W, H)
+    ctx.drawImage(photo, sx, sy, sw, sh, 0, 0, W, H)
+    ctx.globalAlpha = design.photo?.dim ?? 0.55
+    ctx.fillStyle = C.bg
+    ctx.fillRect(0, 0, W, H)
+    ctx.globalAlpha = 1
+  }
   hazard(ctx, 0, hazardH)
 
   // Cabecera: marca, estado y fecha
   let y = hazardH
-  text(ctx, 'MKW HUB', PAD, y + 42, `900 30px ${DISPLAY}`, C.yellow)
+  text(ctx, 'MKW HUB', PAD, y + 42, `900 30px ${DISPLAY}`, C.accent)
   ctx.font = `900 30px ${DISPLAY}`
   const brandW = ctx.measureText('MKW HUB').width
-  slant(ctx, PAD + brandW + 14, y + 20, 64, 28, 7, C.yellow)
-  text(ctx, 'WAR', PAD + brandW + 46, y + 41, `900 20px ${DISPLAY}`, C.bg, 'center')
+  slant(ctx, PAD + brandW + 14, y + 20, 64, 28, 7, C.accent)
+  text(ctx, 'WAR', PAD + brandW + 46, y + 41, `900 20px ${DISPLAY}`, readable(C.accent), 'center')
 
   text(ctx, labels.date, W - PAD, y + 40, `500 15px ${MONO}`, C.muted, 'right')
   ctx.font = `500 15px ${MONO}`
@@ -436,8 +469,8 @@ export function drawWarImage(data: WarImageData, labels: WarImageLabels, logos: 
   ctx.font = `900 20px ${DISPLAY}`
   const statusW = ctx.measureText(labels.status).width + 30
   const statusX = W - PAD - dateW - 18 - statusW
-  slant(ctx, statusX, y + 20, statusW, 28, 7, data.inProgress ? C.yellow : C.ink)
-  text(ctx, labels.status, statusX + statusW / 2, y + 41, ctx.font, C.bg, 'center')
+  slant(ctx, statusX, y + 20, statusW, 28, 7, data.inProgress ? C.accent : C.ink)
+  text(ctx, labels.status, statusX + statusW / 2, y + 41, ctx.font, readable(data.inProgress ? C.accent : C.ink), 'center')
   y += headerH
 
   // Equipos y marcador
@@ -447,7 +480,7 @@ export function drawWarImage(data: WarImageData, labels: WarImageLabels, logos: 
   const badgeW = 132
   const badgeH = 72
   slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, data.diff === 0 ? C.surface2 : diffColor(data.diff))
-  text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 20, `900 54px ${DISPLAY}`, data.diff === 0 ? C.ink : C.bg, 'center')
+  text(ctx, signed(data.diff), W / 2, y + teamH / 2 + 20, `900 54px ${DISPLAY}`, data.diff === 0 ? C.ink : readable(diffColor(data.diff)), 'center')
   y += teamH + 24
 
   // Puntos por jugador
@@ -477,7 +510,23 @@ export function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 /** Genera el PNG completo: espera a las fuentes, dibuja y exporta */
-export async function renderWarImage(data: WarImageData, labels: WarImageLabels, logos: WarImageLogos): Promise<Blob> {
+/** Foto de fondo ya cargada (null si no hay o no se puede leer); es un data URL propio, así que no contamina el canvas */
+export function loadPhoto(dataUrl: string | null | undefined): Promise<HTMLImageElement | null> {
+  if (!dataUrl) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
+
+export async function renderWarImage(
+  data: WarImageData,
+  labels: WarImageLabels,
+  logos: WarImageLogos,
+  design: WarDesign = DEFAULT_DESIGN,
+): Promise<Blob> {
   const sample = [
     data.home.tag,
     data.away.tag,
@@ -488,6 +537,6 @@ export async function renderWarImage(data: WarImageData, labels: WarImageLabels,
     ...Object.values(labels),
     '0123456789+-–·…',
   ].join('')
-  await waitForFonts(sample)
-  return canvasToPng(drawWarImage(data, labels, logos))
+  const [photo] = await Promise.all([loadPhoto(design.photo?.dataUrl), waitForFonts(sample)])
+  return canvasToPng(drawWarImage(data, labels, logos, design, photo))
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import type { EventRace, GameEvent } from '../lib/events'
 import type { WarTable } from '../lib/warTable'
@@ -10,27 +10,32 @@ import { useWarImage } from './useWarImage'
  */
 export default function WarImagePreview({ event, races, table }: { event: GameEvent; races: EventRace[]; table: WarTable }) {
   const { t } = useI18n()
-  const { data, labels, render } = useWarImage(event, races, table)
+  const { data, labels, design, render } = useWarImage(event, races, table)
   const [shown, setShown] = useState<{ key: string; url: string } | null>(null)
   const [failed, setFailed] = useState(false)
 
   // Se vuelve a dibujar solo cuando cambia algo de lo que aparece en la imagen
-  const key = JSON.stringify({ data, labels, team: event.team_id, opponent: event.opponent_team_id })
+  const designKey = useMemo(() => JSON.stringify(design), [design])
+  const key = JSON.stringify({ data, labels, team: event.team_id, opponent: event.opponent_team_id }) + designKey
 
   useEffect(() => {
     let cancelled = false
     let objectUrl: string | null = null
     setFailed(false)
-    render().then(
-      (blob) => {
-        objectUrl = URL.createObjectURL(blob)
-        if (cancelled) URL.revokeObjectURL(objectUrl)
-        else setShown({ key, url: objectUrl })
-      },
-      () => !cancelled && setFailed(true),
-    )
+    // Un momento de espera: al arrastrar un color o el deslizador no se redibuja en cada paso
+    const timer = setTimeout(() => {
+      render().then(
+        (blob) => {
+          objectUrl = URL.createObjectURL(blob)
+          if (cancelled) URL.revokeObjectURL(objectUrl)
+          else setShown({ key, url: objectUrl })
+        },
+        () => !cancelled && setFailed(true),
+      )
+    }, 200)
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
     // render() depende de data y labels, que ya van en key
     // eslint-disable-next-line react-hooks/exhaustive-deps
