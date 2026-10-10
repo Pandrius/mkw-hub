@@ -270,6 +270,8 @@ export type TeamPlayerStats = {
   avgPos: number
   top3Rate: number // % de carreras en el podio
   bestTrack: { trackId: string; avgPoints: number; races: number } | null
+  /** Pista con menos puntos de media (null si solo ha corrido una) */
+  worstTrack: { trackId: string; avgPoints: number; races: number } | null
 }
 
 /**
@@ -330,7 +332,11 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
         races: t.races,
       }))
       const pool = tracks.some((t) => t.races >= 2) ? tracks.filter((t) => t.races >= 2) : tracks
-      const bestTrack = pool.sort((x, y) => y.avgPoints - x.avgPoints || y.races - x.races)[0] ?? null
+      const ranked = [...pool].sort((x, y) => y.avgPoints - x.avgPoints || y.races - x.races)
+      const bestTrack = ranked[0] ?? null
+      // La peor: la de menos puntos de media; con una sola pista no hay "peor"
+      const worst = [...pool].sort((x, y) => x.avgPoints - y.avgPoints || y.races - x.races)[0] ?? null
+      const worstTrack = worst && bestTrack && worst.trackId !== bestTrack.trackId ? worst : null
       return {
         key,
         name: a.name,
@@ -342,6 +348,7 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
         avgPos: round(a.positions / a.races),
         top3Rate: Math.round((a.top3 / a.races) * 100),
         bestTrack,
+        worstTrack,
       }
     })
     .sort((x, y) => y.avgPoints - x.avgPoints || y.races - x.races)

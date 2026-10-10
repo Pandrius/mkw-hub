@@ -19,7 +19,7 @@ import {
 } from '../lib/teamStats'
 import { PendingWars } from '../components/PendingWars'
 
-type TabId = 'tracks' | 'players' | 'rivals' | 'preview' | 'wars' | 'members'
+type TabId = 'overview' | 'tracks' | 'players' | 'rivals' | 'preview' | 'wars' | 'members'
 
 export default function TeamDetail() {
   const { t, locale } = useI18n()
@@ -36,7 +36,7 @@ export default function TeamDetail() {
   const [pending, setPending] = useState<MirroredWar[]>([])
   const [reloadKey, setReloadKey] = useState(0)
   const [loading, setLoading] = useState(isValidId)
-  const [tab, setTab] = useState<TabId>('tracks')
+  const [tab, setTab] = useState<TabId>('overview')
   const [trackSearch, setTrackSearch] = useState('')
 
   const filteredTeamTracks = useMemo(() => {
@@ -181,103 +181,12 @@ export default function TeamDetail() {
         </header>
       </div>
 
-      {/* Métricas Globales de Wars */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="border border-line bg-surface p-4">
-          <p className="font-mono text-xs text-muted">{t('teamStats.wars')}</p>
-          <p className="font-display text-3xl font-extrabold">{stats?.wars ?? 0}</p>
-          <p className="font-mono text-xs text-muted">
-            {stats?.wins ?? 0}V - {stats?.losses ?? 0}D - {stats?.ties ?? 0}E
-          </p>
-        </div>
-
-        <div className="border border-line bg-surface p-4">
-          <p className="font-mono text-xs text-muted">{t('teamStats.winRate')}</p>
-          <p className="font-display text-3xl font-extrabold text-kart-yellow">{stats?.winRate ?? 0}%</p>
-          <p className="font-mono text-xs text-muted">en {stats?.wars ?? 0} wars</p>
-        </div>
-
-        <div className="border border-line bg-surface p-4">
-          <p className="font-mono text-xs text-muted">{t('teamStats.avgDiff')}</p>
-          <p
-            className={`font-display text-3xl font-extrabold ${
-              (stats?.avgDiff ?? 0) > 0 ? 'text-kart-green' : (stats?.avgDiff ?? 0) < 0 ? 'text-kart-red' : 'text-ink'
-            }`}
-          >
-            {(stats?.avgDiff ?? 0) > 0 ? `+${stats?.avgDiff}` : stats?.avgDiff ?? 0}
-          </p>
-          <p className="font-mono text-xs text-muted">pts/carrera</p>
-        </div>
-
-        <div className="border border-line bg-surface p-4">
-          <p className="font-mono text-xs text-muted">{t('teamStats.pointsHome')} / {t('teamStats.pointsAway')}</p>
-          <p className="font-display text-3xl font-extrabold">
-            {stats?.totalPointsHome ?? 0} <span className="text-base text-muted font-sans font-normal">/ {stats?.totalPointsAway ?? 0}</span>
-          </p>
-          <p className="font-mono text-xs text-muted">{stats?.totalRaces ?? 0} carreras</p>
-        </div>
-      </section>
-
-      {/* Pistas favorables y desfavorables para War Picks */}
-      {stats && stats.tracks.length > 0 && (
-        <section className="grid gap-4 sm:grid-cols-2">
-          {stats.bestTracks.length > 0 && (
-            <div className="border-2 border-kart-green/50 bg-surface p-4">
-              <p className="font-mono text-xs font-bold text-kart-green uppercase">
-                ★ {t('teamStats.bestTracks')}
-              </p>
-              <div className="mt-3 space-y-2">
-                {stats.bestTracks.map((tr) => {
-                  const trackObj = getTrack(tr.trackId)
-                  return (
-                    <div key={tr.trackId} className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
-                        <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
-                      </span>
-                      <span className="font-mono font-bold text-kart-green text-sm">
-                        +{tr.diff} pts ({tr.races}c)
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {stats.worstTracks.length > 0 && (
-            <div className="border-2 border-kart-red/50 bg-surface p-4">
-              <p className="font-mono text-xs font-bold text-kart-red uppercase">
-                ⚠ {t('teamStats.worstTracks')}
-              </p>
-              <div className="mt-3 space-y-2">
-                {stats.worstTracks.map((tr) => {
-                  const trackObj = getTrack(tr.trackId)
-                  return (
-                    <div key={tr.trackId} className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
-                        <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
-                      </span>
-                      <span className="font-mono font-bold text-kart-red text-sm">
-                        {tr.diff} pts ({tr.races}c)
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
       {isMember && pending.length > 0 && <PendingWars wars={pending} onDone={() => setReloadKey((k) => k + 1)} />}
-
-      <TeamFormPanel form={form} />
 
       {/* Pestañas de detalle */}
       <Tabs
         tabs={[
+          { id: 'overview', label: t('teamStats.overview') },
           { id: 'tracks', label: t('teamStats.trackPerformance') },
           { id: 'players', label: t('teamStats.players') },
           { id: 'rivals', label: t('teamStats.rivals') },
@@ -290,6 +199,102 @@ export default function TeamDetail() {
       />
 
       {/* Contenido según pestaña */}
+      {tab === 'overview' && (
+        <div className="space-y-8">
+          {/* Métricas Globales de Wars */}
+          <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="border border-line bg-surface p-4">
+              <p className="font-mono text-xs text-muted">{t('teamStats.wars')}</p>
+              <p className="font-display text-3xl font-extrabold">{stats?.wars ?? 0}</p>
+              <p className="font-mono text-xs text-muted">
+                {stats?.wins ?? 0}V - {stats?.losses ?? 0}D - {stats?.ties ?? 0}E
+              </p>
+            </div>
+
+            <div className="border border-line bg-surface p-4">
+              <p className="font-mono text-xs text-muted">{t('teamStats.winRate')}</p>
+              <p className="font-display text-3xl font-extrabold text-kart-yellow">{stats?.winRate ?? 0}%</p>
+              <p className="font-mono text-xs text-muted">en {stats?.wars ?? 0} wars</p>
+            </div>
+
+            <div className="border border-line bg-surface p-4">
+              <p className="font-mono text-xs text-muted">{t('teamStats.avgDiff')}</p>
+              <p
+                className={`font-display text-3xl font-extrabold ${
+                  (stats?.avgDiff ?? 0) > 0 ? 'text-kart-green' : (stats?.avgDiff ?? 0) < 0 ? 'text-kart-red' : 'text-ink'
+                }`}
+              >
+                {(stats?.avgDiff ?? 0) > 0 ? `+${stats?.avgDiff}` : stats?.avgDiff ?? 0}
+              </p>
+              <p className="font-mono text-xs text-muted">pts/carrera</p>
+            </div>
+
+            <div className="border border-line bg-surface p-4">
+              <p className="font-mono text-xs text-muted">{t('teamStats.pointsHome')} / {t('teamStats.pointsAway')}</p>
+              <p className="font-display text-3xl font-extrabold">
+                {stats?.totalPointsHome ?? 0} <span className="text-base text-muted font-sans font-normal">/ {stats?.totalPointsAway ?? 0}</span>
+              </p>
+              <p className="font-mono text-xs text-muted">{stats?.totalRaces ?? 0} carreras</p>
+            </div>
+          </section>
+
+          {/* Pistas favorables y desfavorables para War Picks */}
+          {stats && stats.tracks.length > 0 && (
+            <section className="grid gap-4 sm:grid-cols-2">
+              {stats.bestTracks.length > 0 && (
+                <div className="border-2 border-kart-green/50 bg-surface p-4">
+                  <p className="font-mono text-xs font-bold text-kart-green uppercase">
+                    ★ {t('teamStats.bestTracks')}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {stats.bestTracks.map((tr) => {
+                      const trackObj = getTrack(tr.trackId)
+                      return (
+                        <div key={tr.trackId} className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
+                            <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
+                          </span>
+                          <span className="font-mono font-bold text-kart-green text-sm">
+                            +{tr.diff} pts ({tr.races}c)
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {stats.worstTracks.length > 0 && (
+                <div className="border-2 border-kart-red/50 bg-surface p-4">
+                  <p className="font-mono text-xs font-bold text-kart-red uppercase">
+                    ⚠ {t('teamStats.worstTracks')}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {stats.worstTracks.map((tr) => {
+                      const trackObj = getTrack(tr.trackId)
+                      return (
+                        <div key={tr.trackId} className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Plate color={getCup(trackObj?.cupId ?? 'mushroom')?.color}>{trackObj?.abbr ?? tr.trackId}</Plate>
+                            <span className="font-semibold text-sm">{trackObj?.name ?? tr.trackId}</span>
+                          </span>
+                          <span className="font-mono font-bold text-kart-red text-sm">
+                            {tr.diff} pts ({tr.races}c)
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <TeamFormPanel form={form} />
+        </div>
+      )}
+
       {tab === 'tracks' && (
         <section className="space-y-3">
           {stats?.tracks.length === 0 ? (
@@ -380,11 +385,13 @@ export default function TeamDetail() {
                     <th className="px-4 py-2 text-right font-extrabold">{t('event.avgPos')}</th>
                     <th className="px-4 py-2 text-right font-extrabold">{t('teamStats.top3')}</th>
                     <th className="px-4 py-2 font-extrabold">{t('teamStats.bestTrack')}</th>
+                    <th className="px-4 py-2 font-extrabold">{t('teamStats.worstTrack')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {playerStats.map((p) => {
                     const best = p.bestTrack && getTrack(p.bestTrack.trackId)
+                    const worst = p.worstTrack && getTrack(p.worstTrack.trackId)
                     return (
                       <tr key={p.key} className="border-t border-line/60">
                         <td className="px-4 py-2 font-semibold">
@@ -407,6 +414,16 @@ export default function TeamDetail() {
                               <Plate color={getCup(best?.cupId ?? 'mushroom')?.color}>{best?.abbr ?? p.bestTrack.trackId}</Plate>
                               <span className="font-mono text-xs text-muted">
                                 {p.bestTrack.avgPoints} ({p.bestTrack.races}c)
+                              </span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">
+                          {p.worstTrack && (
+                            <span className="flex items-center gap-2">
+                              <Plate color={getCup(worst?.cupId ?? 'mushroom')?.color}>{worst?.abbr ?? p.worstTrack.trackId}</Plate>
+                              <span className="font-mono text-xs text-muted">
+                                {p.worstTrack.avgPoints} ({p.worstTrack.races}c)
                               </span>
                             </span>
                           )}

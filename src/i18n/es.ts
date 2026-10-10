@@ -310,6 +310,8 @@ export const es = {
   'teamStats.ptsPerRace': 'Pts/carrera',
   'teamStats.top3': 'Top 3',
   'teamStats.bestTrack': 'Mejor pista',
+  'teamStats.worstTrack': 'Peor pista',
+  'teamStats.overview': 'Team Stats',
 
   'teams.subtitle': 'Equipos de Mario Kart World registrados y aprobados en Mario Kart Central.',
   'teams.soonTitle': 'Los equipos se sincronizarán con Mario Kart Central',

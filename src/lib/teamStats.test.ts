@@ -94,9 +94,10 @@ describe('computeTeamStats', () => {
     expect(stats.worstTracks[0].trackId).toBe('bowsers-castle')
   })
 
+  const war = (id: string, races: TeamWar['races']): TeamWar => ({ ...dummyWars[0], id, races })
+  const res = (name: string, position: number, profileId: string | null = null) => ({ name, profileId, position })
+
   it('calcula las estadísticas de cada jugador en las wars del equipo', () => {
-    const war = (id: string, races: TeamWar['races']): TeamWar => ({ ...dummyWars[0], id, races })
-    const res = (name: string, position: number, profileId: string | null = null) => ({ name, profileId, position })
     const wars: TeamWar[] = [
       // La más reciente primero: Peckmat ya está vinculado a su usuario
       war('w2', [
@@ -124,6 +125,37 @@ describe('computeTeamStats', () => {
     expect(peck.profileId).toBe('u1')
     expect(peck.avgPos).toBe(5.33)
     expect(peck.bestTrack).toEqual({ trackId: 'rainbow-road', avgPoints: 12.5, races: 2 })
+  })
+
+  it('calcula la peor pista de cada jugador con las mismas reglas que la mejor', () => {
+    const race = (n: number, track: string, pos: number) => ({
+      track_id: track,
+      race_no: n,
+      missing_home: 0,
+      missing_away: 0,
+      positions: [pos],
+      results: [res('Polimar', pos)],
+    })
+    // Rainbow Road: 1.º y 3.º (15 y 10 → 12.5). Bowser: 9.º y 11.º (4 y 2 → 3). Mario Circuit: una sola carrera
+    const players = computeTeamPlayerStats([
+      war('w1', [race(1, 'rainbow-road', 1), race(2, 'bowsers-castle', 9), race(3, 'mario-circuit', 12)]),
+      war('w2', [race(1, 'rainbow-road', 3), race(2, 'bowsers-castle', 11)]),
+    ])
+    const [polimar] = players
+    expect(polimar.bestTrack).toEqual({ trackId: 'rainbow-road', avgPoints: 12.5, races: 2 })
+    // Mario Circuit (1 pt) no cuenta: con solo una carrera no es fiable
+    expect(polimar.worstTrack).toEqual({ trackId: 'bowsers-castle', avgPoints: 3, races: 2 })
+  })
+
+  it('no hay peor pista si solo ha corrido en una', () => {
+    const [p] = computeTeamPlayerStats([
+      war('w1', [
+        { track_id: 'rainbow-road', race_no: 1, missing_home: 0, missing_away: 0, positions: [1], results: [res('Solo', 1)] },
+        { track_id: 'rainbow-road', race_no: 2, missing_home: 0, missing_away: 0, positions: [2], results: [res('Solo', 2)] },
+      ]),
+    ])
+    expect(p.bestTrack?.trackId).toBe('rainbow-road')
+    expect(p.worstTrack).toBeNull()
   })
 
   it('devuelve estadísticas vacías para un equipo sin wars', () => {
