@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import EventList from '../components/EventList'
 import { PlayerFormPanel } from '../components/FormPanel'
+import { SearchBox, type Suggestion } from '../components/SearchBox'
+import { trackSuggestion } from '../components/trackSuggestion'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
 import { getTrack, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -10,17 +12,47 @@ import { entityKey, teamsOf, type Entity } from '../lib/compare'
 import { getPlayerResults, type PlayerResult } from '../lib/events'
 import { computePlayerForm, getPlayerTimeline, type TimedResult } from '../lib/form'
 import { bestAndWorst, computeStats, MIN_RACES_RELIABLE, type StatsFilter, type TrackStats } from '../lib/stats'
+import { rankHits, REMOTE_MIN_LENGTH, sanitizeTerm, searchRemote, type SearchHit } from '../lib/search'
 import { supabase } from '../lib/supabase'
+import { filterRowsByTrack } from '../lib/trackSearch'
 
 export default function Stats() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { profile, loading, enabled, signIn } = useAuth()
   const { profileId } = useParams()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [notFound, setNotFound] = useState(false)
+  const [playerHits, setPlayerHits] = useState<SearchHit[]>([])
 
   const targetId = profileId ?? profile?.id
+
+  // Sugerencias de jugadores mientras se escribe (con espera, cancelando la consulta anterior)
+  const term = sanitizeTerm(search)
+  useEffect(() => {
+    if (term.length < REMOTE_MIN_LENGTH) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      searchRemote(term, ctrl.signal).then(
+        (hits) => !ctrl.signal.aborted && setPlayerHits(hits.filter((h) => h.kind === 'player')),
+        () => {},
+      )
+    }, 250)
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+  }, [term])
+  // rankHits descarta los resultados de una consulta anterior que ya no coinciden
+  const playerSuggestions = useMemo(
+    () =>
+      term.length < REMOTE_MIN_LENGTH
+        ? []
+        : (rankHits(search, playerHits, 8)[0]?.hits ?? []).map(
+            (h): Suggestion => ({ key: h.id, label: h.label, icon: <Flag code={h.country ?? null} locale={locale} /> }),
+          ),
+    [term, search, playerHits, locale],
+  )
 
   const findPlayer = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,12 +70,16 @@ export default function Stats() {
       <PageHeader title={t('nav.stats')} subtitle={t('stats.onlyFinished')}>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <form onSubmit={findPlayer} className="flex-1 sm:w-64 sm:flex-none">
-            <input
-              type="search"
+            <SearchBox
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
+              onChange={(v) => {
+                setSearch(v)
                 setNotFound(false)
+              }}
+              suggestions={playerSuggestions}
+              onPick={(s) => {
+                setSearch('')
+                navigate(`/estadisticas/${s.key}`)
               }}
               placeholder={t('stats.searchPlayer')}
               className="field"
@@ -227,32 +263,24 @@ function TrackTable({ tracks }: { tracks: TrackStats[] }) {
   const { t } = useI18n()
   const [trackSearch, setTrackSearch] = useState('')
 
-  const filteredTracks = useMemo(() => {
-    const q = trackSearch.trim().toLowerCase()
-    if (!q) return tracks
-    return tracks.filter((ts) => {
-      const track = getTrack(ts.trackId)
-      return (
-        ts.trackId.toLowerCase().includes(q) ||
-        (track?.abbr && track.abbr.toLowerCase().includes(q)) ||
-        (track?.name && track.name.toLowerCase().includes(q))
-      )
-    })
-  }, [tracks, trackSearch])
+  const { rows: filteredTracks, suggestions } = useMemo(
+    () => filterRowsByTrack(tracks, (ts) => ts.trackId, trackSearch),
+    [tracks, trackSearch],
+  )
 
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-display text-xl font-bold">{t('stats.byTrack')}</h3>
-        <div className="w-full sm:w-72">
-          <input
-            type="search"
-            value={trackSearch}
-            onChange={(e) => setTrackSearch(e.target.value)}
-            placeholder={t('stats.searchTrack')}
-            className="field w-full text-sm"
-          />
-        </div>
+        <SearchBox
+          value={trackSearch}
+          onChange={setTrackSearch}
+          suggestions={suggestions.slice(0, 8).map(trackSuggestion)}
+          onPick={(s) => setTrackSearch(s.label)}
+          placeholder={t('stats.searchTrack')}
+          className="field w-full text-sm"
+          wrapperClassName="relative w-full sm:w-72"
+        />
       </div>
       <div className="overflow-hidden panel">
         <table className="w-full text-sm">

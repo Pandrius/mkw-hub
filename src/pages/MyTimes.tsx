@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AddTimeForm from '../components/AddTimeForm'
 import { PbHistoryList, PbNotice, RecentPbs } from '../components/PbHistory'
+import { SearchBox } from '../components/SearchBox'
 import TimeGoals from '../components/TimeGoals'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
 import { TRACKS, getTrackColor, getTrackTextColor } from '../data/tracks'
@@ -372,35 +373,29 @@ function EntitySearch({ onPick, exclude }: { onPick: (e: Entity) => void; exclud
   const visible = query.trim().length < 2 ? [] : results.filter((r) => !exclude.includes(entityKey(r)))
 
   return (
-    <div className="relative">
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t('times.search')}
-        className="field w-64"
-      />
-      {visible.length > 0 && (
-        <ul className="absolute z-20 mt-1 w-80 border-2 border-kart-yellow bg-bg">
-          {visible.map((r) => (
-            <li key={entityKey(r)}>
-              <button
-                onClick={() => {
-                  onPick(r)
-                  setQuery('')
-                  setResults([])
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2"
-              >
-                <span className={`px-1.5 font-mono text-[10px] font-bold ${r.kind === 'team' ? 'bg-kart-yellow text-bg' : 'bg-ink text-bg'}`}>
-                  {r.kind === 'team' ? t('times.team') : t('times.player')}
-                </span>
-                <span className="font-semibold">{r.kind === 'team' ? `${r.tag} · ${r.name}` : r.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <SearchBox
+      value={query}
+      onChange={setQuery}
+      suggestions={visible.map((r) => ({
+        key: entityKey(r),
+        label: r.kind === 'team' ? `${r.tag} · ${r.name}` : r.name,
+        icon: (
+          <span className={`px-1.5 font-mono text-[10px] font-bold ${r.kind === 'team' ? 'bg-kart-yellow text-bg' : 'bg-ink text-bg'}`}>
+            {r.kind === 'team' ? t('times.team') : t('times.player')}
+          </span>
+        ),
+      }))}
+      onPick={(s) => {
+        const r = visible.find((v) => entityKey(v) === s.key)
+        if (!r) return
+        onPick(r)
+        setQuery('')
+        setResults([])
+      }}
+      placeholder={t('times.search')}
+      className="field w-64"
+      wrapperClassName="relative"
+      listClassName="w-80"
+    />
   )
 }

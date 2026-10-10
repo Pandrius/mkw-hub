@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TRACKS } from '../data/tracks'
-import { searchTracks } from './trackSearch'
+import { filterRowsByTrack, searchTracks } from './trackSearch'
 
 describe('searchTracks', () => {
   it('con el campo vacío devuelve todas las pistas en su orden', () => {
@@ -37,5 +37,27 @@ describe('searchTracks', () => {
 
   it('sin coincidencias devuelve una lista vacía', () => {
     expect(searchTracks('zzzzqq')).toEqual([])
+  })
+})
+
+describe('filterRowsByTrack', () => {
+  const rows = [{ trackId: 'rainbow-road' }, { trackId: 'bowsers-castle' }, { trackId: 'no-existe' }]
+  const idOf = (r: { trackId: string }) => r.trackId
+
+  it('sin texto deja todas las filas y no sugiere nada', () => {
+    expect(filterRowsByTrack(rows, idOf, '  ')).toEqual({ rows, suggestions: [] })
+  })
+
+  it('filtra las filas y sugiere solo pistas que están en la tabla', () => {
+    const { rows: found, suggestions } = filterRowsByTrack(rows, idOf, 'rainbow')
+    expect(found).toEqual([{ trackId: 'rainbow-road' }])
+    expect(suggestions.map((t) => t.id)).toEqual(['rainbow-road'])
+  })
+
+  it('con el nombre exacto ya elegido no lo vuelve a sugerir', () => {
+    const name = TRACKS.find((t) => t.id === 'rainbow-road')!.name
+    const { rows: found, suggestions } = filterRowsByTrack(rows, idOf, name)
+    expect(found).toEqual([{ trackId: 'rainbow-road' }])
+    expect(suggestions).toEqual([])
   })
 })

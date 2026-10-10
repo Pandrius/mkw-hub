@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import PlayerInput from '../components/PlayerInput'
+import { SearchBox } from '../components/SearchBox'
 import { EmptyState, PageHeader, Plate, Tabs } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
@@ -220,33 +221,22 @@ export default function NewEvent() {
                   </button>
                 </div>
               ) : (
-                <div className="relative space-y-3">
-                  <input
-                    type="search"
+                <div className="space-y-3">
+                  <SearchBox
                     value={opponentQuery}
-                    onChange={(e) => setOpponentQuery(e.target.value)}
+                    onChange={setOpponentQuery}
+                    suggestions={filteredOpponents.map((tm) => ({
+                      key: String(tm.id),
+                      label: tm.name,
+                      icon: <Plate>{tm.tag}</Plate>,
+                      detail: `MKC #${tm.id}`,
+                    }))}
+                    onPick={(s) => {
+                      const tm = filteredOpponents.find((o) => String(o.id) === s.key)
+                      if (tm) pickOpponentTeam(tm)
+                    }}
                     placeholder={t('event.searchOpponent')}
-                    className="field"
                   />
-                  {filteredOpponents.length > 0 && (
-                    <ul className="absolute z-20 mt-1 w-full border-2 border-kart-yellow bg-bg shadow-lg">
-                      {filteredOpponents.map((tm) => (
-                        <li key={tm.id}>
-                          <button
-                            type="button"
-                            onClick={() => pickOpponentTeam(tm)}
-                            className="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-surface-2"
-                          >
-                            <span className="flex items-center gap-2">
-                              <Plate>{tm.tag}</Plate>
-                              <span className="font-semibold">{tm.name}</span>
-                            </span>
-                            <span className="font-mono text-xs text-muted">MKC #{tm.id}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label>

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { TeamFormPanel } from '../components/FormPanel'
 import { RivalPreview } from '../components/RivalPreview'
+import { SearchBox } from '../components/SearchBox'
+import { trackSuggestion } from '../components/trackSuggestion'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { getTrack, getTrackColor, getTrackTextColor } from '../data/tracks'
@@ -9,6 +11,7 @@ import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { computeTeamForm, type TeamForm } from '../lib/teamForm'
+import { filterRowsByTrack } from '../lib/trackSearch'
 import {
   computeTeamPlayerStats,
   computeTeamStats,
@@ -38,19 +41,10 @@ export default function TeamDetail() {
   const [tab, setTab] = useState<TabId>('overview')
   const [trackSearch, setTrackSearch] = useState('')
 
-  const filteredTeamTracks = useMemo(() => {
-    if (!stats) return []
-    const q = trackSearch.trim().toLowerCase()
-    if (!q) return stats.tracks
-    return stats.tracks.filter((tr) => {
-      const trackObj = getTrack(tr.trackId)
-      return (
-        tr.trackId.toLowerCase().includes(q) ||
-        (trackObj?.abbr && trackObj.abbr.toLowerCase().includes(q)) ||
-        (trackObj?.name && trackObj.name.toLowerCase().includes(q))
-      )
-    })
-  }, [stats, trackSearch])
+  const { rows: filteredTeamTracks, suggestions: trackSuggestions } = useMemo(
+    () => filterRowsByTrack(stats?.tracks ?? [], (tr) => tr.trackId, trackSearch),
+    [stats, trackSearch],
+  )
 
   useEffect(() => {
     if (!isValidId) return
@@ -310,12 +304,14 @@ export default function TeamDetail() {
           ) : (
             <>
               <div className="flex justify-end">
-                <input
-                  type="search"
+                <SearchBox
                   value={trackSearch}
-                  onChange={(e) => setTrackSearch(e.target.value)}
+                  onChange={setTrackSearch}
+                  suggestions={trackSuggestions.slice(0, 8).map(trackSuggestion)}
+                  onPick={(s) => setTrackSearch(s.label)}
                   placeholder={t('stats.searchTrack')}
-                  className="field w-full sm:w-72 text-sm"
+                  className="field w-full text-sm"
+                  wrapperClassName="relative w-full sm:w-72"
                 />
               </div>
               <div className="panel overflow-x-auto">

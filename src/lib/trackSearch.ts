@@ -37,3 +37,24 @@ export function searchTracks(query: string, tracks: Track[] = TRACKS): Track[] {
     .sort((a, b) => a.s - b.s || a.i - b.i)
     .map((x) => x.track)
 }
+
+/**
+ * Filtro de una tabla por pista: las filas cuya pista coincide (en su orden) y las pistas de la
+ * tabla que sugerir, por relevancia. Si lo escrito ya es el nombre exacto de una pista, no se
+ * sugiere (ya está elegida).
+ */
+export function filterRowsByTrack<T>(
+  rows: T[],
+  trackIdOf: (row: T) => string,
+  query: string,
+): { rows: T[]; suggestions: Track[] } {
+  const q = norm(query)
+  if (!q) return { rows, suggestions: [] }
+  const present = new Set(rows.map(trackIdOf))
+  const found = searchTracks(query, TRACKS.filter((tr) => present.has(tr.id)))
+  const ids = new Set(found.map((tr) => tr.id))
+  return {
+    rows: rows.filter((row) => ids.has(trackIdOf(row))),
+    suggestions: found.filter((tr) => norm(tr.name) !== q),
+  }
+}
