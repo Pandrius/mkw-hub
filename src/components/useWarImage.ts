@@ -23,10 +23,8 @@ export function useWarImage(event: GameEvent, races: EventRace[], table: WarTabl
     runningDiff: t('warImg.runningDiff'),
     raceByRace: t('warImg.raceByRace'),
     racesWon: t('warImg.racesWon'),
-    bestRace: t('warImg.bestRace'),
     avgRace: t('warImg.avgRace'),
     tied: t('warImg.tied'),
-    vs: t('warImg.vs'),
     noOpponents: t('warImg.noOpponents'),
     footer: t('warImg.footer'),
   }

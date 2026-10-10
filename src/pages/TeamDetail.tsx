@@ -89,6 +89,15 @@ export default function TeamDetail() {
 
   const playerStats = useMemo(() => computeTeamPlayerStats(wars), [wars])
 
+  // Todas las wars juntas, la más reciente primero (antes iban agrupadas por rival)
+  const warList = useMemo(
+    () =>
+      (stats?.rivals ?? [])
+        .flatMap((rv) => rv.matches.map((m) => ({ m, rv })))
+        .sort((a, b) => (b.m.date ?? '').localeCompare(a.m.date ?? '')),
+    [stats],
+  )
+
   const siblingRosters = useMemo(() => {
     if (!team) return []
     const parentId = team.parent_team_id || team.id
@@ -511,8 +520,7 @@ export default function TeamDetail() {
             <EmptyState title={t('teamStats.noWars')} />
           ) : (
             <div className="panel divide-y divide-line/60">
-              {stats?.rivals.flatMap((rv) =>
-                rv.matches.map((m) => (
+              {warList.map(({ m, rv }) => (
                   <Link
                     key={m.eventId}
                     to={`/eventos/${m.eventId}`}
@@ -548,8 +556,7 @@ export default function TeamDetail() {
                       </p>
                     </div>
                   </Link>
-                )),
-              )}
+              ))}
             </div>
           )}
         </section>

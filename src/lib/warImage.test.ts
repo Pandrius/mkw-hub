@@ -151,10 +151,8 @@ describe('utilidades', () => {
 
 describe('modo neutral', () => {
   const table = buildWarTable(players, races, ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'])
-  // NB (izquierda) contra RKL: por orden alfabético NB va antes, así que no se intercambian
+  // NB (izquierda) contra RKL: NB gana, así que ya va a la izquierda
   const data = buildWarImageData(event(), table, false)
-  // Al revés: la war la sube RKL, que alfabéticamente va después de NB
-  const swappedInput = buildWarImageData(event({ team_tag: 'RKL', opponent_tag: 'NB' }), table, false)
 
   it('raceStats cuenta carreras ganadas, empatadas y la mejor carrera', () => {
     const s = raceStats(data)
@@ -168,29 +166,49 @@ describe('modo neutral', () => {
     expect(raceStats({ races: [] })).toEqual({ winsHome: 0, ties: 0, winsAway: 0, best: null, avgHome: 0, avgAway: 0 })
   })
 
-  it('ordena los equipos por tag sin importar quién suba la war', () => {
+  // La misma war vista desde el otro equipo: el de la derecha pasa a ser "el nuestro"
+  const mirrored = {
+    ...data,
+    home: data.away,
+    away: data.home,
+    diff: -data.diff,
+    races: data.races.map((r) => ({ ...r, home: r.away, away: r.home, diff: -r.diff, runningDiff: -r.runningDiff })),
+  }
+
+  it('el equipo que gana va a la izquierda, lo suba quien lo suba', () => {
+    expect(data.home.total).toBeGreaterThan(data.away.total)
     const a = neutralizeWarImage(data)
-    const b = neutralizeWarImage(swappedInput)
+    const b = neutralizeWarImage(mirrored)
     expect(a.swapped).toBe(false)
     expect(b.swapped).toBe(true)
-    // NB va a la izquierda en los dos casos...
-    expect(a.data.home.tag).toBe('NB')
-    expect(b.data.home.tag).toBe('NB')
-    // ...y conserva sus propios puntos: en el segundo caso NB era el equipo de la derecha
-    expect(a.data.home.total).toBe(table.home)
-    expect(b.data.home.total).toBe(table.away)
-    expect(b.data.away.total).toBe(table.home)
-    expect(b.data.races.map((r) => [r.home, r.away])).toEqual(data.races.map((r) => [r.away, r.home]))
+    expect(a.data.home.tag).toBe(data.home.tag)
+    expect(b.data.home.tag).toBe(data.home.tag)
+    // Cada equipo conserva sus propios puntos
+    expect(b.data.home.total).toBe(a.data.home.total)
+    expect(b.data.away.total).toBe(a.data.away.total)
+    expect(b.data.races.map((r) => [r.home, r.away])).toEqual(a.data.races.map((r) => [r.home, r.away]))
   })
 
   it('al intercambiar, la diferencia se ve desde el nuevo equipo de la izquierda', () => {
-    const b = neutralizeWarImage(swappedInput)
-    expect(b.data.diff).toBe(-swappedInput.diff)
-    expect(b.data.races.every((r, i) => r.diff === -swappedInput.races[i].diff && r.runningDiff === -swappedInput.races[i].runningDiff)).toBe(true)
+    const b = neutralizeWarImage(mirrored)
+    expect(b.data.diff).toBe(data.diff)
+    expect(b.data.diff).toBeGreaterThan(0)
+    expect(b.data.races.every((r, i) => r.diff === data.races[i].diff && r.runningDiff === data.races[i].runningDiff)).toBe(true)
   })
 
-  it('la ordenación no distingue mayúsculas', () => {
-    const lower = buildWarImageData(event({ team_tag: 'zz', opponent_tag: 'Aa' }), table, false)
-    expect(neutralizeWarImage(lower).data.home.tag).toBe('Aa')
+  it('si empatan, van por orden alfabético sin distinguir mayúsculas', () => {
+    const tie = (home: string, away: string) => ({
+      ...data,
+      home: { ...data.home, tag: home, total: 100 },
+      away: { ...data.away, tag: away, total: 100 },
+    })
+    expect(neutralizeWarImage(tie('zz', 'Aa')).data.home.tag).toBe('Aa')
+    expect(neutralizeWarImage(tie('Aa', 'zz')).data.home.tag).toBe('Aa')
+    expect(neutralizeWarImage(tie('Aa', 'zz')).swapped).toBe(false)
+  })
+
+  it('con el mismo tag no intercambia nada', () => {
+    const same = { ...data, home: { ...data.home, tag: 'X', total: 5 }, away: { ...data.away, tag: 'X', total: 5 } }
+    expect(neutralizeWarImage(same).swapped).toBe(false)
   })
 })

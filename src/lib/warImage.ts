@@ -167,12 +167,13 @@ export function raceStats(data: Pick<WarImageData, 'races'>): RaceStats {
 }
 
 /**
- * Versión neutral: los equipos por orden alfabético de tag (no según quién subió la war) y la
- * diferencia vista desde el nuevo equipo de la izquierda. `swapped` indica si se han intercambiado
- * (para intercambiar también los logos).
+ * Versión neutral: el equipo que gana a la izquierda (no según quién subió la war) y, si empatan, por
+ * orden alfabético de tag. La diferencia se ve desde el nuevo equipo de la izquierda. `swapped` indica
+ * si se han intercambiado (para intercambiar también los logos).
  */
 export function neutralizeWarImage(data: WarImageData): { data: WarImageData; swapped: boolean } {
-  const swapped = data.away.tag.trim().localeCompare(data.home.tag.trim(), undefined, { sensitivity: 'base' }) < 0
+  const byTag = data.away.tag.trim().localeCompare(data.home.tag.trim(), undefined, { sensitivity: 'base' })
+  const swapped = data.away.total > data.home.total || (data.away.total === data.home.total && byTag < 0)
   if (!swapped) return { data, swapped: false }
   return {
     swapped: true,

@@ -24,10 +24,8 @@ export type WarImageLabels = {
   /** Modo neutral */
   raceByRace: string
   racesWon: string
-  bestRace: string
   avgRace: string
   tied: string
-  vs: string
   noOpponents: string
   footer: string
 }
@@ -466,29 +464,22 @@ const BOARD_H = 262
 
 /**
  * Modo neutral: en lugar de la diferencia acumulada, el marcador de cada carrera con los puntos de los
- * dos equipos (mismos colores de equipo que arriba, nada de verde o rojo) y unas cifras que no dependen
- * de qué equipo suba la war: carreras ganadas, mejor carrera y puntos medios.
+ * dos equipos (cada fila con su tag y su color, nada de verde o rojo) y dos cifras que no dependen de qué
+ * equipo suba la war: carreras ganadas y puntos medios.
  */
 function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabels): number {
   const stats = raceStats(data)
   slant(ctx, PAD, y, 12, 26, 0, C.accent)
   text(ctx, labels.raceByRace.toUpperCase(), PAD + 22, y + 22, `900 24px ${DISPLAY}`, C.ink)
 
-  // Leyenda: qué color es cada equipo
-  let lx = W - PAD
-  for (const [tag, color] of [[data.away.tag, C.ink], [data.home.tag, C.accent]] as const) {
-    ctx.font = `800 16px ${DISPLAY}`
-    const w = ctx.measureText(tag).width
-    text(ctx, tag, lx, y + 21, ctx.font, color, 'right')
-    ctx.fillStyle = color
-    ctx.fillRect(lx - w - 18, y + 9, 10, 10)
-    lx -= w + 40
-  }
-
-  const x0 = PAD
-  const slotW = (W - PAD * 2) / data.slots
+  // Cada fila de cifras lleva el tag de su equipo en su color, para saber de quién es cada número
+  const labelW = 70
+  const x0 = PAD + labelW
+  const slotW = (W - PAD - x0) / data.slots
   const byNo = new Map(data.races.map((r) => [r.raceNo, r]))
   const top = y + 44
+  fittedText(ctx, data.home.tag, PAD, top + 76, labelW - 10, 800, 22, DISPLAY, C.accent, 'left', 13)
+  fittedText(ctx, data.away.tag, PAD, top + 106, labelW - 10, 800, 22, DISPLAY, C.ink, 'left', 13)
   for (let n = 1; n <= data.slots; n++) {
     const cx = x0 + slotW * (n - 0.5)
     const r = byNo.get(n)
@@ -520,13 +511,12 @@ function raceBoard(ctx: Ctx, data: WarImageData, y: number, labels: WarImageLabe
     ctx.fillRect(bx + aw, top + 118, bw - aw, 7)
   }
 
-  // Tres cifras neutrales para que el bloque no quede vacío
-  const tileW = (W - PAD * 2 - GAP * 2) / 3
+  // Dos cifras neutrales para que el bloque no quede vacío
+  const tileW = (W - PAD * 2 - GAP) / 2
   const tileY = top + 150
   const tiles: [string, string][] = [
     [labels.racesWon, `${data.home.tag} ${stats.winsHome} – ${stats.winsAway} ${data.away.tag}${stats.ties ? `  ·  ${stats.ties} ${labels.tied}` : ''}`],
-    [labels.bestRace, stats.best ? `${stats.best.score} · ${stats.best.abbr} · ${stats.best.side === 'home' ? data.home.tag : data.away.tag}` : '–'],
-    [labels.avgRace, data.races.length ? `${stats.avgHome.toFixed(1)} – ${stats.avgAway.toFixed(1)}` : '–'],
+    [labels.avgRace, data.races.length ? `${data.home.tag} ${stats.avgHome.toFixed(1)} – ${stats.avgAway.toFixed(1)} ${data.away.tag}` : '–'],
   ]
   tiles.forEach(([label, value], i) => {
     const tx = PAD + i * (tileW + GAP)
@@ -646,7 +636,7 @@ function drawWarCanvas(
   const badgeW = 132
   const badgeH = 72
   if (NEUTRAL) {
-    // Sin diferencia ni colores de resultado: un "VS" igual para los dos
+    // Sin signo ni colores de resultado: la distancia entre los dos, como en Lorenzi (±80)
     if (ELEGANT) {
       const bx = W / 2 - badgeW / 2
       const by = y + (teamH - badgeH) / 2
@@ -655,10 +645,10 @@ function drawWarCanvas(
       ctx.strokeStyle = C.accent
       ctx.lineWidth = 1
       ctx.strokeRect(bx + 0.5, by + 0.5, badgeW - 1, badgeH - 1)
-      text(ctx, labels.vs, W / 2, y + teamH / 2 + 15, `700 40px ${DISPLAY}`, C.ink, 'center')
+      fittedText(ctx, `±${Math.abs(data.diff)}`, W / 2, y + teamH / 2 + 15, badgeW - 24, 700, 44, DISPLAY, C.ink, 'center', 26)
     } else {
       slant(ctx, W / 2 - badgeW / 2, y + (teamH - badgeH) / 2, badgeW, badgeH, 12, C.surface2)
-      text(ctx, labels.vs, W / 2, y + teamH / 2 + 18, `900 46px ${DISPLAY}`, C.ink, 'center')
+      fittedText(ctx, `±${Math.abs(data.diff)}`, W / 2, y + teamH / 2 + 20, badgeW - 24, 900, 54, DISPLAY, C.ink, 'center', 28)
     }
   } else if (ELEGANT) {
     // Recuadro de filete con la diferencia en el color del resultado
