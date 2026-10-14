@@ -128,7 +128,7 @@ const TRACK_PLATES: Record<string, PlateColors> = {
   rPB: plate('#e59ab9', '#573b10'), SSS: plate('#8fc9ec', '#454a50'), rDDJ: plate('#2f5a1c', '#e1965c'), GBR: plate('#e5ad33', '#5a2a10'),
   CCF: plate('#e8504a', '#1a1208'), DD: plate('#14518a', '#ffe9c2'), BCi: plate('#6a3fb0', '#ffffff'), DBB: plate('#d02f3f', '#ebfaf8'),
   rMMM: plate('#3a9a38', '#ffffff'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#e8791f', '#2b2b2b'),
-  AH: plate('#24502b', '#e2b78a'), rMC: MC, RR: plate('#e8b6d8', '#1d1a3a'),
+  AH: plate('#8a5a2b', '#b8f0cf'), rMC: MC, RR: plate('#e8b6d8', '#1d1a3a'),
   rMC1: MC, rMC2: MC, rMC3: MC,
   rGV1: GV, rGV2: GV, rGV3: GV,
   rCI1: CM, rCI2: CM,
