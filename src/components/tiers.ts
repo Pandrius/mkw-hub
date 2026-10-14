@@ -11,3 +11,15 @@ export const TIER_COLOR: Record<Tier, string> = {
 }
 
 export const tierLabel = (tier: Tier): MessageKey => `badge.tier.${tier}` as MessageKey
+
+/** Diseño de la medalla: metal por niveles, o uno propio para los dos logros únicos */
+export type MedalKind = 'metal' | 'ruby' | 'legend'
+
+/** Diseño de un logro o insignia destacada a partir de su identificador (ach:perfectEvent, perfectEvent...) */
+export function medalKindOf(id: string): MedalKind {
+  const key = id.replace(/^ach:/, '')
+  return key === 'perfectEvent' ? 'ruby' : key === 'allAchievements' ? 'legend' : 'metal'
+}
+
+/** Rojo rubí para los acentos del evento perfecto */
+export const RUBY = '#ff2d6a'

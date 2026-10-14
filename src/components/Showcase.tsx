@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { MAX_FEATURED, titleCatalog, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
 import { MedalIcon } from './Medal'
 import { featuredName, titleHow, titleName } from './showcaseNames'
-import { TIER_COLOR, tierLabel } from './tiers'
+import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
 /** Título y hasta 3 insignias destacadas junto al nombre. Solo se muestran las que el jugador tiene ganadas */
 export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featuredIds: string[]; titleId: string | null; owned: Featurable[]; ctx: TitleContext }) {
@@ -26,7 +26,7 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
       )}
       {medals.map((m) => (
         <span key={m.id} title={`${featuredName(m.id, t)} · ${t(tierLabel(m.tier))}`}>
-          <MedalIcon glyph={m.glyph} tier={m.tier} size={30} />
+          <MedalIcon glyph={m.glyph} tier={m.tier} size={30} kind={medalKindOf(m.id)} />
         </span>
       ))}
     </div>
@@ -112,7 +112,7 @@ export function ShowcaseEditor({
                     disabled={!on && badges.length >= MAX_FEATURED}
                     className={`flex w-full items-center gap-3 border-2 px-3 py-2 text-left disabled:opacity-40 ${on ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}
                   >
-                    <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} />
+                    <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} kind={medalKindOf(f.id)} />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold">{featuredName(f.id, t)}</span>
                       <span className="font-mono text-[11px]" style={{ color: TIER_COLOR[f.tier] }}>

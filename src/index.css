@@ -276,3 +276,24 @@ input[data-position]::-webkit-inner-spin-button {
     animation: none;
   }
 }
+
+/* Emblema del logro supremo: anillo iridiscente que gira y rayos que rotan despacio */
+@keyframes legend-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.legend-ring {
+  background: conic-gradient(from var(--glam-a), #ffd500, #fff6b0, #28d7f5, #b967ff, #ff7ad9, #ffd500);
+  animation: glam-spin 4s linear infinite;
+}
+.legend-rays {
+  transform-origin: 50px 50px;
+  animation: legend-rotate 40s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .legend-ring,
+  .legend-rays {
+    animation: none;
+  }
+}

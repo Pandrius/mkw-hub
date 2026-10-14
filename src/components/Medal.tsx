@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import type { Glyph } from '../lib/achievements'
 import type { Progress, Tier } from '../lib/badges'
-import { TIER_COLOR, tierLabel } from './tiers'
+import { RUBY, TIER_COLOR, tierLabel, type MedalKind } from './tiers'
 
 /** Dibujos de las medallas en una cuadrícula de 24 × 24: formas planas, sin degradados */
 const GLYPHS: Record<Glyph, ReactNode> = {
@@ -73,9 +73,24 @@ const STOP_AT = [0, 0.3, 0.5, 0.72, 1]
  * Medalla: escudo de metal (bronce, plata, oro o platino) con bisel, brillo y el dibujo grabado en relieve.
  * Sin conseguir, solo el contorno apagado. El nivel se marca además con tantos cuadraditos como niveles alcanzados.
  */
-export function MedalIcon({ glyph, tier, size = 64, single = false }: { glyph: Glyph; tier: Tier; size?: number; single?: boolean }) {
+export function MedalIcon({
+  glyph,
+  tier,
+  size = 64,
+  single = false,
+  kind = 'metal',
+}: {
+  glyph: Glyph
+  tier: Tier
+  size?: number
+  single?: boolean
+  /** 'ruby' (evento perfecto) y 'legend' (logro supremo) tienen diseño propio al conseguirse */
+  kind?: MedalKind
+}) {
   const id = useId().replace(/:/g, '')
   const earned = tier > 0
+  if (earned && kind === 'ruby') return <RubyGem glyph={glyph} size={size} />
+  if (earned && kind === 'legend') return <LegendEmblem size={size * 1.1} />
   const metal = earned ? METALS[tier as 1 | 2 | 3 | 4] : null
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
@@ -144,8 +159,10 @@ export function EpicCard({
   progress,
   thresholds,
   single = false,
+  kind = 'metal',
 }: {
   single?: boolean
+  kind?: MedalKind
   glyph: Glyph
   kicker: string
   name: string
@@ -159,7 +176,7 @@ export function EpicCard({
   const { t } = useI18n()
   const { count, tier, next } = progress
   const earned = tier > 0
-  const accent = earned ? TIER_COLOR[tier] : 'var(--color-line)'
+  const accent = earned ? (kind === 'ruby' ? RUBY : TIER_COLOR[tier]) : 'var(--color-line)'
   const tooltip = single ? undefined : thresholds.map((n, i) => `${t(tierLabel((i + 1) as Tier))}: ${n}`).join('  ·  ')
 
   return (
@@ -173,14 +190,14 @@ export function EpicCard({
         >
           {ghost}
         </span>
-        <MedalIcon glyph={glyph} tier={tier} size={112} single={single} />
+        <MedalIcon glyph={glyph} tier={tier} size={112} single={single} kind={kind} />
         <div className="relative min-w-0 flex-1 basis-72">
           <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{kicker}</p>
           <h4 className="mt-1 font-display text-4xl leading-[0.95] font-black sm:text-6xl">{name}</h4>
           <p className="mt-2 max-w-xl text-sm text-ink/80">{description}</p>
           <div className="mt-4 max-w-xl">
             <div className="h-2 bg-line" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={next ?? count} aria-label={name}>
-              <div className="h-full" style={{ width: `${next ? Math.min(100, Math.round((count / next) * 100)) : 100}%`, background: TIER_COLOR[Math.min(4, tier + 1) as Tier] }} />
+              <div className="h-full" style={{ width: `${next ? Math.min(100, Math.round((count / next) * 100)) : 100}%`, background: kind === 'ruby' ? RUBY : TIER_COLOR[Math.min(4, tier + 1) as Tier] }} />
             </div>
             <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
               <span>
@@ -296,7 +313,7 @@ export function GrandCard({
   const pct = Math.round((Math.min(progress.count, total) / total) * 100)
   return (
     <div className={`relative p-[3px] ${earned ? 'glam-frame' : 'bg-line'}`}>
-      <div className="relative overflow-hidden bg-bg">
+      <div className="relative overflow-hidden" style={{ background: earned ? 'radial-gradient(circle at 14% 50%, rgba(255,213,0,0.2), transparent 42%), #08080c' : 'var(--color-bg)' }}>
         {earned && <div className="glam-sweep pointer-events-none absolute inset-0" aria-hidden />}
         {earned &&
           SPARKLES.map(([x, y, delay], i) => (
@@ -306,7 +323,7 @@ export function GrandCard({
           ))}
         <div className={`relative flex flex-wrap items-center gap-x-10 gap-y-5 px-6 py-8 sm:px-12 ${earned ? '' : 'opacity-60'}`}>
           <div className={earned ? 'glam-float' : ''}>
-            <MedalIcon glyph={glyph} tier={earned ? 4 : 0} size={150} single />
+            {earned ? <LegendEmblem size={190} /> : <MedalIcon glyph={glyph} tier={0} size={150} single />}
           </div>
           <div className="min-w-0 flex-1 basis-80">
             <p className="font-mono text-xs font-bold tracking-[0.35em] text-kart-yellow">{kicker}</p>
@@ -326,6 +343,100 @@ export function GrandCard({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Facetas del rubí: polígono y tono (de la más clara a la más oscura) */
+const RUBY_FACETS: [string, string][] = [
+  ['16,4 40,4 34,18 22,18', '#ff8aa6'],
+  ['16,4 22,18 2,18', '#d4144a'],
+  ['40,4 54,18 34,18', '#ff4d7a'],
+  ['2,18 22,18 28,60', '#8e0a31'],
+  ['22,18 34,18 28,60', '#ee1a5c'],
+  ['34,18 54,18 28,60', '#b30d3d'],
+]
+
+/** Evento perfecto: un rubí tallado con facetas, destellos y la corona grabada. Más exclusivo que cualquier metal */
+export function RubyGem({ glyph, size = 64 }: { glyph: Glyph; size?: number }) {
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
+      <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block overflow-visible drop-shadow-[0_0_8px_rgba(255,45,106,0.65)]">
+        {RUBY_FACETS.map(([points, fill]) => (
+          <polygon key={points} points={points} fill={fill} stroke="#4a0519" strokeWidth="0.6" strokeLinejoin="round" />
+        ))}
+        {/* Reflejos de las facetas */}
+        <polygon points="18,6 26,6 22,15 19,15" fill="#fff" opacity="0.55" />
+        <polygon points="6,18 17,18 12,19.5" fill="#fff" opacity="0.2" />
+        <polygon points="24,22 28,22 28,50" fill="#fff" opacity="0.18" />
+        <polygon points="2,18 54,18 52,19.6 4,19.6" fill="#fff" opacity="0.3" />
+        <polygon points="16,4 40,4 54,18 28,60 2,18" fill="none" stroke="#5c0620" strokeWidth="1.2" strokeLinejoin="round" />
+        <svg x="16" y="21" width="24" height="24" viewBox="0 0 24 24" fill="rgba(0,0,0,0.35)">
+          <g transform="translate(0.6 0.8)">{GLYPHS[glyph]}</g>
+        </svg>
+        <svg x="16" y="21" width="24" height="24" viewBox="0 0 24 24" fill="#ffe4ec">
+          {GLYPHS[glyph]}
+        </svg>
+        <svg viewBox="0 0 10 10" x="40" y="2" width="9" height="9" className="glam-star fill-white">
+          <polygon points="5,0 6.2,3.8 10,5 6.2,6.2 5,10 3.8,6.2 0,5 3.8,3.8" />
+        </svg>
+      </svg>
+      <span className="size-1.5" style={{ background: RUBY }} />
+    </div>
+  )
+}
+
+/**
+ * Logro supremo: un emblema que no se parece a ningún escudo. Anillo iridiscente que gira, rayos dorados, dos coronas de laurel
+ * y un trofeo de oro sobre fondo de obsidiana. Es lo más difícil de conseguir de toda la web.
+ */
+export function LegendEmblem({ size = 150 }: { size?: number }) {
+  const id = useId().replace(/:/g, '')
+  const leaves = Array.from({ length: 7 }, (_, i) => 118 + i * 17)
+  const rays = Array.from({ length: 28 }, (_, i) => i * (360 / 28))
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }} aria-hidden>
+      <div className="legend-ring absolute inset-0 rounded-full" />
+      <div className="absolute rounded-full bg-[#0a0a0f]" style={{ inset: size * 0.045 }} />
+      <svg viewBox="0 0 100 100" className="absolute inset-0 overflow-visible">
+        <defs>
+          <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fff8c4" />
+            <stop offset="0.35" stopColor="#ffd500" />
+            <stop offset="0.6" stopColor="#b57f00" />
+            <stop offset="0.8" stopColor="#ffd500" />
+            <stop offset="1" stopColor="#fff2a0" />
+          </linearGradient>
+          <radialGradient id={`${id}r`} cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#ffd500" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#ffd500" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="40" fill={`url(#${id}r)`} />
+        <g className="legend-rays">
+          {rays.map((a) => (
+            <polygon key={a} points="50,6 51.4,22 48.6,22" fill="#ffd500" opacity="0.6" transform={`rotate(${a} 50 50)`} />
+          ))}
+        </g>
+        <circle cx="50" cy="50" r="34" fill="none" stroke={`url(#${id}g)`} strokeWidth="1.6" />
+        {[-1, 1].map((side) =>
+          leaves.map((a) => {
+            const rad = (a * Math.PI) / 180
+            const x = 50 + side * 31 * Math.cos(rad - Math.PI)
+            const y = 50 + 31 * Math.sin(rad - Math.PI) * -1
+            return <ellipse key={`${side}${a}`} cx={x} cy={y} rx="2.6" ry="6" fill={`url(#${id}g)`} transform={`rotate(${side * (a - 90)} ${x} ${y})`} />
+          }),
+        )}
+        <svg x="30" y="27" width="40" height="40" viewBox="0 0 24 24" fill="rgba(0,0,0,0.5)">
+          <g transform="translate(0.5 0.7)">{GLYPHS.trophy}</g>
+        </svg>
+        <svg x="30" y="27" width="40" height="40" viewBox="0 0 24 24" fill={`url(#${id}g)`} stroke="#6b4a00" strokeWidth="0.4">
+          {GLYPHS.trophy}
+        </svg>
+        <svg viewBox="0 0 10 10" x="44" y="2" width="12" height="12" className="glam-star fill-white">
+          <polygon points="5,0 6.2,3.8 10,5 6.2,6.2 5,10 3.8,6.2 0,5 3.8,3.8" />
+        </svg>
+      </svg>
     </div>
   )
 }

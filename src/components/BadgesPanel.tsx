@@ -5,7 +5,7 @@ import { achievementTotals, BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RAC
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
-import { TIER_COLOR, tierLabel } from './tiers'
+import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
 /** Insignias por volumen de juego y logros de desempeño */
 export function BadgesPanel({ badges, achievements, totalTracks }: { badges: BadgeSet; achievements: Achievement[]; totalTracks: number }) {
@@ -110,6 +110,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
                 progress={a}
                 thresholds={a.thresholds}
                 single={a.single}
+                kind={medalKindOf(a.id)}
               />
             ))}
         </div>
