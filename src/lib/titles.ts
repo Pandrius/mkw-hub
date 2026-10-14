@@ -66,11 +66,13 @@ export type TitleDef = {
 }
 
 const tierOf = (ctx: TitleContext, id: AchievementId) => ctx.achievements.find((a) => a.id === id)?.tier ?? 0
+const countOf = (ctx: TitleContext, id: AchievementId) => ctx.achievements.find((a) => a.id === id)?.count ?? 0
 
 /** Título estático ← logro y nivel mínimo para conseguirlo */
-export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier: Tier }[] = [
+export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier: Tier; /** Cantidad mínima, para logros de un solo nivel */ count?: number }[] = [
   { id: 'perfectionist', achievement: 'perfectEvent', tier: 1 },
-  { id: 'untouchable', achievement: 'perfectEvent', tier: 3 },
+  { id: 'untouchable', achievement: 'perfectEvent', tier: 1, count: 3 },
+  { id: 'grandMaster', achievement: 'allAchievements', tier: 1 },
   { id: 'natureWinner', achievement: 'wins', tier: 3 },
   { id: 'podiumKing', achievement: 'podiums', tier: 3 },
   { id: 'unstoppable', achievement: 'winStreak', tier: 3 },
@@ -92,7 +94,7 @@ export const SQ_TABLES = 25
 
 /** Catálogo completo de títulos con si están ganados. Los de pista y de MMR se generan según los datos del jugador */
 export function titleCatalog(ctx: TitleContext): TitleDef[] {
-  const list: TitleDef[] = ACHIEVEMENT_TITLES.map((t) => ({ id: t.id, group: 'achievement', earned: tierOf(ctx, t.achievement) >= t.tier }))
+  const list: TitleDef[] = ACHIEVEMENT_TITLES.map((t) => ({ id: t.id, group: 'achievement', earned: tierOf(ctx, t.achievement) >= t.tier && countOf(ctx, t.achievement) >= (t.count ?? 0) }))
   list.push(
     { id: 'veteran', group: 'achievement', earned: ctx.badges.races.tier >= 3 },
     { id: 'globetrotter', group: 'achievement', earned: ctx.badges.explorer.tier >= 4 },

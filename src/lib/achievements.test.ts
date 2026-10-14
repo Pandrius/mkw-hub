@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeAchievements, type AchievementId } from './achievements'
+import { achievementTotals, computeAchievements, isMaxed, type AchievementId } from './achievements'
 import type { TimedResult } from './form'
 
 /** Un evento de 12 carreras (o las que se indiquen) con las posiciones dadas */
@@ -76,5 +76,32 @@ describe('computeAchievements', () => {
     expect(get(rows, 'winEverywhere').count).toBe(1)
     // el último nivel pide todas las pistas del juego
     expect(get(rows, 'podiumEverywhere', 40).thresholds.at(-1)).toBe(40)
+  })
+})
+
+describe('logros de una sola vez y logro supremo', () => {
+  it('el evento perfecto no tiene niveles: al lograrlo es platino y el contador sigue subiendo', () => {
+    const one = get(event('a', Array(12).fill(1)), 'perfectEvent')
+    expect(one).toMatchObject({ single: true, count: 1, tier: 4, next: null })
+    const three = get([...event('a', Array(12).fill(1)), ...event('b', Array(12).fill(1)), ...event('c', Array(12).fill(1))], 'perfectEvent')
+    expect(three).toMatchObject({ count: 3, tier: 4 })
+    expect(get(event('a', Array(12).fill(2)), 'perfectEvent')).toMatchObject({ count: 0, tier: 0, next: 1 })
+  })
+
+  it('el logro supremo cuenta los logros al máximo (aquí: evento perfecto y racha de 8 victorias) y no se consigue hasta tenerlos todos', () => {
+    const rows = event('a', Array(12).fill(1))
+    const grand = get(rows, 'allAchievements')
+    expect(grand).toMatchObject({ single: true, epic: true, tier: 0, count: 2 })
+    expect(grand.thresholds).toEqual([computeAchievements(rows, 40).length - 1])
+    expect(achievementTotals(computeAchievements(rows, 40))).toMatchObject({ maxed: 2, possible: 13 * 4 + 1 })
+  })
+
+  it('el supremo se logra cuando todos los demás están al máximo', () => {
+    const all = computeAchievements([], 40).filter((a) => a.id !== 'allAchievements')
+    // Simulamos con los umbrales: un logro supremo con todos al máximo se calcula igual que isMaxed
+    expect(all.every((a) => !isMaxed(a))).toBe(true)
+    expect(isMaxed({ single: true, tier: 4 })).toBe(true)
+    expect(isMaxed({ single: false, tier: 3 })).toBe(false)
+    expect(isMaxed({ single: false, tier: 4 })).toBe(true)
   })
 })

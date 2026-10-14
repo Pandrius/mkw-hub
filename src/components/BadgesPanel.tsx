@@ -1,9 +1,9 @@
 import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RACES, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import { achievementTotals, BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RACES, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
-import { EpicCard, MedalCard } from './Medal'
+import { EpicCard, GrandCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
 import { TIER_COLOR, tierLabel } from './tiers'
 
@@ -11,8 +11,10 @@ import { TIER_COLOR, tierLabel } from './tiers'
 export function BadgesPanel({ badges, achievements, totalTracks }: { badges: BadgeSet; achievements: Achievement[]; totalTracks: number }) {
   const { t } = useI18n()
   const { mostPlayed } = badges
-  const earned = achievements.reduce((n, a) => n + a.tier, 0)
-  const possible = achievements.length * 4
+  // Niveles conseguidos: los de varios niveles suman hasta 4 y los de una sola vez, 1. El supremo no cuenta aquí
+  const regular = achievements.filter((a) => a.id !== 'allAchievements')
+  const grand = achievements.find((a) => a.id === 'allAchievements')
+  const { earned, possible, maxed } = achievementTotals(achievements)
   const descVars = {
     big: BIG_EVENT_POINTS,
     legend: LEGEND_EVENT_POINTS,
@@ -75,12 +77,26 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
         </div>
       </section>
 
-      <section>
+      <section id="logros" className="scroll-mt-24">
         <SectionTitle title={t('ach.title')} hint={t('ach.hint')}>
           <p className="font-mono text-xs text-muted">{t('ach.progress', { done: earned, total: possible })}</p>
         </SectionTitle>
+        {grand && (
+          <div className="mb-3">
+            <GrandCard
+              glyph={grand.glyph}
+              kicker={t('ach.supremeKicker')}
+              name={t('ach.allAchievements.name')}
+              description={t('ach.allAchievements.desc')}
+              countLabel={t('ach.allAchievements.count')}
+              progress={{ ...grand, count: maxed }}
+              total={regular.length}
+              doneLabel={t('ach.done')}
+            />
+          </div>
+        )}
         <div className="mb-3 space-y-3">
-          {achievements
+          {regular
             .filter((a) => a.epic)
             .map((a) => (
               <EpicCard
@@ -93,11 +109,12 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
                 countLabel={t(`ach.${a.id}.count` as MessageKey)}
                 progress={a}
                 thresholds={a.thresholds}
+                single={a.single}
               />
             ))}
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {achievements.filter((a) => !a.epic).map((a) => (
+          {regular.filter((a) => !a.epic).map((a) => (
             <MedalCard
               key={a.id}
               glyph={a.glyph}

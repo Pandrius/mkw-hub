@@ -25,10 +25,12 @@ describe('titleCatalog', () => {
     expect(titleCatalog(ctxFor([])).filter((t) => t.earned)).toEqual([])
   })
 
-  it('un evento perfecto da «Perfeccionista» pero no «Intocable»', () => {
+  it('un evento perfecto da «Perfeccionista» y tres, «Intocable»', () => {
     const earned = titleCatalog(ctxFor(event('a', Array(12).fill(1)))).filter((t) => t.earned).map((t) => t.id)
     expect(earned).toContain('perfectionist')
     expect(earned).not.toContain('untouchable')
+    const three = [...event('a', Array(12).fill(1)), ...event('b', Array(12).fill(1)), ...event('c', Array(12).fill(1))]
+    expect(titleCatalog(ctxFor(three)).find((t) => t.id === 'untouchable')?.earned).toBe(true)
   })
 
   it('«Dueño de pista» se genera por cada pista dominada', () => {

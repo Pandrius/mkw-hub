@@ -13,7 +13,7 @@ import { TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
-import { computeAchievements, ownedTracks } from '../lib/achievements'
+import { achievementTotals, computeAchievements, ownedTracks } from '../lib/achievements'
 import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import type { TimedResult } from '../lib/form'
@@ -131,6 +131,11 @@ type Owner = Pick<Profile, 'username' | 'avatar_url' | 'country_code' | 'feature
 
 type VerifyFilter = 'all' | 'verified'
 
+/** Baja suavemente hasta una sección de la página */
+function jumpTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 /** Cada cuánto como mucho se vuelve a pedir el Lounge al abrir las estadísticas propias */
 const LOUNGE_SYNC_KEY = 'mkwhub.loungeSync'
 const LOUNGE_SYNC_EVERY_MS = 5 * 60 * 1000
@@ -232,6 +237,7 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
     () => ({ achievements, badges, ownedTracks: ownedTracks(verifiedTimeline), lounge: loungeFactsOf(lounge?.account ?? null, lounge?.changes ?? []) }),
     [achievements, badges, verifiedTimeline, lounge],
   )
+  const totals = useMemo(() => achievementTotals(achievements), [achievements])
   const ownedFeatures = useMemo(() => featurable(achievements, badges), [achievements, badges])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
@@ -289,6 +295,17 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
           />
         </div>
       </div>
+
+      {!vsId && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => jumpTo('logros')} className="btn-yellow text-sm">
+            {t('stats.jumpAch', { done: totals.earned, total: totals.possible })}
+          </button>
+          <button type="button" onClick={() => jumpTo('lounge')} className="btn-line text-sm">
+            {t('stats.jumpLounge')}
+          </button>
+        </div>
+      )}
 
       {showcase && (
         <div className="flex flex-wrap items-center gap-4">

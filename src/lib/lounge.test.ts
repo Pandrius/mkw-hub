@@ -3,6 +3,7 @@ import {
   bestGroup,
   computeLoungeStats,
   eventScore,
+  findTableForChange,
   formatOf,
   matchLoungeEvents,
   matchWars,
@@ -256,5 +257,28 @@ describe('utilidades', () => {
   it('mmrSeries ordena por fecha', () => {
     const s = mmrSeries([change({ time: '2026-10-02T00:00:00Z', newMmr: 2 }), change({ time: '2026-10-01T00:00:00Z', newMmr: 1 })])
     expect(s.map((p) => p.mmr)).toEqual([1, 2])
+  })
+})
+
+describe('findTableForChange', () => {
+  const t = (id: number, verifiedOn: string, playerId: number, score: number): LoungeTable => ({
+    id,
+    createdOn: verifiedOn,
+    verifiedOn,
+    tier: 'C',
+    numTeams: 12,
+    numPlayers: 12,
+    teams: [{ rank: 1, scores: [{ score, playerId }] }],
+  })
+  const c = change({ time: '2026-10-14T01:59:59Z', score: 102 })
+
+  it('encuentra la mesa del jugador con esa puntuación verificada a la hora del cambio', () => {
+    const mine = t(5, '2026-10-14T01:59:50Z', 14073, 102)
+    const others = [t(6, '2026-10-14T01:59:50Z', 99, 102), t(7, '2026-10-14T01:59:50Z', 14073, 101), t(8, '2026-10-13T12:00:00Z', 14073, 102)]
+    expect(findTableForChange(c, 14073, [...others, mine])).toBe(mine)
+  })
+
+  it('devuelve null si no hay ninguna que cuadre', () => {
+    expect(findTableForChange(c, 14073, [t(6, '2026-10-14T01:59:50Z', 99, 102)])).toBeNull()
   })
 })

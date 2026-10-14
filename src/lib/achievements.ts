@@ -18,9 +18,10 @@ export type AchievementId =
   | 'domination'
   | 'podiumEverywhere'
   | 'winEverywhere'
+  | 'allAchievements'
 
 /** Dibujo de la medalla (ver Medal.tsx) */
-export type Glyph = 'crown' | 'podium' | 'flag' | 'chevrons' | 'bars' | 'ring' | 'bolt' | 'star'
+export type Glyph = 'crown' | 'podium' | 'flag' | 'chevrons' | 'bars' | 'ring' | 'bolt' | 'star' | 'trophy'
 
 export type Achievement = Progress & {
   id: AchievementId
@@ -29,6 +30,8 @@ export type Achievement = Progress & {
   thresholds: number[]
   /** Logro estrella: se muestra a todo ancho y con un diseño propio */
   epic: boolean
+  /** Se consigue una sola vez (sin niveles): al lograrlo es platino y el contador sigue subiendo */
+  single: boolean
 }
 
 /** Puntos de un evento completo a partir de los cuales cuenta como "gran evento" y como "evento legendario" */
@@ -44,7 +47,7 @@ export const REDEMPTION_FROM = 10
 
 const pointsOf = (position: number) => POINTS[position - 1] ?? 0
 
-type Def = { id: AchievementId; glyph: Glyph; epic?: boolean; thresholds: (totalTracks: number) => number[]; count: (rows: TimedResult[], totalTracks: number) => number }
+type Def = { id: AchievementId; glyph: Glyph; epic?: boolean; single?: boolean; thresholds: (totalTracks: number) => number[]; count: (rows: TimedResult[], totalTracks: number) => number }
 
 /** Eventos completos (12 carreras) con las posiciones del jugador en orden */
 function fullEvents(rows: TimedResult[]): number[][] {
@@ -67,7 +70,8 @@ const DEFS: Def[] = [
     id: 'perfectEvent',
     glyph: 'crown',
     epic: true,
-    thresholds: () => [1, 2, 3, 5],
+    single: true,
+    thresholds: () => [1],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= PERFECT_EVENT_POINTS).length,
   },
   { id: 'podiums', glyph: 'podium', thresholds: () => [25, 100, 300, 1000], count: (rows) => countWhere(rows, (r) => r.position <= 3) },
@@ -129,8 +133,41 @@ const DEFS: Def[] = [
  */
 export function computeAchievements(timeline: TimedResult[], totalTracks: number): Achievement[] {
   const rows = sortTimeline(timeline)
-  return DEFS.map((d) => {
+  const base = DEFS.map((d): Achievement => {
     const thresholds = d.thresholds(totalTracks)
-    return { id: d.id, glyph: d.glyph, epic: !!d.epic, thresholds, ...progressOf(d.count(rows, totalTracks), thresholds) }
+    const count = d.count(rows, totalTracks)
+    return {
+      id: d.id,
+      glyph: d.glyph,
+      epic: !!d.epic,
+      single: !!d.single,
+      thresholds,
+      ...(d.single ? singleProgress(count, thresholds[0]) : progressOf(count, thresholds)),
+    }
   })
+  // El logro supremo: tener todos los demás al máximo (los de varios niveles en platino)
+  const done = base.filter(isMaxed).length
+  return [...base, { id: 'allAchievements', glyph: 'trophy', epic: true, single: true, thresholds: [base.length], ...singleProgress(done, base.length) }]
+}
+
+/** Un logro de una sola vez: sin conseguir es 0 y al lograrlo cuenta como platino. El contador sigue subiendo */
+function singleProgress(count: number, threshold: number): Progress {
+  return count >= threshold ? { count, tier: 4, next: null } : { count, tier: 0, next: threshold }
+}
+
+/** Conseguido del todo: el logro único logrado, o un logro de niveles en platino */
+export const isMaxed = (a: Pick<Achievement, 'single' | 'tier'>) => (a.single ? a.tier > 0 : a.tier === 4)
+
+/**
+ * Totales de los logros (sin contar el supremo): niveles conseguidos de los posibles (los de varios niveles suman hasta 4 y los
+ * de una sola vez, 1) y cuántos están al máximo. Siguen subiendo aunque ya haya platino.
+ */
+export function achievementTotals(achievements: Achievement[]): { earned: number; possible: number; maxed: number; count: number } {
+  const regular = achievements.filter((a) => a.id !== 'allAchievements')
+  return {
+    earned: regular.reduce((n, a) => n + (a.single ? (a.tier > 0 ? 1 : 0) : a.tier), 0),
+    possible: regular.reduce((n, a) => n + (a.single ? 1 : 4), 0),
+    maxed: regular.filter(isMaxed).length,
+    count: regular.length,
+  }
 }

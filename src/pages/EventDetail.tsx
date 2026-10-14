@@ -28,6 +28,7 @@ import {
 } from '../lib/events'
 import { MAX_PENALTIES, type Penalty } from '../lib/penalties'
 import { requestLoungeSync } from '../lib/loungeApi'
+import { loungeTableImage } from '../lib/lounge'
 import { formatDate } from '../lib/time'
 import { VerifiedMark } from '../components/VerifiedMark'
 import { isVerified, verifiedBy } from '../lib/verify'
@@ -247,6 +248,19 @@ export default function EventDetail() {
           if (confirm(t('event.confirmDeleteRace', { n: race.race_no }))) act(() => deleteRace(event.id, race.race_no))
         }}
       />
+
+      {event.lounge_table_id && (
+        <section className="panel space-y-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-xl font-bold">{t(isWar ? "event.loungeTableWar" : "event.loungeTable")}</h2>
+            <a href={loungeTableImage(event.lounge_table_id)} target="_blank" rel="noreferrer" className="font-mono text-xs font-bold text-kart-yellow hover:underline">
+              {t("event.openImage")}
+            </a>
+          </div>
+          <p className="text-xs text-muted">{t("event.loungeTableHint")}</p>
+          <img src={loungeTableImage(event.lounge_table_id)} alt={t("event.loungeTable")} loading="lazy" className="max-w-full border border-line" />
+        </section>
+      )}
 
       {table && table.players.length > 0 && (
         <WarTableCard

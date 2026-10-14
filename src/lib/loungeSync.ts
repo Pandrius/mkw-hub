@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   eventScore,
+  findTableForChange,
   LOUNGE_API,
   LOUNGE_GAME,
   LOUNGE_RACES,
@@ -287,6 +288,51 @@ export async function verifyEvents(
   return result
 }
 
+/** Solo se buscan las mesas de los últimos días: la lista del Lounge pesa mucho y no admite filtrar por jugador */
+const TABLE_LINK_DAYS = 14
+
+/**
+ * Guarda la mesa del Lounge (para enseñar su imagen) de los eventos Lounge ya verificados que aún no la tienen: se busca la
+ * mesa del jugador con la misma puntuación verificada a la hora del cambio de MMR.
+ */
+export async function linkTables(admin: SupabaseClient, profileId: string, playerId: number, changes: LoungeChange[]): Promise<number> {
+  const { data: mine, error: e1 } = await admin.from('event_players').select('event_id').eq('profile_id', profileId)
+  if (e1) throw new Error(e1.message)
+  const ids = [...new Set((mine ?? []).map((p) => p.event_id as string))]
+  const byChange = new Map(changes.filter((c) => c.reason === 'Table').map((c) => [c.changeId, c]))
+  const limit = Date.now() - TABLE_LINK_DAYS * 24 * 3_600_000
+
+  const todo: { id: string; change: LoungeChange }[] = []
+  for (const part of chunks(ids, 100)) {
+    const { data, error } = await admin
+      .from('events')
+      .select('id, lounge_change_id')
+      .in('id', part)
+      .eq('kind', 'lounge')
+      .eq('status', 'finished')
+      .is('lounge_table_id', null)
+      .not('lounge_change_id', 'is', null)
+    if (error) throw new Error(error.message)
+    for (const e of data ?? []) {
+      const change = byChange.get(e.lounge_change_id as number)
+      if (change && Date.parse(change.time) >= limit) todo.push({ id: e.id as string, change })
+    }
+  }
+  if (todo.length === 0) return 0
+
+  const from = new Date(Math.min(...todo.map((x) => Date.parse(x.change.time))) - 2 * 3_600_000).toISOString()
+  const season = changes.at(-1)?.season
+  const tables = await loungeGet<LoungeTable[]>(`table/list?game=${LOUNGE_GAME}${season ? `&season=${season}` : ''}&from=${encodeURIComponent(from)}`)
+  let linked = 0
+  for (const { id, change } of todo) {
+    const table = findTableForChange(change, playerId, tables ?? [])
+    if (!table) continue
+    const { error } = await admin.from('events').update({ lounge_table_id: table.id }).eq('id', id).is('lounge_table_id', null)
+    if (!error) linked++
+  }
+  return linked
+}
+
 /** Minutos mínimos entre dos descargas del Lounge del mismo usuario */
 export const LOUNGE_RESYNC_MS = 60_000
 
@@ -301,6 +347,8 @@ export async function syncLounge(admin: SupabaseClient, profileId: string, disco
   }
   const changes = await syncAccount(admin, profileId, found)
   const verified = await verifyEvents(admin, profileId, changes, true)
+  // La imagen de la mesa es un extra: si falla, la verificación ya hecha se conserva
+  await linkTables(admin, profileId, found.playerId, changes).catch((err) => console.error('link tables', err))
   return { ok: true, linked: true, name: found.name, changes: changes.length, verified }
 }
 
@@ -324,7 +372,7 @@ export async function reverifyPending(
     .select('created_by')
     .eq('status', 'finished')
     .gte('created_at', since)
-    .or('and(kind.eq.lounge,lounge_change_id.is.null),and(kind.eq.war,lounge_table_id.is.null,opponent_confirmed.is.null)')
+    .or('and(kind.eq.lounge,lounge_change_id.is.null),and(kind.eq.lounge,lounge_table_id.is.null),and(kind.eq.war,lounge_table_id.is.null,opponent_confirmed.is.null)')
     .limit(2000)
   if (error) throw new Error(error.message)
   const creators = [...new Set((data ?? []).map((e) => e.created_by as string))].slice(0, maxUsers)

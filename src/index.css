@@ -187,3 +187,92 @@ input[data-position]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Logro supremo: marco de colores que gira, texto con destello, brillo que barre y estrellitas */
+@property --glam-a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes glam-spin {
+  to {
+    --glam-a: 360deg;
+  }
+}
+@keyframes glam-shine {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes glam-twinkle {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: scale(0.5) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(45deg);
+  }
+}
+@keyframes glam-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes glam-sweep {
+  from {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+.glam-frame {
+  background: conic-gradient(from var(--glam-a), #ffd500, #fff6b0, #28d7f5, #ffffff, #ff7ad9, #ffd500);
+  animation: glam-spin 5s linear infinite;
+}
+.glam-text {
+  background: linear-gradient(100deg, #ffb800 15%, #ffd500 30%, #ffffff 45%, #fff6b0 50%, #ffd500 62%, #ffb800 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: glam-shine 3.5s linear infinite;
+}
+.glam-bar {
+  background: linear-gradient(90deg, #ffb800, #fff6b0, #28d7f5, #ffb800);
+  background-size: 200% auto;
+  animation: glam-shine 3s linear infinite;
+}
+.glam-star {
+  animation: glam-twinkle 2.4s ease-in-out infinite;
+}
+.glam-float {
+  animation: glam-float 3.2s ease-in-out infinite;
+}
+.glam-sweep::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: glam-sweep 4.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glam-frame,
+  .glam-text,
+  .glam-bar,
+  .glam-star,
+  .glam-float,
+  .glam-sweep::before {
+    animation: none;
+  }
+}

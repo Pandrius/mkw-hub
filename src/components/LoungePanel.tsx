@@ -33,7 +33,7 @@ export function LoungePanel({ data, isMe }: { data: LoungeData | null; isMe: boo
 
   if (!data) {
     return (
-      <section>
+      <section id="lounge" className="scroll-mt-24">
         <SectionTitle title={t('lg.title')} />
         <div className="panel p-5 text-sm text-muted">{isMe ? t('lg.noneMine') : t('lg.none')}</div>
       </section>
@@ -46,7 +46,7 @@ export function LoungePanel({ data, isMe }: { data: LoungeData | null; isMe: boo
   const date = (iso: string) => new Date(iso).toLocaleDateString(locale, { dateStyle: 'medium' })
 
   return (
-    <section className="space-y-4">
+    <section id="lounge" className="scroll-mt-24 space-y-4">
       <SectionTitle title={t('lg.title')} hint={t('lg.hint')}>
         <p className="flex items-center gap-2 font-mono text-xs text-muted">
           <Flag code={account.countryCode} locale={locale} />

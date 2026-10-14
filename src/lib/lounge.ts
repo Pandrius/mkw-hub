@@ -165,10 +165,36 @@ export function matchLoungeEvents(
 export type LoungeTable = {
   id: number
   createdOn: string
+  verifiedOn?: string | null
   tier: string | null
   numTeams: number
   numPlayers: number
-  teams: { rank: number; scores: { score: number }[] }[]
+  teams: { rank: number; scores: { score: number; playerId?: number }[] }[]
+}
+
+/** Imagen oficial de una mesa del Lounge */
+export const loungeTableImage = (tableId: number) => `https://lounge.mkcentral.com/TableImage/${tableId}.png`
+
+/** Margen entre la hora del cambio de MMR y la verificación de la mesa */
+const TABLE_CHANGE_TOLERANCE_MS = 10 * MIN
+
+/**
+ * La mesa de la que salió un cambio de MMR: la que tiene al jugador con esa misma puntuación y se verificó a la hora del
+ * cambio (el MMR se aplica al verificar la mesa).
+ */
+export function findTableForChange(change: LoungeChange, playerId: number, tables: LoungeTable[]): LoungeTable | null {
+  const at = Date.parse(change.time)
+  let best: LoungeTable | null = null
+  let bestDist = Infinity
+  for (const t of tables) {
+    if (!t.teams.some((tm) => tm.scores.some((s) => s.playerId === playerId && s.score === change.score))) continue
+    const dist = Math.abs(Date.parse(t.verifiedOn ?? t.createdOn) - at)
+    if (dist <= TABLE_CHANGE_TOLERANCE_MS && dist < bestDist) {
+      best = t
+      bestDist = dist
+    }
+  }
+  return best
 }
 
 export type WarCandidate = {
