@@ -116,16 +116,16 @@ describe('niveles ajustados y esmeralda', () => {
   it('umbrales de cada logro', () => {
     expect(thresholds('podiums')).toEqual([50, 300, 750, 1250, 2000])
     expect(thresholds('top6')).toEqual([50, 250, 750, 1500, 2500])
-    expect(thresholds('cleanEvent')).toEqual([1, 3, 5, 7])
-    expect(thresholds('bigEvent')).toEqual([1, 5, 15, 30])
+    expect(thresholds('cleanEvent')).toEqual([1, 3, 5, 7, 10])
+    expect(thresholds('bigEvent')).toEqual([1, 5, 10, 20, 30])
     expect(thresholds('redemption')).toEqual([3, 10, 30, 60, 100])
   })
 
-  it('el evento legendario es de una sola vez y platino', () => {
+  it('el evento legendario es de una sola vez y sale directamente en esmeralda', () => {
     const a = get(event('a', Array(12).fill(2)), 'legendEvent') // 12 × 12 = 144 < 150
     expect(a).toMatchObject({ single: true, tier: 0 })
     const b = get(event('a', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5]), 'legendEvent') // 165 puntos
-    expect(b).toMatchObject({ single: true, tier: 4, count: 1 })
+    expect(b).toMatchObject({ single: true, tier: 5, count: 1 })
   })
 
   it('con cinco niveles el último es esmeralda', () => {

@@ -247,16 +247,16 @@ export function MedalCard({
   const previous = tier > 0 ? thresholds[tier - 1] : 0
   const pct = single ? (tier > 0 ? 100 : 0) : next ? Math.max(0, Math.min(100, Math.round(((count - previous) / (next - previous)) * 100))) : 100
   const accent = TIER_COLOR[tier]
-  const nextColor = single ? TIER_COLOR[4] : TIER_COLOR[Math.min(levels, tier + 1) as Tier]
+  const nextColor = single ? TIER_COLOR[tier || 4] : TIER_COLOR[Math.min(levels, tier + 1) as Tier]
   const tooltip = single ? undefined : thresholds.map((n, i) => `${t(tierLabel((i + 1) as Tier))}: ${n}`).join('  ·  ')
 
   return (
     <div
       className="panel relative flex gap-4 overflow-hidden p-4"
-      style={tier === levels ? { borderColor: accent } : undefined}
+      style={single ? (tier > 0 ? { borderColor: accent } : undefined) : tier === levels ? { borderColor: accent } : undefined}
       title={tooltip}
     >
-      {tier === levels && <div className="hazard absolute inset-x-0 top-0 h-1" />}
+      {(single ? tier > 0 : tier === levels) && <div className="hazard absolute inset-x-0 top-0 h-1" />}
       <MedalIcon glyph={glyph} tier={tier} single={single} levels={levels} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">

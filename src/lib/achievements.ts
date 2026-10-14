@@ -79,11 +79,11 @@ const DEFS: Def[] = [
   { id: 'top6', glyph: 'chevrons', thresholds: () => [50, 250, 750, 1500, 2500], count: (rows) => countWhere(rows, (r) => r.position <= 6) },
   { id: 'winStreak', glyph: 'bolt', thresholds: () => [2, 3, 5, 8], count: (rows) => streakOf(rows, (r) => r.position === 1).best },
   { id: 'top6Streak', glyph: 'bars', thresholds: () => [5, 10, 25, 50], count: (rows) => streakOf(rows, (r) => r.position <= 6).best },
-  { id: 'cleanEvent', glyph: 'flag', thresholds: () => [1, 3, 5, 7], count: (rows) => fullEvents(rows).filter((ps) => ps.every((p) => p <= 6)).length },
+  { id: 'cleanEvent', glyph: 'flag', thresholds: () => [1, 3, 5, 7, 10], count: (rows) => fullEvents(rows).filter((ps) => ps.every((p) => p <= 6)).length },
   {
     id: 'bigEvent',
     glyph: 'flag',
-    thresholds: () => [1, 5, 15, 30],
+    thresholds: () => [1, 5, 10, 20, 30],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= BIG_EVENT_POINTS).length,
   },
   {
@@ -143,7 +143,7 @@ export function computeAchievements(timeline: TimedResult[], totalTracks: number
       epic: !!d.epic,
       single: !!d.single,
       thresholds,
-      ...(d.single ? singleProgress(count, thresholds[0]) : progressOf(count, thresholds)),
+      ...(d.single ? singleProgress(count, thresholds[0], singleTierOf(d.id)) : progressOf(count, thresholds)),
     }
   })
   // El logro supremo: tener todos los demás al máximo (los de varios niveles en platino)
@@ -152,9 +152,12 @@ export function computeAchievements(timeline: TimedResult[], totalTracks: number
 }
 
 /** Un logro de una sola vez: sin conseguir es 0 y al lograrlo cuenta como platino. El contador sigue subiendo */
-function singleProgress(count: number, threshold: number): Progress {
-  return count >= threshold ? { count, tier: 4, next: null } : { count, tier: 0, next: threshold }
+function singleProgress(count: number, threshold: number, tier: Tier = 4): Progress {
+  return count >= threshold ? { count, tier, next: null } : { count, tier: 0, next: threshold }
 }
+
+/** Nivel con el que se enseña un logro de una sola vez: el evento legendario sale directamente en esmeralda; los demás, en platino */
+export const singleTierOf = (id: AchievementId): Tier => (id === 'legendEvent' ? 5 : 4)
 
 /** Conseguido del todo: el logro único logrado, o un logro de niveles en platino */
 export const isMaxed = (a: Pick<Achievement, 'single' | 'tier' | 'thresholds'>) => (a.single ? a.tier > 0 : a.tier === a.thresholds.length)
@@ -182,7 +185,7 @@ export function demoAchievements(real: Achievement[]): Achievement[] {
     .filter((a) => a.id !== 'allAchievements')
     .map((a): Achievement => {
       const last = a.thresholds[a.thresholds.length - 1]
-      return { ...a, tier: (a.single ? 4 : a.thresholds.length) as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
+      return { ...a, tier: (a.single ? singleTierOf(a.id) : a.thresholds.length) as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
     })
   const grand = real.find((a) => a.id === 'allAchievements')
   return grand ? [...regular, { ...grand, tier: 4 as Tier, next: null, count: regular.length }] : regular
