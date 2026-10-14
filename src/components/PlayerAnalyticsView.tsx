@@ -82,7 +82,7 @@ export function PlayerAnalyticsView({ a, showSplit }: { a: PlayerAnalytics; show
         </div>
       </section>
 
-      <TrackTable tracks={a.tracks} />
+      <TrackTable tracks={a.tracks} overall={a.avgPoints} />
     </div>
   )
 }
@@ -211,7 +211,7 @@ function KeyTracks({ title, tracks }: { title: string; tracks: PlayerTrack[] }) 
   )
 }
 
-function TrackTable({ tracks }: { tracks: PlayerTrack[] }) {
+function TrackTable({ tracks, overall }: { tracks: PlayerTrack[]; overall: number }) {
   const { t } = useI18n()
   const num = useNum()
   const [search, setSearch] = useState('')
@@ -267,7 +267,16 @@ function TrackTable({ tracks }: { tracks: PlayerTrack[] }) {
                   <td className="px-3 py-2 text-right font-mono">
                     <Signed value={tr.delta} digits={2} />
                   </td>
-                  <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
+                  <td
+                    className="px-3 py-2 text-right font-mono whitespace-nowrap"
+                    title={t('an.adjCalc', {
+                      races: tr.races,
+                      avg: num(tr.avgPoints, 2),
+                      prior: TRACK_PRIOR,
+                      overall: num(overall, 2),
+                      adj: num(tr.adjPoints, 2),
+                    })}
+                  >
                     {num(tr.adjPoints, 2)}
                     <Confidence level={tr.confidence} />
                   </td>

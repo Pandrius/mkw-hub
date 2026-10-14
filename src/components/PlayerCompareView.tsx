@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { MIN_TRACK_RACES, type PlayerAnalytics } from '../lib/playerAnalytics'
+import { MIN_TRACK_RACES, TRACK_PRIOR, type PlayerAnalytics } from '../lib/playerAnalytics'
 import { comparePlayers, DUEL_TIE, type TrackDuel } from '../lib/playerCompare'
 import { PHASES } from '../lib/statMath'
 import { SectionTitle, Signed, Th, TrackName } from './StatBlocks'
@@ -109,7 +109,7 @@ export function PlayerCompareView({ a, b, nameA, nameB }: { a: PlayerAnalytics; 
                   <Th right={false}>{t('stats.colTrack')}</Th>
                   <Th>{nameA}</Th>
                   <Th>{nameB}</Th>
-                  <Th hint={t('cmp.diffHint')}>{t('cmp.diff')}</Th>
+                  <Th hint={t('cmp.diffHint', { races: 'n', prior: TRACK_PRIOR })}>{t('cmp.diff')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -120,7 +120,7 @@ export function PlayerCompareView({ a, b, nameA, nameB }: { a: PlayerAnalytics; 
                     </td>
                     <Cell value={num(d.aPoints, 2)} sub={`×${d.aRaces}`} win={d.diff >= DUEL_TIE} />
                     <Cell value={num(d.bPoints, 2)} sub={`×${d.bRaces}`} win={d.diff <= -DUEL_TIE} />
-                    <td className="px-3 py-2 text-right font-mono">
+                    <td className="px-3 py-2 text-right font-mono" title={t('cmp.diffTip', { aAdj: num(d.aAdj, 2), bAdj: num(d.bAdj, 2) })}>
                       <Signed value={d.diff} digits={2} />
                     </td>
                   </tr>
@@ -169,7 +169,17 @@ function DuelList({ title, duels }: { title: string; duels: TrackDuel[] }) {
       ) : (
         <ol className="mt-3 space-y-2">
           {duels.map((d) => (
-            <li key={d.trackId} className="flex items-center justify-between gap-3">
+            <li
+              key={d.trackId}
+              className="flex items-center justify-between gap-3"
+              title={t('cmp.duelTip', {
+                a: num(d.aPoints, 2),
+                b: num(d.bPoints, 2),
+                aAdj: num(d.aAdj, 2),
+                bAdj: num(d.bAdj, 2),
+                diff: num(Math.abs(d.diff), 2),
+              })}
+            >
               <TrackName trackId={d.trackId} />
               <span className="shrink-0 text-right font-mono text-sm">
                 <Signed value={d.diff} digits={2} className="font-bold" />
