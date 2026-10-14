@@ -11,6 +11,8 @@ function event(id: string, date: string, positions: number[], kind: 'war' | 'lou
     raceNo: i + 1,
     date,
     racers: kind === 'war' ? 12 : null,
+
+    verified: true,
   }))
 }
 

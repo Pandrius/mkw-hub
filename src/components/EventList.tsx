@@ -4,6 +4,7 @@ import { useI18n } from '../i18n'
 import { listEventsFor, type GameEvent } from '../lib/events'
 import { formatDate } from '../lib/time'
 import { EmptyState } from './ui'
+import { VerifiedMark } from './VerifiedMark'
 
 /** Eventos de un jugador: primero los abiertos, luego los finalizados */
 export default function EventList({ profileId }: { profileId: string }) {
@@ -44,7 +45,8 @@ export default function EventList({ profileId }: { profileId: string }) {
               {e.kind === 'war' ? `${e.team_tag ?? '?'} ${t('event.vs')} ${e.opponent_tag ?? '?'}` : 'Lounge'}
             </span>
             <span className="text-sm text-muted">{t('event.racesCount', { n: e.races })}</span>
-            <span className="text-sm text-muted">{formatDate(e.created_at, locale)}</span>
+            {e.status === 'finished' && <VerifiedMark event={e} tier={e.lounge_tier} />}
+            <span className="text-sm text-muted">{formatDate(e.played_at ?? e.created_at, locale)}</span>
             <span className={`text-xs font-bold uppercase ${e.status === 'open' ? 'text-kart-yellow' : 'text-muted'}`}>
               {t(e.status === 'open' ? 'event.open' : 'event.finished')}
             </span>

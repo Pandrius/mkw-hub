@@ -16,6 +16,9 @@ export type Profile = {
   country_code: string | null
   mkc_player_id: number | null
   mkc_synced_at: string | null
+  /** Insignias destacadas (`ach:wins`, `badge:races`, `track:lc`…) y título del perfil */
+  featured_badges?: string[]
+  title_id?: string | null
 }
 
 /** Cada cuánto se vuelve a consultar MKC (país y equipos) al iniciar sesión */

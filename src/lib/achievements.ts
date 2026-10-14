@@ -1,7 +1,7 @@
-import { progressOf, type Progress } from './badges'
-import { sortTimeline, streakOf, type TimedResult } from './form'
-import { POINTS } from './scoring'
-import { mean, RACES_PER_WAR } from './statMath'
+import { progressOf, type Progress } from './badges.js'
+import { sortTimeline, streakOf, type TimedResult } from './form.js'
+import { POINTS } from './scoring.js'
+import { mean, RACES_PER_WAR } from './statMath.js'
 
 export type AchievementId =
   | 'perfectEvent'
@@ -53,6 +53,13 @@ function fullEvents(rows: TimedResult[]): number[][] {
   return [...byEvent.values()].filter((rs) => rs.length >= RACES_PER_WAR).map((rs) => rs.map((r) => r.position))
 }
 
+/** Pistas "dominadas": con suficientes carreras y una posición media muy buena (dan derecho al título «Dueño de …») */
+export function ownedTracks(rows: TimedResult[]): string[] {
+  const byTrack = new Map<string, number[]>()
+  for (const r of rows) byTrack.set(r.trackId, [...(byTrack.get(r.trackId) ?? []), r.position])
+  return [...byTrack].filter(([, ps]) => ps.length >= DOMINATION_RACES && mean(ps) <= DOMINATION_AVG_POS).map(([id]) => id)
+}
+
 const countWhere = (rows: TimedResult[], test: (r: TimedResult) => boolean) => rows.filter(test).length
 
 const DEFS: Def[] = [
@@ -100,11 +107,7 @@ const DEFS: Def[] = [
     id: 'domination',
     glyph: 'ring',
     thresholds: () => [1, 3, 6, 12],
-    count: (rows) => {
-      const byTrack = new Map<string, number[]>()
-      for (const r of rows) byTrack.set(r.trackId, [...(byTrack.get(r.trackId) ?? []), r.position])
-      return [...byTrack.values()].filter((ps) => ps.length >= DOMINATION_RACES && mean(ps) <= DOMINATION_AVG_POS).length
-    },
+    count: (rows) => ownedTracks(rows).length,
   },
   {
     id: 'podiumEverywhere',

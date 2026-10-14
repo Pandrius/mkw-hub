@@ -64,6 +64,9 @@
   "functions": {
     "api/sync.ts": {
       "maxDuration": 60
+    },
+    "api/lounge.ts": {
+      "maxDuration": 30
     }
   }
 }

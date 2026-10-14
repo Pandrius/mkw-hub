@@ -10,6 +10,8 @@ const race = (eventId: string, trackId: string): TimedResult => ({
   raceNo: 1,
   date: '2026-10-01T10:00:00Z',
   racers: 12,
+
+  verified: true,
 })
 
 describe('progressOf', () => {

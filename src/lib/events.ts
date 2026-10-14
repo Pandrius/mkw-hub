@@ -27,6 +27,14 @@ export type GameEvent = {
   created_by: string
   created_at: string
   finished_at: string | null
+  /** Hora (en punto) a la que se jugó; null en los eventos antiguos */
+  played_at?: string | null
+  /** Cambio de MMR del Lounge que respalda este evento (lounge) */
+  lounge_change_id?: number | null
+  /** Mesa SQ 6v6 del Lounge que respalda esta war */
+  lounge_table_id?: number | null
+  lounge_tier?: string | null
+  verified_at?: string | null
 }
 
 export type EventPlayer = { id: number; event_id: string; name: string; profile_id: string | null }
@@ -69,6 +77,8 @@ export type CreateEventInput = {
   opponentTeamId?: number | null
   opponentName?: string | null
   opponentPlayers?: string[] | null
+  /** Hora (ISO) a la que se jugó; sin ella, la hora actual */
+  playedAt?: string | null
 }
 
 export function createEvent(input: CreateEventInput): Promise<string> {
@@ -82,6 +92,7 @@ export function createEvent(input: CreateEventInput): Promise<string> {
     opponent_team_id: input.opponentTeamId ?? null,
     opponent_name: input.opponentName ?? null,
     opponent_players: input.opponentPlayers ?? null,
+    played_at: input.playedAt ?? null,
   })
 }
 
@@ -219,13 +230,13 @@ export async function listEventsFor(profileId: string): Promise<(GameEvent & { r
   })
 }
 
-export type PlayerResult = { kind: EventKind; event_id: string; track_id: string; position: number; racers: number | null }
+export type PlayerResult = { kind: EventKind; event_id: string; track_id: string; position: number; racers: number | null; verified?: boolean }
 
 /** Resultados de eventos finalizados de un jugador (para estadísticas) */
 export async function getPlayerResults(profileId: string): Promise<PlayerResult[]> {
   const { data, error } = await client()
     .from('player_results')
-    .select('kind, event_id, track_id, position, racers')
+    .select('kind, event_id, track_id, position, racers, verified')
     .eq('profile_id', profileId)
     .limit(10000)
   if (error) throw error

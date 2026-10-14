@@ -4,7 +4,7 @@ import type { TimedResult } from './form'
 
 /** Un evento de 12 carreras (o las que se indiquen) con las posiciones dadas */
 function event(id: string, positions: number[], track = (i: number) => `t${i}`, date = '2026-10-01T10:00:00Z'): TimedResult[] {
-  return positions.map((position, i) => ({ eventId: id, kind: 'war', trackId: track(i), position, raceNo: i + 1, date, racers: 12 }))
+  return positions.map((position, i) => ({ eventId: id, kind: 'war', trackId: track(i), position, raceNo: i + 1, date, racers: 12, verified: true }))
 }
 
 const get = (rows: TimedResult[], id: AchievementId, total = 40) => computeAchievements(rows, total).find((a) => a.id === id)!

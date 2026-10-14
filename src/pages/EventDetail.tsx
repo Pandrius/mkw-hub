@@ -27,7 +27,10 @@ import {
   type GameEvent,
 } from '../lib/events'
 import { MAX_PENALTIES, type Penalty } from '../lib/penalties'
+import { requestLoungeSync } from '../lib/loungeApi'
 import { formatDate } from '../lib/time'
+import { VerifiedMark } from '../components/VerifiedMark'
+import { isVerified } from '../lib/verify'
 import { buildWarTable, lorenziEditorUrl, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
@@ -38,6 +41,7 @@ export default function EventDetail() {
   const [detail, setDetail] = useState<Detail | null | undefined>(undefined)
   const [editing, setEditing] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
 
   const reload = useCallback(async () => {
     setDetail(await getEvent(eventId))
@@ -84,7 +88,21 @@ export default function EventDetail() {
   const finish = () => {
     const msg =
       races.length < RACES_PER_EVENT ? t('event.confirmFinishIncomplete', { n: races.length }) : t('event.confirmFinish')
-    if (confirm(msg)) act(() => finishEvent(event.id))
+    if (!confirm(msg)) return
+    act(async () => {
+      await finishEvent(event.id)
+      // El servidor comprueba el evento con el Lounge; si ya hay una mesa que coincida, queda verificado
+      void requestLoungeSync().then(async (r) => {
+        if (r && !r.skipped) await reload()
+      })
+    })
+  }
+
+  const recheck = async () => {
+    setChecking(true)
+    await requestLoungeSync()
+    await reload()
+    setChecking(false)
   }
 
   const remove = async () => {
@@ -116,7 +134,17 @@ export default function EventDetail() {
             <span className={`text-xs font-bold uppercase ${isOpen ? 'text-kart-yellow' : 'text-muted'}`}>
               {t(isOpen ? 'event.open' : 'event.finished')}
             </span>
-            <span className="text-muted">{formatDate(event.created_at, locale)}</span>
+            <span className="text-muted">
+              {event.played_at
+                ? new Date(event.played_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
+                : formatDate(event.created_at, locale)}
+            </span>
+            {!isOpen && <VerifiedMark event={event} tier={event.lounge_tier} />}
+            {!isOpen && !isVerified(event) && profile?.id === event.created_by && (
+              <button type="button" onClick={recheck} disabled={checking} className="font-mono text-xs font-bold text-kart-yellow hover:underline disabled:opacity-60">
+                {checking ? t('ver.checking') : t('ver.recheck')}
+              </button>
+            )}
           </p>
           <h1 className="mt-1 font-display text-3xl font-black sm:text-4xl">
             {isWar ? (

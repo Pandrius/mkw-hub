@@ -1,4 +1,4 @@
-import type { TimedResult } from './form'
+import type { TimedResult } from './form.js'
 
 /** 0 = sin insignia; 1 bronce, 2 plata, 3 oro, 4 platino */
 export type Tier = 0 | 1 | 2 | 3 | 4

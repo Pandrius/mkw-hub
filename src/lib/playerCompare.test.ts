@@ -15,6 +15,8 @@ function runs(player: string, tracks: Record<string, number[]>): TimedResult[] {
       raceNo: (n++ % 12) + 1,
       date: `2026-10-${String(10 + Math.floor(n / 12)).padStart(2, '0')}T10:00:00Z`,
       racers: 12,
+
+      verified: true,
     })),
   )
 }

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import PlayerInput from '../components/PlayerInput'
+import { PlayedAtPicker } from '../components/PlayedAtPicker'
 import { SearchBox } from '../components/SearchBox'
 import { EmptyState, PageHeader, Plate, Tabs } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, teamsOf, type Entity, type TeamWithMembers } from '../lib/compare'
 import { createEvent, type EventKind } from '../lib/events'
+import { currentHour } from '../lib/playedAt'
 
 export default function NewEvent() {
   const { t } = useI18n()
@@ -32,6 +34,7 @@ export default function NewEvent() {
   const [players, setPlayers] = useState<string[]>(() => Array(6).fill(''))
   const [opponentPlayers, setOpponentPlayers] = useState<string[]>(() => Array(6).fill(''))
   const [ingame, setIngame] = useState('')
+  const [playedAt, setPlayedAt] = useState(() => currentHour().toISOString())
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -130,6 +133,7 @@ export default function NewEvent() {
         opponentTeamId: kind === 'war' ? selectedOpponentTeam?.id ?? null : null,
         opponentName: kind === 'war' ? opponentName.trim() || null : null,
         opponentPlayers: cleanOpponentPlayers,
+        playedAt,
       })
       navigate(`/eventos/${id}`)
     } catch (err) {
@@ -336,6 +340,8 @@ export default function NewEvent() {
             />
           </label>
         )}
+
+        <PlayedAtPicker value={playedAt} onChange={setPlayedAt} />
 
         {error && <p className="text-sm text-kart-red">{error}</p>}
         <button
