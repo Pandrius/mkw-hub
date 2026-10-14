@@ -12,6 +12,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { MKWRS_CSV_URL, parseWorldRecords } from '../src/lib/mkwrs.js'
+import { reverifyPending } from '../src/lib/loungeSync.js'
 import { syncAllRegisteredUsersMkc } from '../src/lib/mkc.js'
 
 const CHUNK_SIZE = 500
@@ -158,9 +159,18 @@ export async function GET(request: Request): Promise<Response> {
     console.error('Error verificando rosters de usuarios:', err)
   }
 
+  // Reintenta la verificación con el Lounge de los eventos que quedaron pendientes
+  let loungeStats = { users: 0, lounge: 0, wars: 0, errors: 0 }
+  try {
+    loungeStats = await reverifyPending(supabase)
+  } catch (err) {
+    console.error('Error reverificando eventos con el Lounge:', err)
+  }
+
   return Response.json({
     ok: true,
     syncedAt: startedAt,
+    loungeVerified: loungeStats,
     worldRecords: records.length,
     tracks,
     removed: count ?? 0,

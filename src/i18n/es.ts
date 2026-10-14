@@ -909,6 +909,8 @@ export const es = {
   'rk.inSite': 'Ver sus estadísticas en MKW Hub',
   'rk.more': 'Ver más',
   'rk.shown': '{n} de {total}',
+  'ver.noteOk': 'Evento finalizado y verificado: coincide con una mesa del Lounge.',
+  'ver.notePending': 'Evento finalizado. Todavía no hay una mesa del Lounge que coincida: las mesas tardan un rato en verificarse. Se volverá a comprobar al abrir tus estadísticas y cada día.',
 } as const
 
 export type MessageKey = keyof typeof es

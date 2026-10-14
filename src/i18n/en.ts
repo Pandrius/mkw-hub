@@ -910,4 +910,6 @@ export const en: Record<MessageKey, string> = {
   'rk.inSite': 'See their stats on MKW Hub',
   'rk.more': 'Show more',
   'rk.shown': '{n} of {total}',
+  'ver.noteOk': 'Event finished and verified: it matches a Lounge table.',
+  'ver.notePending': 'Event finished. There is no matching Lounge table yet: tables take a while to get verified. It will be checked again when you open your stats and every day.',
 }

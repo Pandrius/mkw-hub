@@ -30,7 +30,7 @@ import { MAX_PENALTIES, type Penalty } from '../lib/penalties'
 import { requestLoungeSync } from '../lib/loungeApi'
 import { formatDate } from '../lib/time'
 import { VerifiedMark } from '../components/VerifiedMark'
-import { isVerified } from '../lib/verify'
+import { isVerified, verifiedBy } from '../lib/verify'
 import { buildWarTable, lorenziEditorUrl, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
@@ -42,6 +42,8 @@ export default function EventDetail() {
   const [editing, setEditing] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  /** Resultado de comprobar el evento recién finalizado con el Lounge */
+  const [verifyNote, setVerifyNote] = useState<'ok' | 'pending' | null>(null)
 
   const reload = useCallback(async () => {
     setDetail(await getEvent(eventId))
@@ -92,9 +94,13 @@ export default function EventDetail() {
     act(async () => {
       await finishEvent(event.id)
       // El servidor comprueba el evento con el Lounge; si ya hay una mesa que coincida, queda verificado
-      void requestLoungeSync().then(async (r) => {
-        if (r && !r.skipped) await reload()
-      })
+      const r = await requestLoungeSync()
+      const fresh = await getEvent(event.id)
+      if (fresh) {
+        setDetail(fresh)
+        // Verificado de verdad (Lounge, SQ o rival), no solo por ser un perfil de confianza
+        if (r) setVerifyNote(!isVerified(fresh.event) || verifiedBy(fresh.event) === 'trusted' ? 'pending' : 'ok')
+      }
     })
   }
 
@@ -120,6 +126,18 @@ export default function EventDetail() {
       <Link to="/estadisticas" className="text-sm text-muted hover:text-ink">
         ← {t('nav.stats')}
       </Link>
+
+      {verifyNote && (
+        <div
+          role="status"
+          className={`flex flex-wrap items-center justify-between gap-3 border-l-4 px-4 py-3 text-sm ${verifyNote === 'ok' ? 'border-kart-green bg-kart-green/10' : 'border-kart-yellow bg-surface'}`}
+        >
+          <span>{t(verifyNote === 'ok' ? 'ver.noteOk' : 'ver.notePending')}</span>
+          <button type="button" onClick={() => setVerifyNote(null)} className="font-mono text-xs font-bold text-muted hover:text-ink">
+            ✕
+          </button>
+        </div>
+      )}
 
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>

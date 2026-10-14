@@ -303,3 +303,47 @@ export async function syncLounge(admin: SupabaseClient, profileId: string, disco
   const verified = await verifyEvents(admin, profileId, changes, true)
   return { ok: true, linked: true, name: found.name, changes: changes.length, verified }
 }
+
+/** Eventos de los últimos días que se siguen buscando en el Lounge (más allá, se da por no verificable) */
+const PENDING_DAYS = 30
+
+/**
+ * Reintenta la verificación de los eventos que quedaron pendientes (la mesa del Lounge tarda en verificarse y puede aparecer
+ * después de subir el evento). Lo llama el cron diario. Procesa como mucho `maxUsers` creadores y para al llegar a `budgetMs`.
+ */
+export async function reverifyPending(
+  admin: SupabaseClient,
+  opts: { maxUsers?: number; budgetMs?: number } = {},
+): Promise<{ users: number; lounge: number; wars: number; errors: number }> {
+  const { maxUsers = 25, budgetMs = 40_000 } = opts
+  const started = Date.now()
+  const out = { users: 0, lounge: 0, wars: 0, errors: 0 }
+  const since = new Date(Date.now() - PENDING_DAYS * 24 * 3_600_000).toISOString()
+  const { data, error } = await admin
+    .from('events')
+    .select('created_by')
+    .eq('status', 'finished')
+    .gte('created_at', since)
+    .or('and(kind.eq.lounge,lounge_change_id.is.null),and(kind.eq.war,lounge_table_id.is.null,opponent_confirmed.is.null)')
+    .limit(2000)
+  if (error) throw new Error(error.message)
+  const creators = [...new Set((data ?? []).map((e) => e.created_by as string))].slice(0, maxUsers)
+
+  for (const id of creators) {
+    if (Date.now() - started > budgetMs) break
+    try {
+      const { data: auth } = await admin.auth.admin.getUserById(id)
+      const identity = auth.user?.identities?.find((i) => i.provider === 'discord')
+      const discordId = (identity?.identity_data?.provider_id as string | undefined) || (identity?.identity_data?.sub as string | undefined)
+      if (!discordId) continue
+      const r = await syncLounge(admin, id, discordId)
+      out.users++
+      out.lounge += r.verified.lounge
+      out.wars += r.verified.wars
+    } catch (err) {
+      console.error('reverify', id, err)
+      out.errors++
+    }
+  }
+  return out
+}
