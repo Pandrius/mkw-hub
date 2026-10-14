@@ -1,30 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import EventList from '../components/EventList'
 import { PlayerAnalyticsView } from '../components/PlayerAnalyticsView'
+import { PlayerCompareView } from '../components/PlayerCompareView'
 import { SearchBox, type Suggestion } from '../components/SearchBox'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
+import { WelcomeGuide } from '../components/WelcomeGuide'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
+import { listEventsFor } from '../lib/events'
 import { getPlayerTimeline, type TimedResult } from '../lib/form'
+import { isGuideHidden } from '../lib/guideStore'
 import { computePlayerAnalytics } from '../lib/playerAnalytics'
 import type { StatsFilter } from '../lib/stats'
 import { rankHits, REMOTE_MIN_LENGTH, sanitizeTerm, searchRemote, type SearchHit } from '../lib/search'
 import { supabase } from '../lib/supabase'
 
-export default function Stats() {
-  const { t, locale } = useI18n()
-  const { profile, loading, enabled, signIn } = useAuth()
-  const { profileId } = useParams()
-  const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [notFound, setNotFound] = useState(false)
+/** Sugerencias de jugadores mientras se escribe (con espera, cancelando la consulta anterior) */
+function usePlayerSuggestions(search: string): Suggestion[] {
+  const { locale } = useI18n()
   const [playerHits, setPlayerHits] = useState<SearchHit[]>([])
-
-  const targetId = profileId ?? profile?.id
-
-  // Sugerencias de jugadores mientras se escribe (con espera, cancelando la consulta anterior)
   const term = sanitizeTerm(search)
   useEffect(() => {
     if (term.length < REMOTE_MIN_LENGTH) return
@@ -41,7 +37,7 @@ export default function Stats() {
     }
   }, [term])
   // rankHits descarta los resultados de una consulta anterior que ya no coinciden
-  const playerSuggestions = useMemo(
+  return useMemo(
     () =>
       term.length < REMOTE_MIN_LENGTH
         ? []
@@ -50,6 +46,21 @@ export default function Stats() {
           ),
     [term, search, playerHits, locale],
   )
+}
+
+export default function Stats() {
+  const { t } = useI18n()
+  const { profile, loading, enabled, signIn } = useAuth()
+  const { profileId } = useParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [notFound, setNotFound] = useState(false)
+  const playerSuggestions = usePlayerSuggestions(search)
+
+  const targetId = profileId ?? profile?.id
+  const vsParam = params.get('vs')
+  const vsId = vsParam && vsParam !== targetId ? vsParam : null
 
   const findPlayer = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,19 +112,27 @@ export default function Stats() {
           )}
         </EmptyState>
       ) : (
-        <PlayerStats key={targetId} profileId={targetId} isMe={targetId === profile?.id} />
+        <PlayerStats key={`${targetId}|${vsId ?? ''}`} profileId={targetId} isMe={targetId === profile?.id} meId={profile?.id ?? null} vsId={vsId} />
       )}
     </>
   )
 }
 
-function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) {
+type Owner = Pick<Profile, 'username' | 'avatar_url' | 'country_code'>
+
+function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null }) {
   const { t, locale } = useI18n()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<StatsFilter>('all')
-  const [owner, setOwner] = useState<Pick<Profile, 'username' | 'avatar_url' | 'country_code'> | null>(null)
+  const [owner, setOwner] = useState<Owner | null>(null)
   const [teams, setTeams] = useState<Entity[]>([])
   const [timeline, setTimeline] = useState<TimedResult[] | null>(null)
+  const [vs, setVs] = useState<{ owner: Owner | null; timeline: TimedResult[] } | null>(null)
+  const [hasEvents, setHasEvents] = useState(true)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [error, setError] = useState(false)
+  const [vsSearch, setVsSearch] = useState('')
+  const vsSuggestions = usePlayerSuggestions(vsSearch)
 
   useEffect(() => {
     let cancelled = false
@@ -121,27 +140,42 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
       supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', profileId).maybeSingle(),
       teamsOf(profileId),
       getPlayerTimeline(profileId),
+      isMe ? listEventsFor(profileId) : Promise.resolve(null),
+      vsId ? supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', vsId).maybeSingle() : Promise.resolve(null),
+      vsId ? getPlayerTimeline(vsId) : Promise.resolve(null),
     ]).then(
-      ([prof, tms, tl]) => {
+      ([prof, tms, tl, events, vsProf, vsTl]) => {
         if (cancelled) return
         setOwner(prof.data)
         setTeams(tms)
         setTimeline(tl)
+        setVs(vsTl ? { owner: vsProf?.data ?? null, timeline: vsTl } : null)
+        // La guía de bienvenida es solo para quien aún no ha registrado ningún evento
+        if (events && events.length === 0) {
+          setHasEvents(false)
+          setGuideOpen(!isGuideHidden())
+        }
       },
       () => !cancelled && setError(true),
     )
     return () => {
       cancelled = true
     }
-  }, [profileId])
+  }, [profileId, isMe, vsId])
 
   const analytics = useMemo(() => (timeline ? computePlayerAnalytics(timeline, filter) : null), [timeline, filter])
+  const vsAnalytics = useMemo(() => (vs ? computePlayerAnalytics(vs.timeline, filter) : null), [vs, filter])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
   if (!timeline) return <p className="text-muted">{t('common.loading')}</p>
 
+  const ownerName = isMe ? t('stats.you') : (owner?.username ?? '…')
+  const vsName = vs?.owner?.username ?? '…'
+
   return (
     <div className="space-y-8">
+      {guideOpen && <WelcomeGuide onClose={() => setGuideOpen(false)} />}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="flex items-center gap-2.5 font-display text-2xl font-bold">
@@ -177,12 +211,64 @@ function PlayerStats({ profileId, isMe }: { profileId: string; isMe: boolean }) 
         />
       </div>
 
-      {!analytics ? <EmptyState title={t('stats.noData')} /> : <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />}
+      <div className="flex flex-wrap items-center gap-3">
+        {vsId ? (
+          <>
+            <p className="font-display text-lg font-bold">{t('cmp.vs', { a: ownerName, b: vsName })}</p>
+            <Link to={`/estadisticas/${profileId}`} className="btn-line text-sm">
+              {t('cmp.clear')}
+            </Link>
+          </>
+        ) : (
+          <>
+            <div className="w-full sm:w-72">
+              <SearchBox
+                value={vsSearch}
+                onChange={setVsSearch}
+                suggestions={vsSuggestions}
+                onPick={(s) => {
+                  setVsSearch('')
+                  navigate(`/estadisticas/${profileId}?vs=${s.key}`)
+                }}
+                placeholder={isMe ? t('cmp.searchMe') : t('cmp.searchOther', { user: owner?.username ?? '…' })}
+                className="field text-sm"
+              />
+            </div>
+            {!isMe && meId && (
+              <Link to={`/estadisticas/${meId}?vs=${profileId}`} className="btn-line text-sm">
+                {t('cmp.meVs', { user: owner?.username ?? '…' })}
+              </Link>
+            )}
+          </>
+        )}
+      </div>
 
-      <section>
-        <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>
-        <EventList profileId={profileId} />
-      </section>
+      {vsId ? (
+        !analytics || !vsAnalytics ? (
+          <EmptyState title={t('cmp.noData')}>{t('cmp.noDataOf', { user: !analytics ? ownerName : vsName })}</EmptyState>
+        ) : (
+          <PlayerCompareView a={analytics} b={vsAnalytics} nameA={ownerName} nameB={vsName} />
+        )
+      ) : (
+        <>
+          {!analytics ? (
+            <EmptyState title={t('stats.noData')}>
+              {isMe && !hasEvents && (
+                <button type="button" onClick={() => setGuideOpen(true)} className="btn-line mt-1 text-sm">
+                  {t('guide.reopen')}
+                </button>
+              )}
+            </EmptyState>
+          ) : (
+            <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />
+          )}
+
+          <section>
+            <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>
+            <EventList profileId={profileId} />
+          </section>
+        </>
+      )}
     </div>
   )
 }

@@ -52,6 +52,9 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Forma (últimas 12 carreras frente a las anteriores, media móvil) y rachas
 - [x] Pistas fuertes y débiles frente a la media propia, ajustadas por número de carreras
 - [x] Análisis de cada war: evolución de la diferencia, cambios de líder, fases, reparto de posiciones y rendimiento individual
+- [x] La portada de quien ha iniciado sesión son sus estadísticas
+- [x] Guía de bienvenida para quien no tiene eventos: ventana paso a paso para subir una War o un Lounge, con «No volver a mostrar»
+- [x] Comparar tus estadísticas con las de otro jugador: resumen, fases y pistas donde ganas y donde pierdes (`/estadisticas/:id?vs=:otro`)
 
 ### 3b. Bot de Discord
 - [x] Comandos `/evento iniciar`, `/carrera`, `/sub`, `/corregir`, `/evento ver`, `/evento finalizar`

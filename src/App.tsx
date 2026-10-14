@@ -2,7 +2,7 @@ import { Route, Routes } from 'react-router'
 import Layout from './components/Layout'
 import Admin from './pages/Admin'
 import EventDetail from './pages/EventDetail'
-import Home from './pages/Home'
+import Index from './pages/Index'
 import MyTimes from './pages/MyTimes'
 import NewEvent from './pages/NewEvent'
 import NotFound from './pages/NotFound'
@@ -18,7 +18,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Home />} />
+        <Route index element={<Index />} />
         <Route path="pistas" element={<Tracks />} />
         <Route path="pistas/:trackId" element={<TrackDetail />} />
         <Route path="contrarreloj" element={<TimeTrials />} />
