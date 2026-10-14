@@ -11,6 +11,7 @@ import { TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
+import { computeAchievements } from '../lib/achievements'
 import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import { getPlayerTimeline, type TimedResult } from '../lib/form'
@@ -168,6 +169,7 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
 
   const analytics = useMemo(() => (timeline ? computePlayerAnalytics(timeline, filter) : null), [timeline, filter])
   const badges = useMemo(() => (timeline ? computeBadges(timeline, TRACKS.length) : null), [timeline])
+  const achievements = useMemo(() => (timeline ? computeAchievements(timeline, TRACKS.length) : []), [timeline])
   const vsAnalytics = useMemo(() => (vs ? computePlayerAnalytics(vs.timeline, filter) : null), [vs, filter])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
@@ -267,7 +269,7 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
             <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />
           )}
 
-          {badges && <BadgesPanel badges={badges} />}
+          {badges && <BadgesPanel badges={badges} achievements={achievements} totalTracks={TRACKS.length} />}
 
           <section>
             <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>
