@@ -136,7 +136,7 @@ const TRACK_PLATES: Record<string, PlateColors> = {
 }
 
 /** Arcoíris suave de Rainbow Road, como las losetas de la carretera de su captura: solo la placa (DOM) lo usa; en el resto (texto, imagen de la war) vale el color liso */
-const RAINBOW = 'linear-gradient(100deg, #f09ac0, #f4b078, #efd87c, #a4d9a0, #92d4dc, #9bacec, #c9a0ee)'
+const RAINBOW = 'linear-gradient(100deg, #ee86b4, #f4a6c6, #b9dcae, #8fd6c0, #8fc8e8, #9aa6ec, #bb9cee)'
 
 /** Fondo de la placa de una pista: el color liso o, en Rainbow Road, el arcoíris */
 export function getTrackPlateBackground(track: Track | undefined | null): string | undefined {
