@@ -6,6 +6,7 @@ import Index from './pages/Index'
 import MyTimes from './pages/MyTimes'
 import NewEvent from './pages/NewEvent'
 import NotFound from './pages/NotFound'
+import Ranking from './pages/Ranking'
 import Stats from './pages/Stats'
 import TeamDetail from './pages/TeamDetail'
 import Teams from './pages/Teams'
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="eventos/nuevo" element={<NewEvent />} />
         <Route path="eventos/:eventId" element={<EventDetail />} />
         <Route path="eventos/:eventId/validar" element={<ValidateWar />} />
+        <Route path="ranking" element={<Ranking />} />
         <Route path="equipos" element={<Teams />} />
         <Route path="equipos/:teamId" element={<TeamDetail />} />
         <Route path="admin" element={<Admin />} />

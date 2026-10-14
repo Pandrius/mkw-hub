@@ -1,7 +1,16 @@
 import type { EventKind, PlayerResult } from './events'
 import { POINTS } from './scoring'
 
-export type StatsFilter = 'all' | EventKind
+/** SQ no es un tipo de evento sino un tier del Lounge que se conoce al verificar: aparte de War y Lounge */
+export type StatsFilter = 'all' | EventKind | 'sq'
+
+export const isSq = (r: { tier?: string | null }) => r.tier === 'SQ'
+
+/** War y Lounge no incluyen las SQ verificadas (salen en su propio filtro); Todo incluye todo */
+export function matchesFilter(r: { kind: EventKind; tier?: string | null }, filter: StatsFilter): boolean {
+  if (filter === 'all') return true
+  return filter === 'sq' ? isSq(r) : r.kind === filter && !isSq(r)
+}
 
 export type TrackStats = {
   trackId: string
@@ -32,7 +41,7 @@ function pointsForPos(position: number): number {
 }
 
 export function computeStats(results: PlayerResult[], filter: StatsFilter): Stats {
-  const rows = filter === 'all' ? results : results.filter((r) => r.kind === filter)
+  const rows = results.filter((r) => matchesFilter(r, filter))
   const byTrack = new Map<string, number[]>()
   for (const r of rows) byTrack.set(r.track_id, [...(byTrack.get(r.track_id) ?? []), r.position])
 

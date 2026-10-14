@@ -58,9 +58,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Insignias por volumen de juego: carreras totales, eventos, explorador y carreras por pista (bronce 25 · plata 100 · oro 250 · platino 500)
 - [x] Logros de desempeño con 4 niveles (bronce, plata, oro, platino): podios, victorias, top 6, rachas, eventos limpios / grandes / legendarios, redención, final de foto, dueño de pista, podio y victoria en todas las pistas
 - [x] Recompensas: hasta 3 insignias destacadas y un título junto al nombre (logros, dueño de pista, ranking y clubes de MMR del Lounge); se validan en el servidor (`api/showcase.ts`)
-- [x] Hora de juego declarada al subir un evento (en punto, sin fechas futuras ni de más de 7 días) y un evento Lounge por hora
-- [ ] Límite de eventos abiertos a la vez y subidos al día: pendiente de decidir
-- [ ] Rankings entre jugadores: descartado por ahora, los eventos no se pueden verificar
+- [x] Día de juego declarado al subir un evento (sin fechas futuras ni de más de 7 días; solo el día para no depender de la zona horaria) y máximo de 6 eventos abiertos a la vez
+- [x] Rankings (`/ranking`): estadísticas de la web contando solo eventos verificados (mín. 50 carreras, por país y tipo) y ranking del Lounge por país o mundial
 - [x] Comparar tus estadísticas con las de otro jugador: resumen, fases y pistas donde ganas y donde pierdes (`/estadisticas/:id?vs=:otro`)
 
 ### 3a. Lounge de MKCentral (solo 12p por ahora)
@@ -68,6 +67,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Historial de MMR de todas las temporadas, gráfica y estadísticas (formato, tier, SQ, compañeros, semanas, mejor día y hora)
 - [x] Verificación de eventos: Lounge = misma puntuación total a la hora jugada; war = validada por el rival o igual que una mesa SQ 6v6
 - [x] Los logros, insignias y títulos solo cuentan eventos verificados; las estadísticas se pueden ver con todos o solo con los verificados
+- [x] Perfiles de confianza (los marca un admin): todo lo que suben cuenta como verificado
+- [x] Filtros War / Lounge / SQ (la SQ se reconoce sola al verificar la mesa) y puesto en el ranking de su país
 - [ ] Modo de 24 jugadores (`mkworld24p`)
 - [ ] Reintentar la verificación de eventos pendientes en el cron diario
 

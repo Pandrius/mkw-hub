@@ -63,31 +63,44 @@ describe('parseChanges', () => {
 })
 
 describe('matchLoungeEvents', () => {
-  const t0 = '2026-10-10T20:00:00Z'
+  const day = '2026-10-10'
 
-  it('empareja por puntuación dentro de la ventana de la hora jugada', () => {
+  it('empareja por puntuación dentro del día jugado', () => {
     const c = change({ time: '2026-10-10T20:50:00Z', score: 97 })
-    const m = matchLoungeEvents([{ id: 'e1', score: 97, playedAt: t0, createdAt: '2026-10-10T21:30:00Z' }], [c])
+    const m = matchLoungeEvents([{ id: 'e1', score: 97, playedOn: day, createdAt: '2026-10-10T21:30:00Z' }], [c])
     expect(m.get('e1')).toBe(c)
+  })
+
+  it('cubre cualquier zona horaria: de la tarde anterior a la madrugada siguiente', () => {
+    const early = change({ time: '2026-10-09T12:00:00Z', score: 80 }) // ya es día 10 en UTC+12
+    const late = change({ time: '2026-10-11T10:00:00Z', score: 81 }) // aún es día 10 en UTC-10, con retraso de la mesa
+    const m = matchLoungeEvents(
+      [
+        { id: 'e1', score: 80, playedOn: day, createdAt: day },
+        { id: 'e2', score: 81, playedOn: day, createdAt: day },
+      ],
+      [early, late],
+    )
+    expect([...m.keys()].sort()).toEqual(['e1', 'e2'])
   })
 
   it('no empareja si la puntuación es distinta', () => {
     const c = change({ time: '2026-10-10T20:50:00Z', score: 96 })
-    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedAt: t0, createdAt: t0 }], [c]).size).toBe(0)
+    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedOn: day, createdAt: day }], [c]).size).toBe(0)
   })
 
-  it('no empareja un cambio anterior a la hora jugada ni uno de más de un día después', () => {
-    const before = change({ time: '2026-10-10T19:00:00Z', score: 97 })
-    const late = change({ time: '2026-10-11T22:00:00Z', score: 97 })
-    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedAt: t0, createdAt: t0 }], [before, late]).size).toBe(0)
+  it('no empareja un cambio de otro día', () => {
+    const before = change({ time: '2026-10-08T12:00:00Z', score: 97 })
+    const after = change({ time: '2026-10-13T12:00:00Z', score: 97 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedOn: day, createdAt: day }], [before, after]).size).toBe(0)
   })
 
   it('un mismo cambio solo sirve para un evento', () => {
     const c = change({ time: '2026-10-10T20:50:00Z', score: 97 })
     const m = matchLoungeEvents(
       [
-        { id: 'e1', score: 97, playedAt: t0, createdAt: t0 },
-        { id: 'e2', score: 97, playedAt: t0, createdAt: t0 },
+        { id: 'e1', score: 97, playedOn: day, createdAt: day },
+        { id: 'e2', score: 97, playedOn: day, createdAt: day },
       ],
       [c],
     )
@@ -96,26 +109,27 @@ describe('matchLoungeEvents', () => {
 
   it('respeta los cambios ya usados por otros eventos', () => {
     const c = change({ time: '2026-10-10T20:50:00Z', score: 97 })
-    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedAt: t0, createdAt: t0 }], [c], [c.changeId]).size).toBe(0)
+    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedOn: day, createdAt: day }], [c], [c.changeId]).size).toBe(0)
   })
 
-  it('con dos mesas iguales elige la más cercana a la hora jugada', () => {
-    const near = change({ time: '2026-10-10T20:40:00Z', score: 80 })
-    const far = change({ time: '2026-10-11T08:00:00Z', score: 80 })
-    expect(matchLoungeEvents([{ id: 'e1', score: 80, playedAt: t0, createdAt: t0 }], [far, near]).get('e1')).toBe(near)
+  it('con dos mesas iguales elige la más cercana al mediodía del día jugado', () => {
+    const near = change({ time: '2026-10-10T12:40:00Z', score: 80 })
+    const far = change({ time: '2026-10-10T23:50:00Z', score: 80 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 80, playedOn: day, createdAt: day }], [far, near]).get('e1')).toBe(near)
   })
 
-  it('eventos antiguos sin hora jugada: hasta 7 días antes de subirse', () => {
-    const c = change({ time: '2026-10-08T12:00:00Z', score: 70 })
-    const ok = matchLoungeEvents([{ id: 'e1', score: 70, playedAt: null, createdAt: '2026-10-10T12:00:00Z' }], [c])
-    expect(ok.size).toBe(1)
-    const tooOld = matchLoungeEvents([{ id: 'e1', score: 70, playedAt: null, createdAt: '2026-10-20T12:00:00Z' }], [c])
-    expect(tooOld.size).toBe(0)
+  it('eventos antiguos sin día: se crean al empezar, la mesa se verifica hasta un día después', () => {
+    const after = change({ time: '2026-10-12T22:11:00Z', score: 99 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 99, playedOn: null, createdAt: '2026-10-12T21:10:00Z' }], [after]).size).toBe(1)
+    // Hasta 7 días antes de subirse
+    const old = change({ time: '2026-10-08T12:00:00Z', score: 70 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-10T12:00:00Z' }], [old]).size).toBe(1)
+    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-20T12:00:00Z' }], [old]).size).toBe(0)
   })
 
   it('ignora las penalizaciones y bonos aunque lleven puntuación', () => {
     const strike = change({ time: '2026-10-10T20:50:00Z', score: 97, reason: 'Strike' })
-    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedAt: t0, createdAt: t0 }], [strike]).size).toBe(0)
+    expect(matchLoungeEvents([{ id: 'e1', score: 97, playedOn: day, createdAt: day }], [strike]).size).toBe(0)
   })
 })
 
@@ -130,7 +144,7 @@ describe('matchWars', () => {
   })
   const a = [90, 80, 75, 70, 40, 35]
   const b = [100, 85, 60, 55, 50, 45]
-  const cand = { id: 'w1', playerScores: [35, 40, 70, 75, 80, 90], playedAt: '2026-10-10T20:00:00Z', createdAt: '2026-10-10T21:30:00Z' }
+  const cand = { id: 'w1', playerScores: [35, 40, 70, 75, 80, 90], playedOn: '2026-10-10', createdAt: '2026-10-10T21:30:00Z' }
 
   it('empareja con la mesa 6v6 donde un equipo tiene las mismas puntuaciones, en cualquier orden', () => {
     const t = table(7, '2026-10-10T20:05:00Z', a, b)
@@ -139,10 +153,10 @@ describe('matchWars', () => {
     expect(matchWars([cand], [swapped]).get('w1')).toBe(swapped)
   })
 
-  it('no empareja otras puntuaciones, mesas que no son 6v6 ni mesas de otra hora', () => {
+  it('no empareja otras puntuaciones, mesas que no son 6v6 ni mesas de otro día', () => {
     expect(matchWars([cand], [table(1, '2026-10-10T20:05:00Z', [91, 80, 75, 70, 40, 35], b)]).size).toBe(0)
     expect(matchWars([cand], [table(2, '2026-10-10T20:05:00Z', a, b, 6)]).size).toBe(0)
-    expect(matchWars([cand], [table(3, '2026-10-10T12:00:00Z', a, b)]).size).toBe(0)
+    expect(matchWars([cand], [table(3, '2026-10-07T12:00:00Z', a, b)]).size).toBe(0)
   })
 
   it('solo verifica wars de exactamente 6 jugadores', () => {

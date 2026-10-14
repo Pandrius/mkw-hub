@@ -2,7 +2,7 @@ import type { EventKind } from './events'
 import { sortTimeline, streakOf, type Streak, type TimedResult } from './form'
 import { POINTS } from './scoring'
 import { mean, median, pct, PHASES, phaseOf, RACES_PER_WAR, rolling, round2, shrink, stdDev, sum, type Phase } from './statMath'
-import type { StatsFilter } from './stats'
+import { matchesFilter, type StatsFilter } from './stats'
 
 /** Rendimiento de un conjunto de carreras */
 export type PerfLine = { races: number; avgPos: number; avgPoints: number }
@@ -99,7 +99,7 @@ export const trendOf = (delta: number): FormTrend =>
 
 /** Estadísticas individuales a partir de la línea de tiempo del jugador (función pura). Null si no hay carreras. */
 export function computePlayerAnalytics(all: TimedResult[], filter: StatsFilter): PlayerAnalytics | null {
-  const rows = sortTimeline(filter === 'all' ? all : all.filter((r) => r.kind === filter))
+  const rows = sortTimeline(all.filter((r) => matchesFilter(r, filter)))
   if (!rows.length) return null
 
   const positions = rows.map((r) => r.position)

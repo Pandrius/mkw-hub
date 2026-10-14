@@ -274,6 +274,7 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
               { id: 'all', label: t('stats.all') },
               { id: 'war', label: t('stats.war') },
               { id: 'lounge', label: t('stats.lounge') },
+              { id: 'sq', label: t('stats.sq') },
             ]}
             value={filter}
             onChange={setFilter}

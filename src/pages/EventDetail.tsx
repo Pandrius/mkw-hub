@@ -135,9 +135,7 @@ export default function EventDetail() {
               {t(isOpen ? 'event.open' : 'event.finished')}
             </span>
             <span className="text-muted">
-              {event.played_at
-                ? new Date(event.played_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
-                : formatDate(event.created_at, locale)}
+              {formatDate(event.played_on ?? event.created_at, locale)}
             </span>
             {!isOpen && <VerifiedMark event={event} tier={event.lounge_tier} />}
             {!isOpen && !isVerified(event) && profile?.id === event.created_by && (

@@ -20,6 +20,9 @@ export type LoungeAccount = {
   maxMmr: number | null
   overallRank: number | null
   totalPlayers: number | null
+  /** Puesto entre los jugadores de su país */
+  countryRank: number | null
+  countryTotal: number | null
   eventsPlayed: number | null
   winRate: number | null
   rankName: string | null
@@ -37,6 +40,8 @@ type AccountRow = {
   max_mmr: number | null
   overall_rank: number | null
   total_players: number | null
+  country_rank: number | null
+  country_total: number | null
   events_played: number | null
   win_rate: number | null
   rank_name: string | null
@@ -79,6 +84,8 @@ export async function getLoungeData(profileId: string): Promise<LoungeData | nul
       maxMmr: a.max_mmr,
       overallRank: a.overall_rank,
       totalPlayers: a.total_players,
+      countryRank: a.country_rank,
+      countryTotal: a.country_total,
       eventsPlayed: a.events_played,
       winRate: a.win_rate,
       rankName: a.rank_name,

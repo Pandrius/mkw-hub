@@ -96,33 +96,35 @@ export function eventScore(positions: number[]): number | null {
 const MIN = 60_000
 const HOUR = 3_600_000
 
-/** Eventos con hora jugada: el cambio de MMR llega al verificarse la mesa, entre unos minutos y un día después */
-export const LOUNGE_BEFORE_MS = 10 * MIN
-export const LOUNGE_AFTER_MS = 25 * HOUR
-/** Eventos antiguos (sin hora jugada): se subieron como mucho 7 días después de jugarlos */
+/**
+ * Ventanas de tiempo para cruzar un evento con el Lounge. El evento solo declara el DÍA (el bot y la web pueden estar en
+ * zonas horarias distintas), así que la ventana cubre ese día en cualquier zona (UTC-14 a UTC+14) más el retraso de la mesa:
+ * el cambio de MMR llega al verificarse, entre unos minutos y un día después de jugar.
+ */
+export const ZONE_SLACK_MS = 14 * HOUR
+export const LOUNGE_LAG_MS = 25 * HOUR
+/** Eventos sin día declarado: se crean al empezar a jugar y se subieron como mucho 7 días después de jugarlos */
 export const LEGACY_BACK_MS = 7 * 24 * HOUR
-export const LEGACY_AHEAD_MS = 10 * MIN
-/** Mesas SQ 6v6: se crean poco antes o después de la hora jugada */
-export const TABLE_BEFORE_MS = HOUR
-export const TABLE_AFTER_MS = 2.5 * HOUR
+/** Mesas SQ 6v6: se crean al empezar, así que el retraso es corto */
+export const TABLE_LAG_MS = 3 * HOUR
 
 export type LoungeCandidate = {
   id: string
   /** Puntuación total del jugador (ver eventScore) */
   score: number
-  /** Hora jugada declarada (en punto); null en los eventos antiguos */
-  playedAt: string | null
+  /** Día jugado declarado (AAAA-MM-DD); null en los eventos antiguos */
+  playedOn: string | null
   createdAt: string
 }
 
 /** Instante de referencia y ventana [desde, hasta] (ms) en la que debe caer la hora de la mesa */
-function windowOf(playedAt: string | null, createdAt: string, before: number, after: number): [ref: number, from: number, to: number] {
-  if (playedAt) {
-    const ref = Date.parse(playedAt)
-    return [ref, ref - before, ref + after]
+function windowOf(playedOn: string | null, createdAt: string, lag: number): [ref: number, from: number, to: number] {
+  if (playedOn) {
+    const start = Date.parse(`${playedOn}T00:00:00Z`)
+    return [start + 12 * HOUR, start - ZONE_SLACK_MS, start + 24 * HOUR + ZONE_SLACK_MS + lag]
   }
   const ref = Date.parse(createdAt)
-  return [ref, ref - LEGACY_BACK_MS, ref + LEGACY_AHEAD_MS]
+  return [ref, ref - LEGACY_BACK_MS, ref + lag]
 }
 
 /**
@@ -137,9 +139,9 @@ export function matchLoungeEvents(
   const used = new Set(taken)
   const tables = changes.filter((c) => c.reason === 'Table' && c.score !== null)
   const out = new Map<string, LoungeChange>()
-  const ordered = [...candidates].sort((a, b) => Date.parse(a.playedAt ?? a.createdAt) - Date.parse(b.playedAt ?? b.createdAt))
+  const ordered = [...candidates].sort((a, b) => Date.parse(a.playedOn ?? a.createdAt) - Date.parse(b.playedOn ?? b.createdAt))
   for (const cand of ordered) {
-    const [ref, from, to] = windowOf(cand.playedAt, cand.createdAt, LOUNGE_BEFORE_MS, LOUNGE_AFTER_MS)
+    const [ref, from, to] = windowOf(cand.playedOn, cand.createdAt, LOUNGE_LAG_MS)
     let best: LoungeChange | null = null
     let bestDist = Infinity
     for (const c of tables) {
@@ -173,7 +175,7 @@ export type WarCandidate = {
   id: string
   /** Puntuación total de cada uno de los 6 jugadores de nuestro equipo */
   playerScores: number[]
-  playedAt: string | null
+  playedOn: string | null
   createdAt: string
 }
 
@@ -189,7 +191,7 @@ export function matchWars(candidates: WarCandidate[], tables: LoungeTable[]): Ma
   for (const cand of candidates) {
     if (cand.playerScores.length !== 6) continue
     const key = sortedKey(cand.playerScores)
-    const [ref, from, to] = windowOf(cand.playedAt, cand.createdAt, TABLE_BEFORE_MS, TABLE_AFTER_MS)
+    const [ref, from, to] = windowOf(cand.playedOn, cand.createdAt, TABLE_LAG_MS)
     let best: LoungeTable | null = null
     let bestDist = Infinity
     for (const t of sixVsSix) {

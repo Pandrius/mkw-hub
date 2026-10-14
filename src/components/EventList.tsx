@@ -46,7 +46,7 @@ export default function EventList({ profileId }: { profileId: string }) {
             </span>
             <span className="text-sm text-muted">{t('event.racesCount', { n: e.races })}</span>
             {e.status === 'finished' && <VerifiedMark event={e} tier={e.lounge_tier} />}
-            <span className="text-sm text-muted">{formatDate(e.played_at ?? e.created_at, locale)}</span>
+            <span className="text-sm text-muted">{formatDate(e.played_on ?? e.created_at, locale)}</span>
             <span className={`text-xs font-bold uppercase ${e.status === 'open' ? 'text-kart-yellow' : 'text-muted'}`}>
               {t(e.status === 'open' ? 'event.open' : 'event.finished')}
             </span>

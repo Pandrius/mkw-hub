@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TimedResult } from './form.js'
+import { eventDate } from './playedAt.js'
 import { isVerified, type Verifiable } from './verify.js'
 
 /**
@@ -11,7 +12,7 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
   const { data, error } = await client
     .from('race_results')
     .select(
-      'position, event_players!inner(profile_id), event_races!inner(race_no, track_id, missing_home, missing_away, events!inner(id, kind, status, created_at, played_at, lounge_change_id, lounge_table_id, opponent_confirmed))',
+      'position, event_players!inner(profile_id), event_races!inner(race_no, track_id, missing_home, missing_away, events!inner(id, kind, status, created_at, played_on, lounge_change_id, lounge_table_id, lounge_tier, trusted, opponent_confirmed))',
     )
     .eq('event_players.profile_id', profileId)
     .eq('event_races.events.status', 'finished')
@@ -24,7 +25,7 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
       track_id: string
       missing_home: number
       missing_away: number
-      events: Verifiable & { id: string; created_at: string; played_at: string | null }
+      events: Verifiable & { id: string; created_at: string; played_on: string | null; lounge_tier: string | null }
     }
   }
   return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -33,8 +34,9 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
     trackId: r.event_races.track_id,
     position: r.position,
     raceNo: r.event_races.race_no,
-    date: r.event_races.events.played_at ?? r.event_races.events.created_at,
+    date: eventDate(r.event_races.events.created_at, r.event_races.events.played_on),
     racers: r.event_races.events.kind === 'war' ? 12 - r.event_races.missing_home - r.event_races.missing_away : null,
     verified: isVerified(r.event_races.events),
+    tier: r.event_races.events.lounge_tier,
   }))
 }

@@ -14,6 +14,7 @@ import type { LoungeData } from '../lib/loungeApi'
 import { DiffBars, LineChart } from './Charts'
 import { SectionTitle, Signed, StatTile, Th } from './StatBlocks'
 import { useNum } from './statFormat'
+import { countryName } from '../lib/countries'
 import { Flag, Tabs } from './ui'
 
 type Period = 'all' | `${number}`
@@ -65,7 +66,12 @@ export function LoungePanel({ data, isMe }: { data: LoungeData | null; isMe: boo
         <StatTile
           label={t('lg.rank')}
           value={account.overallRank !== null ? `#${num(account.overallRank, 0)}` : '—'}
-          sub={pct !== null ? t('lg.topPercent', { pct: num(pct, 1), total: num(account.totalPlayers ?? 0, 0) }) : undefined}
+          sub={[
+            pct !== null && t('lg.topPercent', { pct: num(pct, 1), total: num(account.totalPlayers ?? 0, 0) }),
+            account.countryRank && account.countryCode && t('lg.countryRank', { rank: account.countryRank, total: num(account.countryTotal ?? 0, 0), country: countryName(account.countryCode, locale) }),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         />
         <StatTile
           label={t('lg.tables')}

@@ -13,6 +13,8 @@ export type TimedResult = {
   racers: number | null
   /** Evento verificado (Lounge o rival): los logros solo cuentan estos */
   verified: boolean
+  /** Tier de la mesa del Lounge una vez verificado ('SQ', 'C'...) */
+  tier?: string | null
 }
 
 export type Streak = { current: number; best: number }

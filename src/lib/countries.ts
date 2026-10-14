@@ -51,3 +51,24 @@ export function countryName(code: string, locale: string): string {
     return code
   }
 }
+
+/** Todos los países, ordenados por nombre en el idioma indicado */
+export function allCountries(locale: string): { code: string; name: string }[] {
+  const A = 'A'.charCodeAt(0)
+  const out: { code: string; name: string }[] = []
+  const names = new Intl.DisplayNames([locale], { type: 'region' })
+  for (let i = 0; i < 26; i++) {
+    for (let j = 0; j < 26; j++) {
+      const code = String.fromCharCode(A + i, A + j)
+      try {
+        // Mismo filtro que buildIndex: fuera códigos obsoletos o sin asignar
+        if (Intl.getCanonicalLocales(`und-${code}`)[0] !== `und-${code}`) continue
+        const name = names.of(code)
+        if (name && name !== code) out.push({ code, name })
+      } catch {
+        // código no válido
+      }
+    }
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, locale))
+}

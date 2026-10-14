@@ -1,41 +1,30 @@
 /**
- * Hora a la que se jugó un evento (en punto, en la zona del dispositivo). Mismas reglas que create_event en la base de datos:
- * no puede ser futura ni tener más de 7 días.
+ * Día en que se jugó un evento (AAAA-MM-DD, en la zona del dispositivo). Solo el día: el bot de Discord y la web pueden estar
+ * en zonas horarias distintas, y la verificación con el Lounge ya cubre cualquier zona. No puede ser futuro ni tener más de 7 días
+ * (misma regla que create_event en la base de datos).
  */
 export const MAX_DAYS_BACK = 7
 
-const HOUR_MS = 3_600_000
+const pad = (n: number) => String(n).padStart(2, '0')
 
-/** La hora actual en punto */
-export function currentHour(now = new Date()): Date {
-  const d = new Date(now)
-  d.setMinutes(0, 0, 0)
-  return d
+/** AAAA-MM-DD en la zona local */
+export function localDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** Días elegibles, de hoy a hace 7 días (a las 00:00 locales) */
-export function dayOptions(now = new Date()): Date[] {
+export type DayOption = { value: string; date: Date }
+
+/** Días elegibles, de hoy a hace 7 días */
+export function dayOptions(now = new Date()): DayOption[] {
   return Array.from({ length: MAX_DAYS_BACK + 1 }, (_, i) => {
-    const d = new Date(now)
-    d.setHours(0, 0, 0, 0)
-    d.setDate(d.getDate() - i)
-    return d
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+    return { value: localDate(date), date }
   })
 }
 
-/** Instante de una hora de un día (ambos locales) */
-export function at(day: Date, hour: number): Date {
-  const d = new Date(day)
-  d.setHours(hour, 0, 0, 0)
-  return d
-}
-
-/** Horas (0-23) válidas de un día: ni futuras ni de más de 7 días */
-export function hoursFor(day: Date, now = new Date()): number[] {
-  const latest = currentHour(now).getTime()
-  const earliest = latest - MAX_DAYS_BACK * 24 * HOUR_MS
-  return Array.from({ length: 24 }, (_, h) => h).filter((h) => {
-    const t = at(day, h).getTime()
-    return t <= latest && t >= earliest
-  })
+/** Fecha de un evento para ordenarlo: cuándo se creó, salvo que se declarara un día muy anterior (se subió tarde) */
+export function eventDate(createdAt: string, playedOn: string | null | undefined): string {
+  if (!playedOn) return createdAt
+  const lagMs = Date.parse(createdAt) - Date.parse(`${playedOn}T00:00:00Z`)
+  return lagMs > 2 * 24 * 3_600_000 ? `${playedOn}T12:00:00Z` : createdAt
 }
