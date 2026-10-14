@@ -63,10 +63,9 @@ describe('getTrackColor', () => {
     // Sky-High Sundae es de helado: fondo rosa suave
     expect(hue(color('rSHS')!)).toBeGreaterThan(300)
     expect(hue(color('rSHS')!)).toBeLessThan(350)
-    // Bowser's Castle: fondo negro y letras de lava naranja
-    expect(color('BC')).toBe('#050505')
-    expect(hue(getTrackTextColor(getTrackByAbbr('BC'))!)).toBeGreaterThan(15)
-    expect(hue(getTrackTextColor(getTrackByAbbr('BC'))!)).toBeLessThan(45)
+    // Bowser's Castle: fondo de lava naranja
+    expect(hue(color('BC')!)).toBeGreaterThan(15)
+    expect(hue(color('BC')!)).toBeLessThan(45)
   })
 
   it('las pistas sin color propio usan el de su pista madre o el de su copa, y sin pista no hay color', () => {
@@ -78,8 +77,8 @@ describe('getTrackColor', () => {
     expect(getTrackColor(sinNada)).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
-  // Pistas con contraste más bajo a propósito: SP lleva letras amarillas y rDDJ letras verdes discretas
-  const CONTRASTE_BAJO: Record<string, number> = { SP: 2.2, rDDJ: 3 }
+  // Pistas con contraste más bajo a propósito: SP lleva letras amarillas, rDDJ letras discretas, DKS azul del mono sobre rojo y rMMM letras blancas sobre verde césped
+  const CONTRASTE_BAJO: Record<string, number> = { SP: 2.2, rDDJ: 3.3, DKS: 3.4, rMMM: 3.5 }
 
   it('cada placa tiene dos colores y las letras se leen sobre el fondo (contraste de al menos 4,5)', () => {
     const lin = (hex: string, i: number) => {

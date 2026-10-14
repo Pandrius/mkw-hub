@@ -117,26 +117,26 @@ type PlateColors = { bg: string; fg: string }
 const plate = (bg: string, fg: string): PlateColors => ({ bg, fg })
 
 const MC = plate('#e1c265', '#371710')
-const GV = plate('#acd175', '#3b1a6e') // alternativa por probar: fondo morado y letras verdes
+const GV = plate('#acd175', '#5a1fb0') // alternativa por probar: fondo morado y letras verdes
 const CM = plate('#5a3320', '#e8d9c8') // chocolate
 
 const TRACK_PLATES: Record<string, PlateColors> = {
-  MBC: plate('#dd9168', '#102937'), CC: plate('#63a0e3', '#371f10'), WS: plate('#d1925e', '#102637'), DKS: plate('#e4565e', '#081640'),
+  MBC: plate('#dd9168', '#102937'), CC: plate('#63a0e3', '#371f10'), WS: plate('#d1925e', '#102637'), DKS: plate('#ea5f66', '#10308f'),
   rDH: plate('#d5c071', '#101837'), rSGB: plate('#d79c6f', '#102737'), rWS: plate('#c9603c', '#08171c'), rAF: plate('#ca885c', '#102837'),
   rDKP: plate('#a9d4ee', '#372610'), SP: plate('#5699c9', '#ffe14d'), rSHS: plate('#eab0cb', '#1f3f8c'), rWSh: plate('#40b3bf', '#371410'),
-  rKTB: plate('#559bf1', '#372610'), FO: plate('#d1a875', '#102637'), PS: plate('#ab346b', '#e2f9cc'),
-  rPB: plate('#ab346b', '#f3e2b4'), SSS: plate('#8fc9ec', '#2f353b'), rDDJ: plate('#e1965c', '#2f5a1c'), GBR: plate('#e5ad33', '#5a2a10'),
-  CCF: plate('#d42a30', '#fff5f0'), DD: plate('#1c68a8', '#ffe9c2'), BCi: plate('#6a3fb0', '#ffffff'), DBB: plate('#d02f3f', '#ebfaf8'),
-  rMMM: plate('#278228', '#ffffff'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#050505', '#ff7a1a'),
-  AH: plate('#24502b', '#e2b78a'), rMC: MC, RR: plate('#f2c230', '#1a1030'),
+  rKTB: plate('#559bf1', '#372610'), FO: plate('#d1a875', '#102637'), PS: plate('#e59ab9', '#134420'),
+  rPB: plate('#e59ab9', '#573b10'), SSS: plate('#8fc9ec', '#454a50'), rDDJ: plate('#2f5a1c', '#e1965c'), GBR: plate('#e5ad33', '#5a2a10'),
+  CCF: plate('#e8504a', '#1a1208'), DD: plate('#14518a', '#ffe9c2'), BCi: plate('#6a3fb0', '#ffffff'), DBB: plate('#d02f3f', '#ebfaf8'),
+  rMMM: plate('#3a9a38', '#ffffff'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#e8791f', '#2b2b2b'),
+  AH: plate('#24502b', '#e2b78a'), rMC: MC, RR: plate('#e8b6d8', '#1d1a3a'),
   rMC1: MC, rMC2: MC, rMC3: MC,
   rGV1: GV, rGV2: GV, rGV3: GV,
   rCI1: CM, rCI2: CM,
   rKB1: plate('#559bf1', '#372610'), rVL1: plate('#52c6f4', '#371b10'),
 }
 
-/** Arcoíris de Rainbow Road: solo la placa (DOM) lo usa; en el resto (texto, imagen de la war) vale el color liso */
-const RAINBOW = 'linear-gradient(90deg, #ff5a5a, #ffa94d, #ffe14d, #6fdc6f, #4dd2ff, #7a8cff, #c07cff)'
+/** Arcoíris suave de Rainbow Road, como las losetas de la carretera de su captura: solo la placa (DOM) lo usa; en el resto (texto, imagen de la war) vale el color liso */
+const RAINBOW = 'linear-gradient(100deg, #f09ac0, #f4b078, #efd87c, #a4d9a0, #92d4dc, #9bacec, #c9a0ee)'
 
 /** Fondo de la placa de una pista: el color liso o, en Rainbow Road, el arcoíris */
 export function getTrackPlateBackground(track: Track | undefined | null): string | undefined {
