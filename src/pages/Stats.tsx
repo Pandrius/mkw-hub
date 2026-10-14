@@ -13,7 +13,7 @@ import { TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
-import { achievementTotals, computeAchievements, ownedTracks } from '../lib/achievements'
+import { achievementTotals, computeAchievements, demoAchievements, ownedTracks } from '../lib/achievements'
 import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import type { TimedResult } from '../lib/form'
@@ -121,7 +121,14 @@ export default function Stats() {
           )}
         </EmptyState>
       ) : (
-        <PlayerStats key={`${targetId}|${vsId ?? ''}`} profileId={targetId} isMe={targetId === profile?.id} meId={profile?.id ?? null} vsId={vsId} />
+        <PlayerStats
+          key={`${targetId}|${vsId ?? ''}`}
+          profileId={targetId}
+          isMe={targetId === profile?.id}
+          meId={profile?.id ?? null}
+          vsId={vsId}
+          demo={targetId === profile?.id && profile?.role === 'admin' && params.get('demo') === 'logros'}
+        />
       )}
     </>
   )
@@ -140,7 +147,7 @@ function jumpTo(id: string) {
 const LOUNGE_SYNC_KEY = 'mkwhub.loungeSync'
 const LOUNGE_SYNC_EVERY_MS = 5 * 60 * 1000
 
-function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null }) {
+function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null; demo: boolean }) {
   const { t, locale } = useI18n()
   const navigate = useNavigate()
   const [filter, setFilter] = useState<StatsFilter>('all')
@@ -227,7 +234,10 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
   const vsShown = useMemo(() => (vs ? (verifyFilter === 'verified' ? vs.timeline.filter((r) => r.verified) : vs.timeline) : null), [vs, verifyFilter])
   const analytics = useMemo(() => (shown ? computePlayerAnalytics(shown, filter) : null), [shown, filter])
   const badges = useMemo(() => computeBadges(verifiedTimeline, TRACKS.length), [verifiedTimeline])
-  const achievements = useMemo(() => computeAchievements(verifiedTimeline, TRACKS.length), [verifiedTimeline])
+  const achievements = useMemo(() => {
+    const real = computeAchievements(verifiedTimeline, TRACKS.length)
+    return demo ? demoAchievements(real) : real
+  }, [verifiedTimeline, demo])
   const vsAnalytics = useMemo(() => (vsShown ? computePlayerAnalytics(vsShown, filter) : null), [vsShown, filter])
   const eventCounts = useMemo(() => {
     const all = new Set((timeline ?? []).map((r) => r.eventId))
@@ -295,6 +305,8 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
           />
         </div>
       </div>
+
+      {demo && <p className="border-l-4 border-kart-red bg-surface px-4 py-3 text-sm">{t('stats.demo')}</p>}
 
       {!vsId && (
         <div className="flex flex-wrap gap-2">

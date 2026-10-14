@@ -925,4 +925,5 @@ export const en: Record<MessageKey, string> = {
   'event.loungeTableWar': 'Lounge table (SQ)',
   'event.openImage': 'Open image',
   'event.loungeTableHint': 'The official table of this match in the MKCentral Lounge, with every player’s score.',
+  'stats.demo': 'Achievements preview: everything shows at the maximum on this screen only. Nothing is saved and your real achievements don’t change. Remove ?demo=logros from the address to go back.',
 }

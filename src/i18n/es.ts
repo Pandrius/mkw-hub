@@ -924,6 +924,7 @@ export const es = {
   'event.loungeTableWar': 'Tabla del Lounge (SQ)',
   'event.openImage': 'Abrir imagen',
   'event.loungeTableHint': 'La tabla oficial de esta mesa en el Lounge de MKCentral, con las puntuaciones de todos los jugadores.',
+  'stats.demo': 'Vista previa de logros: todos aparecen al máximo solo en esta pantalla. No se guarda nada y tus logros reales no cambian. Quita ?demo=logros de la dirección para volver.',
 } as const
 
 export type MessageKey = keyof typeof es

@@ -1,4 +1,4 @@
-import { progressOf, type Progress } from './badges.js'
+import { progressOf, type Progress, type Tier } from './badges.js'
 import { sortTimeline, streakOf, type TimedResult } from './form.js'
 import { POINTS } from './scoring.js'
 import { mean, RACES_PER_WAR } from './statMath.js'
@@ -170,4 +170,19 @@ export function achievementTotals(achievements: Achievement[]): { earned: number
     maxed: regular.filter(isMaxed).length,
     count: regular.length,
   }
+}
+
+/**
+ * Vista previa para ver cómo quedan los logros al máximo (solo se enseña en pantalla, no se guarda nada): todos en platino,
+ * el evento perfecto conseguido y el supremo desbloqueado, con contadores por encima del último nivel.
+ */
+export function demoAchievements(real: Achievement[]): Achievement[] {
+  const regular = real
+    .filter((a) => a.id !== 'allAchievements')
+    .map((a): Achievement => {
+      const last = a.thresholds[a.thresholds.length - 1]
+      return { ...a, tier: 4 as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
+    })
+  const grand = real.find((a) => a.id === 'allAchievements')
+  return grand ? [...regular, { ...grand, tier: 4 as Tier, next: null, count: regular.length }] : regular
 }
