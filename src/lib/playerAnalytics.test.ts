@@ -77,7 +77,9 @@ describe('computePlayerAnalytics', () => {
     const rr = a.tracks.find((t) => t.trackId === 'rr')!
     expect(rr.avgPoints).toBe(15)
     expect(rr.delta).toBe(4.4) // media del jugador: (15·3 + 4·2) / 5 = 10.6
-    expect(rr.rating).toBe(1.76) // 2 carreras · 4.4 / (2 + 3)
+    expect(rr.rating).toBe(0.73) // 2 carreras · 4.4 / (2 + 10)
+    expect(rr.adjPoints).toBe(11.33) // 10.6 + 0.73
+    expect(rr.confidence).toBe(1)
     expect(a.strongest.map((t) => t.trackId)).toEqual(['rr'])
     expect(a.weakest.map((t) => t.trackId)).toEqual(['ok'])
   })

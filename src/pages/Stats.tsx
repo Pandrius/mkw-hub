@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import EventList from '../components/EventList'
+import { BadgesPanel } from '../components/BadgesPanel'
 import { PlayerAnalyticsView } from '../components/PlayerAnalyticsView'
 import { PlayerCompareView } from '../components/PlayerCompareView'
 import { SearchBox, type Suggestion } from '../components/SearchBox'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
 import { WelcomeGuide } from '../components/WelcomeGuide'
+import { TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
+import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import { getPlayerTimeline, type TimedResult } from '../lib/form'
 import { isGuideHidden } from '../lib/guideStore'
@@ -164,6 +167,7 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
   }, [profileId, isMe, vsId])
 
   const analytics = useMemo(() => (timeline ? computePlayerAnalytics(timeline, filter) : null), [timeline, filter])
+  const badges = useMemo(() => (timeline ? computeBadges(timeline, TRACKS.length) : null), [timeline])
   const vsAnalytics = useMemo(() => (vs ? computePlayerAnalytics(vs.timeline, filter) : null), [vs, filter])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
@@ -262,6 +266,8 @@ function PlayerStats({ profileId, isMe, meId, vsId }: { profileId: string; isMe:
           ) : (
             <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />
           )}
+
+          {badges && <BadgesPanel badges={badges} />}
 
           <section>
             <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>

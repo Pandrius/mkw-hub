@@ -16,6 +16,10 @@ export type PlayerTrack = {
   delta: number
   /** El mismo delta ajustado por muestra (con pocas carreras se acerca a 0); ordena mejores y peores */
   rating: number
+  /** Puntos por carrera ajustados: la media propia más el rating. Con pocas carreras se acerca al nivel general del jugador */
+  adjPoints: number
+  /** Fiabilidad del dato según las carreras: 1 = pocas, 2 = suficientes, 3 = muchas */
+  confidence: 1 | 2 | 3
   podiumRate: number
   best: number
   /** Últimas posiciones en la pista, de la más antigua a la más reciente (máx. 3) */
@@ -71,6 +75,13 @@ export const MIN_BASELINE = 6
 export const TREND_THRESHOLD = 0.75
 /** Carreras mínimas en una pista para entrar en mejores / peores */
 export const MIN_TRACK_RACES = 2
+/** Carreras "ficticias" al nivel general del jugador que se suman a cada pista: cuantas más carreras reales, menos pesan */
+export const TRACK_PRIOR = 10
+/** Carreras en una pista a partir de las cuales el dato es de fiabilidad media / alta */
+export const CONFIDENCE_MID = 5
+export const CONFIDENCE_HIGH = 25
+
+export const confidenceOf = (races: number): 1 | 2 | 3 => (races >= CONFIDENCE_HIGH ? 3 : races >= CONFIDENCE_MID ? 2 : 1)
 
 const pointsOf = (position: number) => POINTS[position - 1] ?? 0
 
@@ -142,13 +153,16 @@ export function computePlayerAnalytics(all: TimedResult[], filter: StatsFilter):
     .map(([trackId, rs]) => {
       const ps = rs.map((r) => r.position)
       const pts = ps.map(pointsOf)
+      const rating = round2(shrink(sum(pts.map((p) => p - avgPoints)), pts.length, TRACK_PRIOR))
       return {
         trackId,
         races: rs.length,
         avgPos: round2(mean(ps)),
         avgPoints: round2(mean(pts)),
         delta: round2(mean(pts) - avgPoints),
-        rating: round2(shrink(sum(pts.map((p) => p - avgPoints)), pts.length)),
+        rating,
+        adjPoints: round2(avgPoints + rating),
+        confidence: confidenceOf(pts.length),
         podiumRate: pct(ps.filter((p) => p <= 3).length, ps.length),
         best: Math.min(...ps),
         recent: ps.slice(-3),

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { getTrack, getTrackPlateBackground, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
+import type { MessageKey } from '../i18n/es'
 import type { Record3 } from '../lib/statMath'
 import { positionColor, useNum } from './statFormat'
 import { Plate } from './ui'
@@ -81,6 +82,19 @@ export function Th({ children, hint, right = true }: { children: ReactNode; hint
         </span>
       )}
     </th>
+  )
+}
+
+/** Fiabilidad de un dato según las carreras que lo respaldan: 1 a 3 cuadraditos llenos */
+export function Confidence({ level }: { level: 1 | 2 | 3 }) {
+  const { t } = useI18n()
+  const label = t(`an.confidence.${level}` as MessageKey)
+  return (
+    <span className="ml-2 inline-flex gap-0.5 align-middle" title={label} role="img" aria-label={label}>
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={`size-1.5 ${i <= level ? 'bg-kart-yellow' : 'bg-line'}`} />
+      ))}
+    </span>
   )
 }
 

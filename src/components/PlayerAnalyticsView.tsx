@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import type { Streak } from '../lib/form'
-import { MIN_BASELINE, MIN_TRACK_RACES, RECENT_RACES, type PerfLine, type PlayerAnalytics, type PlayerTrack } from '../lib/playerAnalytics'
+import { MIN_BASELINE, MIN_TRACK_RACES, RECENT_RACES, TRACK_PRIOR, type PerfLine, type PlayerAnalytics, type PlayerTrack } from '../lib/playerAnalytics'
 import { PHASES } from '../lib/statMath'
 import { filterRowsByTrack } from '../lib/trackSearch'
 import { LineChart, PositionHistogram } from './Charts'
 import { SearchBox } from './SearchBox'
-import { PositionChip, SectionTitle, Signed, StatTile, Th, TrackName } from './StatBlocks'
+import { Confidence, PositionChip, SectionTitle, Signed, StatTile, Th, TrackName } from './StatBlocks'
 import { useNum } from './statFormat'
 import { trackSuggestion } from './trackSuggestion'
 
@@ -239,6 +239,7 @@ function TrackTable({ tracks }: { tracks: PlayerTrack[] }) {
               <Th>{t('an.col.avgPos')}</Th>
               <Th>{t('an.col.ptsPerRace')}</Th>
               <Th hint={t('an.col.vsAvgHint')}>{t('an.col.vsAvg')}</Th>
+              <Th hint={t('an.col.adjHint', { n: TRACK_PRIOR })}>{t('an.col.adj')}</Th>
               <Th>{t('an.col.podium')}</Th>
               <Th>{t('an.col.best')}</Th>
               <Th right={false}>{t('an.col.recent')}</Th>
@@ -247,7 +248,7 @@ function TrackTable({ tracks }: { tracks: PlayerTrack[] }) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-sm text-muted">
+                <td colSpan={9} className="p-8 text-center text-sm text-muted">
                   {t('stats.noTracksFound')}
                 </td>
               </tr>
@@ -265,6 +266,10 @@ function TrackTable({ tracks }: { tracks: PlayerTrack[] }) {
                   <td className="px-3 py-2 text-right font-mono font-bold">{num(tr.avgPoints, 2)}</td>
                   <td className="px-3 py-2 text-right font-mono">
                     <Signed value={tr.delta} digits={2} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
+                    {num(tr.adjPoints, 2)}
+                    <Confidence level={tr.confidence} />
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{tr.podiumRate} %</td>
                   <td className="px-3 py-2 text-right font-mono">{tr.best}</td>

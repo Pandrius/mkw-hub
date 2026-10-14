@@ -54,6 +54,9 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Análisis de cada war: evolución de la diferencia, cambios de líder, fases, reparto de posiciones y rendimiento individual
 - [x] La portada de quien ha iniciado sesión son sus estadísticas
 - [x] Guía de bienvenida para quien no tiene eventos: ventana paso a paso para subir una War o un Lounge, con «No volver a mostrar»
+- [x] Puntos por carrera ajustados por número de carreras (pocas carreras → se acerca al nivel general) con indicador de fiabilidad
+- [x] Insignias por volumen de juego: carreras totales, eventos, explorador y carreras por pista (bronce 25 · plata 100 · oro 250 · platino 500)
+- [ ] Rankings entre jugadores: descartado por ahora, los eventos no se pueden verificar
 - [x] Comparar tus estadísticas con las de otro jugador: resumen, fases y pistas donde ganas y donde pierdes (`/estadisticas/:id?vs=:otro`)
 
 ### 3b. Bot de Discord

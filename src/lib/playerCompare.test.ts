@@ -23,14 +23,24 @@ const analytics = (rows: TimedResult[]) => computePlayerAnalytics(rows, 'all')!
 
 describe('comparePlayers', () => {
   it('separa las pistas donde cada uno es mejor, de mayor a menor ventaja', () => {
-    const a = analytics(runs('a', { LC: [1, 1], RR: [8, 8], DS: [5, 5] }))
-    const b = analytics(runs('b', { LC: [6, 6], RR: [2, 2], DS: [5, 5] }))
+    const rep = (pos: number) => Array(20).fill(pos)
+    const a = analytics(runs('a', { LC: rep(1), RR: rep(8), DS: rep(5) }))
+    const b = analytics(runs('b', { LC: rep(6), RR: rep(2), DS: rep(5) }))
     const c = comparePlayers(a, b)
     expect(c.aBetter.map((d) => d.trackId)).toEqual(['LC'])
     expect(c.bBetter.map((d) => d.trackId)).toEqual(['RR'])
     expect(c.duels.map((d) => d.trackId)).toEqual(['LC', 'DS', 'RR'])
-    // 1.º = 15 puntos y 6.º = 7 puntos
-    expect(c.aBetter[0].diff).toBe(8)
+    expect(c.duels.find((d) => d.trackId === 'DS')!.diff).toBe(0)
+  })
+
+  it('con pocas carreras la ventaja pesa mucho menos que con muchas', () => {
+    // En LC, a saca 1.º y 1.º (15 pts) frente a 6.º (7 pts) de b en 30 carreras: en bruto son 8 puntos de ventaja
+    const a = analytics(runs('a', { LC: [1, 1], RR: Array(30).fill(6) }))
+    const b = analytics(runs('b', { LC: Array(30).fill(6), RR: Array(30).fill(6) }))
+    const lc = comparePlayers(a, b).duels.find((d) => d.trackId === 'LC')!
+    expect(lc.aPoints - lc.bPoints).toBe(8)
+    expect(lc.diff).toBeGreaterThan(0)
+    expect(lc.diff).toBeLessThan(2)
   })
 
   it('ignora pistas sin carreras suficientes de alguno de los dos', () => {
