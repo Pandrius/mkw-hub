@@ -117,7 +117,7 @@ type PlateColors = { bg: string; fg: string }
 const plate = (bg: string, fg: string): PlateColors => ({ bg, fg })
 
 const MC = plate('#e1c265', '#371710')
-const GV = plate('#acd175', '#5a1fb0') // alternativa por probar: fondo morado y letras verdes
+const GV = plate('#4a1a96', '#b5e07a') // morado con letras verdes; la versión anterior era fondo verde #acd175 y letras moradas #5a1fb0
 const CM = plate('#5a3320', '#e8d9c8') // chocolate
 
 const TRACK_PLATES: Record<string, PlateColors> = {
