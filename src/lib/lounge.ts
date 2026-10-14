@@ -103,8 +103,11 @@ const HOUR = 3_600_000
  */
 export const ZONE_SLACK_MS = 14 * HOUR
 export const LOUNGE_LAG_MS = 25 * HOUR
-/** Eventos sin día declarado: se crean al empezar a jugar y se subieron como mucho 7 días después de jugarlos */
-export const LEGACY_BACK_MS = 7 * 24 * HOUR
+/**
+ * Eventos sin día declarado: se crean al empezar a jugar, así que la mesa se verifica después de crearse el evento. Un margen
+ * mayor por detrás daba falsos positivos (la misma puntuación en una mesa de días antes).
+ */
+export const LEGACY_BACK_MS = 6 * HOUR
 /** Mesas SQ 6v6: se crean al empezar, así que el retraso es corto */
 export const TABLE_LAG_MS = 3 * HOUR
 

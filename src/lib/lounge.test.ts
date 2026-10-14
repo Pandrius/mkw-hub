@@ -119,13 +119,15 @@ describe('matchLoungeEvents', () => {
     expect(matchLoungeEvents([{ id: 'e1', score: 80, playedOn: day, createdAt: day }], [far, near]).get('e1')).toBe(near)
   })
 
-  it('eventos antiguos sin día: se crean al empezar, la mesa se verifica hasta un día después', () => {
+  it('eventos antiguos sin día: se crean al empezar, la mesa se verifica hasta un día después y no vale una de días antes', () => {
     const after = change({ time: '2026-10-12T22:11:00Z', score: 99 })
     expect(matchLoungeEvents([{ id: 'e1', score: 99, playedOn: null, createdAt: '2026-10-12T21:10:00Z' }], [after]).size).toBe(1)
-    // Hasta 7 días antes de subirse
-    const old = change({ time: '2026-10-08T12:00:00Z', score: 70 })
-    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-10T12:00:00Z' }], [old]).size).toBe(1)
-    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-20T12:00:00Z' }], [old]).size).toBe(0)
+    // Una mesa de días antes con la misma puntuación NO sirve (falso positivo)
+    const old = change({ time: '2026-10-10T12:00:00Z', score: 70 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-12T12:00:00Z' }], [old]).size).toBe(0)
+    // Pero sí la que se verificó poco antes de crearse el evento (se sube después de jugar)
+    const recent = change({ time: '2026-10-12T08:00:00Z', score: 70 })
+    expect(matchLoungeEvents([{ id: 'e1', score: 70, playedOn: null, createdAt: '2026-10-12T12:00:00Z' }], [recent]).size).toBe(1)
   })
 
   it('ignora las penalizaciones y bonos aunque lleven puntuación', () => {
