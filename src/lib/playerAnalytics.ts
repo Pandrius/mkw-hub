@@ -22,7 +22,7 @@ export type PlayerTrack = {
   confidence: 1 | 2 | 3
   podiumRate: number
   best: number
-  /** Últimas posiciones en la pista, de la más antigua a la más reciente (máx. 3) */
+  /** Últimas posiciones en la pista, de la más reciente a la más antigua (máx. 3): la nueva entra por la izquierda */
   recent: number[]
 }
 
@@ -165,7 +165,7 @@ export function computePlayerAnalytics(all: TimedResult[], filter: StatsFilter):
         confidence: confidenceOf(pts.length),
         podiumRate: pct(ps.filter((p) => p <= 3).length, ps.length),
         best: Math.min(...ps),
-        recent: ps.slice(-3),
+        recent: ps.slice(-3).reverse(),
       }
     })
     .sort((a, b) => b.avgPoints - a.avgPoints || b.races - a.races)

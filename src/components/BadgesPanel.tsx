@@ -1,9 +1,9 @@
 import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RACES, LEGEND_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import { BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RACES, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
-import { MedalCard } from './Medal'
+import { EpicCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
 import { TIER_COLOR, tierLabel } from './tiers'
 
@@ -16,6 +16,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
   const descVars = {
     big: BIG_EVENT_POINTS,
     legend: LEGEND_EVENT_POINTS,
+    perfect: PERFECT_EVENT_POINTS,
     races: DOMINATION_RACES,
     avg: DOMINATION_AVG_POS,
     from: REDEMPTION_FROM,
@@ -78,8 +79,25 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
         <SectionTitle title={t('ach.title')} hint={t('ach.hint')}>
           <p className="font-mono text-xs text-muted">{t('ach.progress', { done: earned, total: possible })}</p>
         </SectionTitle>
+        <div className="mb-3 space-y-3">
+          {achievements
+            .filter((a) => a.epic)
+            .map((a) => (
+              <EpicCard
+                key={a.id}
+                glyph={a.glyph}
+                kicker={t('ach.epicKicker')}
+                name={t(`ach.${a.id}.name` as MessageKey)}
+                description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
+                ghost={String(PERFECT_EVENT_POINTS)}
+                countLabel={t(`ach.${a.id}.count` as MessageKey)}
+                progress={a}
+                thresholds={a.thresholds}
+              />
+            ))}
+        </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {achievements.map((a) => (
+          {achievements.filter((a) => !a.epic).map((a) => (
             <MedalCard
               key={a.id}
               glyph={a.glyph}

@@ -4,6 +4,7 @@ import { POINTS } from './scoring'
 import { mean, RACES_PER_WAR } from './statMath'
 
 export type AchievementId =
+  | 'perfectEvent'
   | 'podiums'
   | 'wins'
   | 'top6'
@@ -19,18 +20,22 @@ export type AchievementId =
   | 'winEverywhere'
 
 /** Dibujo de la medalla (ver Medal.tsx) */
-export type Glyph = 'podium' | 'flag' | 'chevrons' | 'bars' | 'ring' | 'bolt' | 'star'
+export type Glyph = 'crown' | 'podium' | 'flag' | 'chevrons' | 'bars' | 'ring' | 'bolt' | 'star'
 
 export type Achievement = Progress & {
   id: AchievementId
   glyph: Glyph
   /** Cantidades necesarias para cada nivel (bronce, plata, oro, platino) */
   thresholds: number[]
+  /** Logro estrella: se muestra a todo ancho y con un diseño propio */
+  epic: boolean
 }
 
 /** Puntos de un evento completo a partir de los cuales cuenta como "gran evento" y como "evento legendario" */
 export const BIG_EVENT_POINTS = 120
 export const LEGEND_EVENT_POINTS = 150
+/** Puntuación máxima de un evento de 12 carreras: ganarlas todas (12 × 15) */
+export const PERFECT_EVENT_POINTS = 180
 /** Carreras en una pista para considerarla "dominada" y posición media máxima que se exige */
 export const DOMINATION_RACES = 10
 export const DOMINATION_AVG_POS = 3
@@ -39,7 +44,7 @@ export const REDEMPTION_FROM = 10
 
 const pointsOf = (position: number) => POINTS[position - 1] ?? 0
 
-type Def = { id: AchievementId; glyph: Glyph; thresholds: (totalTracks: number) => number[]; count: (rows: TimedResult[], totalTracks: number) => number }
+type Def = { id: AchievementId; glyph: Glyph; epic?: boolean; thresholds: (totalTracks: number) => number[]; count: (rows: TimedResult[], totalTracks: number) => number }
 
 /** Eventos completos (12 carreras) con las posiciones del jugador en orden */
 function fullEvents(rows: TimedResult[]): number[][] {
@@ -51,6 +56,13 @@ function fullEvents(rows: TimedResult[]): number[][] {
 const countWhere = (rows: TimedResult[], test: (r: TimedResult) => boolean) => rows.filter(test).length
 
 const DEFS: Def[] = [
+  {
+    id: 'perfectEvent',
+    glyph: 'crown',
+    epic: true,
+    thresholds: () => [1, 2, 3, 5],
+    count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= PERFECT_EVENT_POINTS).length,
+  },
   { id: 'podiums', glyph: 'podium', thresholds: () => [25, 100, 300, 1000], count: (rows) => countWhere(rows, (r) => r.position <= 3) },
   { id: 'wins', glyph: 'star', thresholds: () => [10, 50, 150, 500], count: (rows) => countWhere(rows, (r) => r.position === 1) },
   { id: 'top6', glyph: 'chevrons', thresholds: () => [50, 250, 750, 2000], count: (rows) => countWhere(rows, (r) => r.position <= 6) },
@@ -116,6 +128,6 @@ export function computeAchievements(timeline: TimedResult[], totalTracks: number
   const rows = sortTimeline(timeline)
   return DEFS.map((d) => {
     const thresholds = d.thresholds(totalTracks)
-    return { id: d.id, glyph: d.glyph, thresholds, ...progressOf(d.count(rows, totalTracks), thresholds) }
+    return { id: d.id, glyph: d.glyph, epic: !!d.epic, thresholds, ...progressOf(d.count(rows, totalTracks), thresholds) }
   })
 }

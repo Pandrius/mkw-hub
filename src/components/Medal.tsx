@@ -42,6 +42,12 @@ const GLYPHS: Record<Glyph, ReactNode> = {
       <rect x="9.5" y="9.5" width="5" height="5" />
     </>
   ),
+  crown: (
+    <>
+      <polygon points="2,18 3.5,6 8.5,11.5 12,3 15.5,11.5 20.5,6 22,18" />
+      <rect x="2" y="19.5" width="20" height="2.5" />
+    </>
+  ),
   bolt: <polygon points="14,2 4,14 11,14 9,22 20,9 13,9" />,
   star: <polygon points="12,2 14.9,8.6 22,9.3 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.3 9.1,8.6" />,
 }
@@ -67,6 +73,71 @@ export function MedalIcon({ glyph, tier, size = 64 }: { glyph: Glyph; tier: Tier
           <span key={i} className="size-1.5" style={{ background: i <= tier ? TIER_COLOR[tier] : 'var(--color-line)' }} />
         ))}
       </span>
+    </div>
+  )
+}
+
+/**
+ * Logro épico: tarjeta a todo ancho con banderas a cuadros en movimiento, medalla grande y la cifra enorme de fondo.
+ * Sin conseguir se ve apagado, como un reto a la vista.
+ */
+export function EpicCard({
+  glyph,
+  kicker,
+  name,
+  description,
+  ghost,
+  countLabel,
+  progress,
+  thresholds,
+}: {
+  glyph: Glyph
+  kicker: string
+  name: string
+  description: string
+  /** Cifra grande de fondo */
+  ghost: string
+  countLabel: string
+  progress: Progress
+  thresholds: number[]
+}) {
+  const { t } = useI18n()
+  const { count, tier, next } = progress
+  const earned = tier > 0
+  const accent = earned ? TIER_COLOR[tier] : 'var(--color-line)'
+  const tooltip = thresholds.map((n, i) => `${t(tierLabel((i + 1) as Tier))}: ${n}`).join('  ·  ')
+
+  return (
+    <div className="panel relative overflow-hidden" style={{ borderColor: earned ? accent : undefined }} title={tooltip}>
+      <div className={`checker h-3 ${earned ? 'checker-run' : 'opacity-30'}`} aria-hidden />
+      <div className="relative flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-6 sm:px-10">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-display text-[9rem] leading-none font-black text-transparent select-none sm:text-[12rem]"
+          style={{ WebkitTextStroke: `2px ${accent}`, opacity: earned ? 0.5 : 0.35 }}
+        >
+          {ghost}
+        </span>
+        <MedalIcon glyph={glyph} tier={tier} size={112} />
+        <div className="relative min-w-0 flex-1 basis-72">
+          <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{kicker}</p>
+          <h4 className="mt-1 font-display text-4xl leading-[0.95] font-black sm:text-6xl">{name}</h4>
+          <p className="mt-2 max-w-xl text-sm text-ink/80">{description}</p>
+          <div className="mt-4 max-w-xl">
+            <div className="h-2 bg-line" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={next ?? count} aria-label={name}>
+              <div className="h-full" style={{ width: `${next ? Math.min(100, Math.round((count / next) * 100)) : 100}%`, background: TIER_COLOR[Math.min(4, tier + 1) as Tier] }} />
+            </div>
+            <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
+              <span>
+                <span className="font-bold text-ink">{count}</span> {countLabel}
+                {earned && <span className="ml-2 font-bold uppercase" style={{ color: accent }}>· {t(tierLabel(tier))}</span>}
+              </span>
+              <span>{next ? t('badge.nextAt', { n: next }) : t('badge.maxed')}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className={`checker h-3 ${earned ? 'checker-run' : 'opacity-30'}`} aria-hidden />
     </div>
   )
 }

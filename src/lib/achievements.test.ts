@@ -38,6 +38,15 @@ describe('computeAchievements', () => {
     expect(get(rows, 'legendEvent').count).toBe(2) // legend y loose (11 × 15 + 6 = 171)
   })
 
+  it('evento perfecto: 12 victorias seguidas, 180 puntos', () => {
+    const perfect = event('p', Array(12).fill(1))
+    const almost = event('q', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]) // 177 puntos
+    const rows = [...perfect, ...almost]
+    expect(get(rows, 'perfectEvent').count).toBe(1)
+    expect(get(rows, 'perfectEvent').epic).toBe(true)
+    expect(get(rows, 'legendEvent').count).toBe(2)
+  })
+
   it('un evento incompleto no cuenta para los logros de evento', () => {
     const rows = event('short', Array(10).fill(1))
     expect(get(rows, 'bigEvent').count).toBe(0)

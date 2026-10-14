@@ -162,6 +162,21 @@ body {
   }
 }
 
+/* Bandera a cuadros que avanza, para el logro épico */
+@keyframes checker-run {
+  to {
+    background-position: 16px 0;
+  }
+}
+.checker-run {
+  animation: checker-run 0.9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .checker-run {
+    animation: none;
+  }
+}
+
 /* Campos de posición: sin las flechitas de subir/bajar el número (↑/↓ del teclado cambian de jugador) */
 input[data-position] {
   appearance: textfield;

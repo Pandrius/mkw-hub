@@ -84,6 +84,17 @@ describe('computePlayerAnalytics', () => {
     expect(a.weakest.map((t) => t.trackId)).toEqual(['ok'])
   })
 
+  it('últimas posiciones de una pista: la más reciente primero', () => {
+    const rows = [
+      ...event('a', '2026-10-01T10:00:00Z', [5], 'war', () => 'rr'),
+      ...event('b', '2026-10-02T10:00:00Z', [3], 'war', () => 'rr'),
+      ...event('c', '2026-10-03T10:00:00Z', [8], 'war', () => 'rr'),
+      ...event('d', '2026-10-04T10:00:00Z', [1], 'war', () => 'rr'),
+    ]
+    const rr = computePlayerAnalytics(rows, 'all')!.tracks.find((t) => t.trackId === 'rr')!
+    expect(rr.recent).toEqual([1, 8, 3])
+  })
+
   it('respeta el filtro war / lounge y separa ambos con "todo"', () => {
     const rows = [...event('a', '2026-10-01T10:00:00Z', Array(6).fill(1)), ...event('b', '2026-10-02T10:00:00Z', Array(6).fill(12), 'lounge')]
     expect(computePlayerAnalytics(rows, 'war')!.avgPos).toBe(1)
