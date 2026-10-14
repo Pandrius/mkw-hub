@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { getTrack, getTrackColor, getTrackTextColor } from '../data/tracks'
+import { getTrack, getTrackPlateBackground, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { Record3 } from '../lib/statMath'
 import { positionColor, useNum } from './statFormat'
@@ -62,7 +62,7 @@ export function TrackName({ trackId, short = false }: { trackId: string; short?:
   const track = getTrack(trackId)
   return (
     <Link to={`/pistas/${trackId}`} className="flex min-w-0 items-center gap-2 hover:text-kart-yellow">
-      <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>
+      <Plate color={getTrackPlateBackground(track)} textColor={getTrackTextColor(track)}>
         {track?.abbr ?? trackId}
       </Plate>
       {!short && <span className="truncate font-semibold">{track?.name ?? trackId}</span>}

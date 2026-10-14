@@ -5,7 +5,7 @@ import { PbHistoryList, PbNotice, RecentPbs } from '../components/PbHistory'
 import { SearchBox } from '../components/SearchBox'
 import TimeGoals from '../components/TimeGoals'
 import { EmptyState, Flag, PageHeader, Plate, Tabs } from '../components/ui'
-import { TRACKS, getTrackColor, getTrackTextColor } from '../data/tracks'
+import { TRACKS, getTrackPlateBackground, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import {
@@ -267,7 +267,7 @@ export default function MyTimes() {
                   <tr key={row.trackId} className="border-t border-line/60">
                     <td className="sticky left-0 z-10 bg-surface px-4 py-2">
                       <Link to={`/pistas/${track.id}`} className="flex items-center gap-2 hover:text-kart-yellow">
-                        <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>{track.abbr}</Plate>
+                        <Plate color={getTrackPlateBackground(track)} textColor={getTrackTextColor(track)}>{track.abbr}</Plate>
                         <span className="hidden whitespace-nowrap sm:inline">{track.name}</span>
                       </Link>
                     </td>

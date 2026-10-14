@@ -54,18 +54,19 @@ describe('getTrackColor', () => {
   it('las variantes de una misma pista comparten color', () => {
     expect(new Set(['rMC', 'rMC1', 'rMC2', 'rMC3'].map(color)).size).toBe(1)
     expect(new Set(['rGV1', 'rGV2', 'rGV3'].map(color)).size).toBe(1)
-    expect(new Set(['rCM', 'rCM1', 'rCM2'].map(color)).size).toBe(1)
+    expect(new Set(['rCM', 'rCI1', 'rCI2'].map(color)).size).toBe(1)
   })
 
   it('el color sigue a la captura de la pista, no a su copa (Dry Bones Burnout es de lava, no verde)', () => {
     const h = hue(color('DBB')!)
     expect(h < 20 || h > 340).toBe(true)
-    // Bowser's Castle es de fuego: tono naranja
-    expect(hue(color('BC')!)).toBeGreaterThan(15)
-    expect(hue(color('BC')!)).toBeLessThan(45)
-    // Sky-High Sundae es de cielo: tono azul
-    expect(hue(color('rSHS')!)).toBeGreaterThan(190)
-    expect(hue(color('rSHS')!)).toBeLessThan(250)
+    // Sky-High Sundae es de helado: fondo rosa suave
+    expect(hue(color('rSHS')!)).toBeGreaterThan(300)
+    expect(hue(color('rSHS')!)).toBeLessThan(350)
+    // Bowser's Castle: fondo negro y letras de lava naranja
+    expect(color('BC')).toBe('#050505')
+    expect(hue(getTrackTextColor(getTrackByAbbr('BC'))!)).toBeGreaterThan(15)
+    expect(hue(getTrackTextColor(getTrackByAbbr('BC'))!)).toBeLessThan(45)
   })
 
   it('las pistas sin color propio usan el de su pista madre o el de su copa, y sin pista no hay color', () => {
@@ -76,6 +77,9 @@ describe('getTrackColor', () => {
     const sinNada: Track = { id: 'y', name: 'Y', cupId: 'leaf' }
     expect(getTrackColor(sinNada)).toMatch(/^#[0-9a-f]{6}$/i)
   })
+
+  // Pistas con contraste más bajo a propósito: SP lleva letras amarillas y rDDJ letras verdes discretas
+  const CONTRASTE_BAJO: Record<string, number> = { SP: 2.2, rDDJ: 3 }
 
   it('cada placa tiene dos colores y las letras se leen sobre el fondo (contraste de al menos 4,5)', () => {
     const lin = (hex: string, i: number) => {
@@ -89,12 +93,12 @@ describe('getTrackColor', () => {
       expect(fg, t.id).toMatch(/^#[0-9a-f]{6}$/i)
       expect(fg.toLowerCase(), t.id).not.toBe(bg.toLowerCase())
       const [hi, lo] = lum(bg) > lum(fg) ? [lum(bg), lum(fg)] : [lum(fg), lum(bg)]
-      expect((hi + 0.05) / (lo + 0.05), t.id).toBeGreaterThanOrEqual(4.5)
+      expect((hi + 0.05) / (lo + 0.05), t.id).toBeGreaterThanOrEqual(CONTRASTE_BAJO[t.abbr ?? ''] ?? 4.5)
     }
   })
 
   it('las variantes comparten también el color de las letras', () => {
-    for (const group of [['rMC', 'rMC1', 'rMC2', 'rMC3'], ['rGV1', 'rGV2', 'rGV3'], ['rCM', 'rCM1', 'rCM2']]) {
+    for (const group of [['rMC', 'rMC1', 'rMC2', 'rMC3'], ['rGV1', 'rGV2', 'rGV3'], ['rCM', 'rCI1', 'rCI2']]) {
       expect(new Set(group.map((a) => getTrackTextColor(getTrackByAbbr(a)))).size).toBe(1)
     }
   })

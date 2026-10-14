@@ -66,8 +66,8 @@ const FILES = {
   rGV2: 'MKWorld SNES Ghost Valley 2 Icon.png',
   rGV3: 'MKWorld SNES Ghost Valley 3 Icon.png',
   rKB1: 'MKWorld SNES Koopa Beach 1 Icon.png',
-  rCM1: 'MKWorld SNES Choco Island 1 Icon.png',
-  rCM2: 'MKWorld SNES Choco Island 2 Icon.png',
+  rCI1: 'MKWorld SNES Choco Island 1 Icon.png',
+  rCI2: 'MKWorld SNES Choco Island 2 Icon.png',
   rVL1: 'MKWorld SNES Vanilla Lake 1 Icon.png',
 }
 

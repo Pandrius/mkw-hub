@@ -76,8 +76,8 @@ export const TRACKS: Track[] = [
   { id: 'snes-ghost-valley-1', abbr: 'rGV1', name: 'SNES Ghost Valley 1', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
   { id: 'snes-ghost-valley-2', abbr: 'rGV2', name: 'SNES Ghost Valley 2', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
   { id: 'snes-ghost-valley-3', abbr: 'rGV3', name: 'SNES Ghost Valley 3', cupId: 'snes', origin: 'SNES', parentId: 'boo-cinema' },
-  { id: 'snes-choco-island-1', abbr: 'rCM1', name: 'SNES Choco Island 1', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
-  { id: 'snes-choco-island-2', abbr: 'rCM2', name: 'SNES Choco Island 2', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
+  { id: 'snes-choco-island-1', abbr: 'rCI1', name: 'SNES Choco Island 1', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
+  { id: 'snes-choco-island-2', abbr: 'rCI2', name: 'SNES Choco Island 2', cupId: 'snes', origin: 'SNES', parentId: 'choco-mountain' },
   { id: 'snes-koopa-beach-1', abbr: 'rKB1', name: 'SNES Koopa Beach 1', cupId: 'snes', origin: 'SNES', parentId: 'koopa-troopa-beach' },
   { id: 'snes-vanilla-lake-1', abbr: 'rVL1', name: 'SNES Vanilla Lake 1', cupId: 'snes', origin: 'SNES', parentId: 'sky-high-sundae' },
 ]
@@ -91,7 +91,7 @@ export function getTrack(id: string): Track | undefined {
 const TRACK_IMAGES = new Set([
   'MBC', 'CC', 'WS', 'DKS', 'rDH', 'rSGB', 'rWS', 'rAF', 'rDKP', 'SP', 'rSHS', 'rWSh', 'rKTB', 'FO', 'PS',
   'rPB', 'SSS', 'rDDJ', 'GBR', 'CCF', 'DD', 'BCi', 'DBB', 'rMMM', 'rCM', 'rTF', 'BC', 'AH', 'rMC', 'RR',
-  'rMC1', 'rMC2', 'rMC3', 'rGV1', 'rGV2', 'rGV3', 'rKB1', 'rCM1', 'rCM2', 'rVL1',
+  'rMC1', 'rMC2', 'rMC3', 'rGV1', 'rGV2', 'rGV3', 'rKB1', 'rCI1', 'rCI2', 'rVL1',
 ])
 
 export function getTrackImage(track: Track, hd = false): string | undefined {
@@ -117,22 +117,30 @@ type PlateColors = { bg: string; fg: string }
 const plate = (bg: string, fg: string): PlateColors => ({ bg, fg })
 
 const MC = plate('#e1c265', '#371710')
-const GV = plate('#acd175', '#101a37')
-const CM = plate('#da976c', '#102837')
+const GV = plate('#acd175', '#3b1a6e') // alternativa por probar: fondo morado y letras verdes
+const CM = plate('#5a3320', '#e8d9c8') // chocolate
 
 const TRACK_PLATES: Record<string, PlateColors> = {
-  MBC: plate('#dd9168', '#102937'), CC: plate('#63a0e3', '#371f10'), WS: plate('#d1925e', '#102637'), DKS: plate('#d54b53', '#080e1c'),
+  MBC: plate('#dd9168', '#102937'), CC: plate('#63a0e3', '#371f10'), WS: plate('#d1925e', '#102637'), DKS: plate('#e4565e', '#081640'),
   rDH: plate('#d5c071', '#101837'), rSGB: plate('#d79c6f', '#102737'), rWS: plate('#c9603c', '#08171c'), rAF: plate('#ca885c', '#102837'),
-  rDKP: plate('#699cdd', '#372610'), SP: plate('#5699c9', '#28240b'), rSHS: plate('#5b93ec', '#28220b'), rWSh: plate('#40b3bf', '#371410'),
-  rKTB: plate('#559bf1', '#372610'), FO: plate('#d1a875', '#102637'), PS: plate('#d58f72', '#102c37'),
-  rPB: plate('#d18f75', '#102c37'), SSS: plate('#d1a775', '#102c37'), rDDJ: plate('#e1965c', '#102637'), GBR: plate('#d79b48', '#102637'),
-  CCF: plate('#e15c4e', '#281e0b'), DD: plate('#339bd8', '#371e10'), BCi: plate('#40bfb6', '#371013'), DBB: plate('#d02f3f', '#ebfaf8'),
-  rMMM: plate('#5fe4e7', '#1a3710'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#c77538', '#0b1b28'),
-  AH: plate('#c6a140', '#102f37'), rMC: MC, RR: plate('#6c98ce', '#37101f'),
+  rDKP: plate('#a9d4ee', '#372610'), SP: plate('#5699c9', '#ffe14d'), rSHS: plate('#eab0cb', '#1f3f8c'), rWSh: plate('#40b3bf', '#371410'),
+  rKTB: plate('#559bf1', '#372610'), FO: plate('#d1a875', '#102637'), PS: plate('#ab346b', '#e2f9cc'),
+  rPB: plate('#ab346b', '#f3e2b4'), SSS: plate('#8fc9ec', '#2f353b'), rDDJ: plate('#e1965c', '#2f5a1c'), GBR: plate('#e5ad33', '#5a2a10'),
+  CCF: plate('#d42a30', '#fff5f0'), DD: plate('#1c68a8', '#ffe9c2'), BCi: plate('#6a3fb0', '#ffffff'), DBB: plate('#d02f3f', '#ebfaf8'),
+  rMMM: plate('#278228', '#ffffff'), rCM: CM, rTF: plate('#c78653', '#102637'), BC: plate('#050505', '#ff7a1a'),
+  AH: plate('#24502b', '#e2b78a'), rMC: MC, RR: plate('#f2c230', '#1a1030'),
   rMC1: MC, rMC2: MC, rMC3: MC,
   rGV1: GV, rGV2: GV, rGV3: GV,
-  rCM1: CM, rCM2: CM,
-  rKB1: plate('#ebb55c', '#213710'), rVL1: plate('#52c6f4', '#371b10'),
+  rCI1: CM, rCI2: CM,
+  rKB1: plate('#559bf1', '#372610'), rVL1: plate('#52c6f4', '#371b10'),
+}
+
+/** Arcoíris de Rainbow Road: solo la placa (DOM) lo usa; en el resto (texto, imagen de la war) vale el color liso */
+const RAINBOW = 'linear-gradient(90deg, #ff5a5a, #ffa94d, #ffe14d, #6fdc6f, #4dd2ff, #7a8cff, #c07cff)'
+
+/** Fondo de la placa de una pista: el color liso o, en Rainbow Road, el arcoíris */
+export function getTrackPlateBackground(track: Track | undefined | null): string | undefined {
+  return track?.abbr === 'RR' ? RAINBOW : getTrackColor(track)
 }
 
 function getPlate(track: Track | undefined | null): PlateColors | undefined {

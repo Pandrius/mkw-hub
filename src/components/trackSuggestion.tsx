@@ -1,4 +1,4 @@
-import { getTrackColor, getTrackTextColor, type Track } from '../data/tracks'
+import { getTrackPlateBackground, getTrackTextColor, type Track } from '../data/tracks'
 import type { Suggestion } from './SearchBox'
 import { Plate } from './ui'
 
@@ -7,7 +7,7 @@ export const trackSuggestion = (track: Track): Suggestion => ({
   key: track.id,
   label: track.name,
   icon: (
-    <Plate color={getTrackColor(track)} textColor={getTrackTextColor(track)}>
+    <Plate color={getTrackPlateBackground(track)} textColor={getTrackTextColor(track)}>
       {track.abbr ?? track.id}
     </Plate>
   ),
