@@ -80,7 +80,7 @@ export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier:
   { id: 'cleanDriver', achievement: 'cleanEvent', tier: 3 },
   { id: 'comeback', achievement: 'redemption', tier: 3 },
   { id: 'closer', achievement: 'finalRace', tier: 3 },
-  { id: 'legend', achievement: 'legendEvent', tier: 3 },
+  { id: 'legend', achievement: 'legendEvent', tier: 1, count: 8 },
   { id: 'allTerrain', achievement: 'podiumEverywhere', tier: 4 },
   { id: 'trackMaster', achievement: 'winEverywhere', tier: 4 },
 ]

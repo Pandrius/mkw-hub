@@ -56,7 +56,7 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Guía de bienvenida para quien no tiene eventos: ventana paso a paso para subir una War o un Lounge, con «No volver a mostrar»
 - [x] Puntos por carrera ajustados por número de carreras (pocas carreras → se acerca al nivel general) con indicador de fiabilidad
 - [x] Insignias por volumen de juego: carreras totales, eventos, explorador y carreras por pista (bronce 25 · plata 100 · oro 250 · platino 500)
-- [x] Medallas de metal (bronce, plata, oro y platino) con relieve, botones de acceso directo a Logros y a MMR/Lounge, evento perfecto de una sola vez y logro supremo «Leyenda absoluta» (todos los demás al máximo)
+- [x] Medallas de metal (bronce, plata, oro y platino) con relieve, botones de acceso directo a Logros y a MMR/Lounge, evento perfecto y evento legendario de una sola vez, nivel esmeralda sobre el platino en los logros más exigentes y logro supremo «Leyenda absoluta» (todos los demás al máximo), con diseños propios en el estilo de la web
 - [x] Imagen de la tabla oficial del Lounge en los eventos verificados (Lounge y SQ)
 - [x] Logros de desempeño con 4 niveles (bronce, plata, oro, platino): podios, victorias, top 6, rachas, eventos limpios / grandes / legendarios, redención, final de foto, dueño de pista, podio y victoria en todas las pistas
 - [x] Recompensas: hasta 3 insignias destacadas y un título junto al nombre (logros, dueño de pista, ranking y clubes de MMR del Lounge); se validan en el servidor (`api/showcase.ts`)

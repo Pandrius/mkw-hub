@@ -1,7 +1,7 @@
 import type { TimedResult } from './form.js'
 
-/** 0 = sin insignia; 1 bronce, 2 plata, 3 oro, 4 platino */
-export type Tier = 0 | 1 | 2 | 3 | 4
+/** 0 = sin insignia; 1 bronce, 2 plata, 3 oro, 4 platino, 5 esmeralda (solo en los logros más exigentes) */
+export type Tier = 0 | 1 | 2 | 3 | 4 | 5
 
 /** Carreras en una misma pista para cada nivel */
 export const TRACK_TIERS = [25, 100, 250, 500]

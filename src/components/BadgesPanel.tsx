@@ -123,6 +123,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
               description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
               progress={a}
               thresholds={a.thresholds}
+              single={a.single}
             />
           ))}
         </div>

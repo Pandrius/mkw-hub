@@ -8,6 +8,7 @@ export const TIER_COLOR: Record<Tier, string> = {
   2: '#c9ced6',
   3: 'var(--color-kart-yellow)',
   4: '#28d7f5',
+  5: '#22e07f',
 }
 
 export const tierLabel = (tier: Tier): MessageKey => `badge.tier.${tier}` as MessageKey

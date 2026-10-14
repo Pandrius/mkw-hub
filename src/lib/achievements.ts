@@ -74,28 +74,29 @@ const DEFS: Def[] = [
     thresholds: () => [1],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= PERFECT_EVENT_POINTS).length,
   },
-  { id: 'podiums', glyph: 'podium', thresholds: () => [25, 100, 300, 1000], count: (rows) => countWhere(rows, (r) => r.position <= 3) },
+  { id: 'podiums', glyph: 'podium', thresholds: () => [50, 300, 750, 1250, 2000], count: (rows) => countWhere(rows, (r) => r.position <= 3) },
   { id: 'wins', glyph: 'star', thresholds: () => [10, 50, 150, 500], count: (rows) => countWhere(rows, (r) => r.position === 1) },
-  { id: 'top6', glyph: 'chevrons', thresholds: () => [50, 250, 750, 2000], count: (rows) => countWhere(rows, (r) => r.position <= 6) },
+  { id: 'top6', glyph: 'chevrons', thresholds: () => [50, 250, 750, 1500, 2500], count: (rows) => countWhere(rows, (r) => r.position <= 6) },
   { id: 'winStreak', glyph: 'bolt', thresholds: () => [2, 3, 5, 8], count: (rows) => streakOf(rows, (r) => r.position === 1).best },
   { id: 'top6Streak', glyph: 'bars', thresholds: () => [5, 10, 25, 50], count: (rows) => streakOf(rows, (r) => r.position <= 6).best },
-  { id: 'cleanEvent', glyph: 'flag', thresholds: () => [1, 3, 10, 25], count: (rows) => fullEvents(rows).filter((ps) => ps.every((p) => p <= 6)).length },
+  { id: 'cleanEvent', glyph: 'flag', thresholds: () => [1, 3, 5, 7], count: (rows) => fullEvents(rows).filter((ps) => ps.every((p) => p <= 6)).length },
   {
     id: 'bigEvent',
     glyph: 'flag',
-    thresholds: () => [1, 5, 15, 40],
+    thresholds: () => [1, 5, 15, 30],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= BIG_EVENT_POINTS).length,
   },
   {
     id: 'legendEvent',
     glyph: 'star',
-    thresholds: () => [1, 3, 8, 20],
+    single: true,
+    thresholds: () => [1],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= LEGEND_EVENT_POINTS).length,
   },
   {
     id: 'redemption',
     glyph: 'bolt',
-    thresholds: () => [1, 5, 15, 40],
+    thresholds: () => [3, 10, 30, 60, 100],
     count: (rows) => {
       let n = 0
       for (let i = 1; i < rows.length; i++) {
@@ -156,17 +157,17 @@ function singleProgress(count: number, threshold: number): Progress {
 }
 
 /** Conseguido del todo: el logro único logrado, o un logro de niveles en platino */
-export const isMaxed = (a: Pick<Achievement, 'single' | 'tier'>) => (a.single ? a.tier > 0 : a.tier === 4)
+export const isMaxed = (a: Pick<Achievement, 'single' | 'tier' | 'thresholds'>) => (a.single ? a.tier > 0 : a.tier === a.thresholds.length)
 
 /**
- * Totales de los logros (sin contar el supremo): niveles conseguidos de los posibles (los de varios niveles suman hasta 4 y los
+ * Totales de los logros (sin contar el supremo): niveles conseguidos de los posibles (los de varios niveles suman hasta 5 y los
  * de una sola vez, 1) y cuántos están al máximo. Siguen subiendo aunque ya haya platino.
  */
 export function achievementTotals(achievements: Achievement[]): { earned: number; possible: number; maxed: number; count: number } {
   const regular = achievements.filter((a) => a.id !== 'allAchievements')
   return {
     earned: regular.reduce((n, a) => n + (a.single ? (a.tier > 0 ? 1 : 0) : a.tier), 0),
-    possible: regular.reduce((n, a) => n + (a.single ? 1 : 4), 0),
+    possible: regular.reduce((n, a) => n + (a.single ? 1 : a.thresholds.length), 0),
     maxed: regular.filter(isMaxed).length,
     count: regular.length,
   }
@@ -181,7 +182,7 @@ export function demoAchievements(real: Achievement[]): Achievement[] {
     .filter((a) => a.id !== 'allAchievements')
     .map((a): Achievement => {
       const last = a.thresholds[a.thresholds.length - 1]
-      return { ...a, tier: 4 as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
+      return { ...a, tier: (a.single ? 4 : a.thresholds.length) as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
     })
   const grand = real.find((a) => a.id === 'allAchievements')
   return grand ? [...regular, { ...grand, tier: 4 as Tier, next: null, count: regular.length }] : regular
