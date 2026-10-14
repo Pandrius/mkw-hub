@@ -77,8 +77,8 @@ describe('getTrackColor', () => {
     expect(getTrackColor(sinNada)).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
-  // Pistas con contraste más bajo a propósito: SP lleva letras amarillas, rDDJ letras discretas, DKS azul del mono sobre rojo y rMMM letras blancas sobre verde césped
-  const CONTRASTE_BAJO: Record<string, number> = { SP: 2.2, rDDJ: 3.3, DKS: 3.4, rMMM: 3.5 }
+  // Pistas con contraste más bajo a propósito: SP lleva letras amarillas, rDDJ letras discretas, DKS azul del mono sobre rojo rMMM letras blancas sobre verde césped y AH verde brillante sobre marrón
+  const CONTRASTE_BAJO: Record<string, number> = { SP: 2.2, rDDJ: 3.3, DKS: 3.4, rMMM: 3.5, AH: 2.2 }
 
   it('cada placa tiene dos colores y las letras se leen sobre el fondo (contraste de al menos 4,5)', () => {
     const lin = (hex: string, i: number) => {
