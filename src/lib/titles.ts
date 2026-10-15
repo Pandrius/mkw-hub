@@ -43,6 +43,14 @@ export function featurable(achievements: Achievement[], badges: BadgeSet): Featu
   ].filter((f) => f.tier > 0)
 }
 
+/** Rayos de los escudos del evento perfecto y de la leyenda absoluta: simples, ramificados o sin rayos */
+export type BoltStyle = 'simple' | 'forked' | 'none'
+export const BOLT_STYLES: BoltStyle[] = ['simple', 'forked', 'none']
+export const DEFAULT_BOLT_STYLE: BoltStyle = 'simple'
+export const isBoltStyle = (v: unknown): v is BoltStyle => typeof v === 'string' && (BOLT_STYLES as string[]).includes(v)
+/** Premio: solo quien ha conseguido el evento perfecto o la leyenda absoluta puede elegir cómo se ven sus rayos */
+export const canPickBolts = (owned: Featurable[]) => owned.some((f) => f.id === 'ach:perfectEvent' || f.id === 'ach:allAchievements')
+
 /** Comprueba una selección de insignias destacadas: sin repetidas, hasta 3 y todas ganadas. Devuelve la lista limpia o null */
 export function validateFeatured(ids: unknown, owned: Featurable[]): FeaturedId[] | null {
   if (!Array.isArray(ids) || ids.length > MAX_FEATURED) return null

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import EventList from '../components/EventList'
 import { BadgesPanel } from '../components/BadgesPanel'
 import { LoungePanel } from '../components/LoungePanel'
+import { BoltStyleContext } from '../components/boltStyle'
 import { ProfileShowcase, ShowcaseEditor } from '../components/Showcase'
 import { PlayerAnalyticsView } from '../components/PlayerAnalyticsView'
 import { PlayerCompareView } from '../components/PlayerCompareView'
@@ -22,7 +23,7 @@ import type { TimedResult } from '../lib/form'
 import { getPlayerTimeline } from '../lib/timeline'
 import { isGuideHidden } from '../lib/guideStore'
 import { getLoungeData, requestLoungeSync, type LoungeData } from '../lib/loungeApi'
-import { featurable, loungeFactsOf } from '../lib/titles'
+import { DEFAULT_BOLT_STYLE, featurable, isBoltStyle, loungeFactsOf, type BoltStyle } from '../lib/titles'
 import { computePlayerAnalytics } from '../lib/playerAnalytics'
 import type { StatsFilter } from '../lib/stats'
 import { rankHits, REMOTE_MIN_LENGTH, sanitizeTerm, searchRemote, type SearchHit } from '../lib/search'
@@ -139,7 +140,7 @@ export default function Stats() {
   )
 }
 
-type Owner = Pick<Profile, 'username' | 'avatar_url' | 'country_code' | 'featured_badges' | 'title_id'>
+type Owner = Pick<Profile, 'username' | 'avatar_url' | 'country_code' | 'featured_badges' | 'title_id' | 'bolt_style'>
 
 type VerifyFilter = 'all' | 'verified'
 
@@ -163,7 +164,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
   const [reloadKey, setReloadKey] = useState(0)
   const [checking, setChecking] = useState(false)
   const [editing, setEditing] = useState(openEditor)
-  const [showcase, setShowcase] = useState<{ badges: string[]; title: string | null } | null>(null)
+  const [showcase, setShowcase] = useState<{ badges: string[]; title: string | null; bolts: BoltStyle } | null>(null)
   const [owner, setOwner] = useState<Owner | null>(null)
   const [teams, setTeams] = useState<Entity[]>([])
   const [timeline, setTimeline] = useState<TimedResult[] | null>(null)
@@ -177,7 +178,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
   useEffect(() => {
     let cancelled = false
     Promise.all([
-      supabase!.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id').eq('id', profileId).maybeSingle(),
+      supabase!.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id, bolt_style').eq('id', profileId).maybeSingle(),
       getLoungeData(profileId),
       getOwnedTracks(profileId).catch(() => [] as string[]),
       getAchievementStats(),
@@ -193,7 +194,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
         setLounge(loungeData)
         setOwnedTrackIds(owned)
         setAchStats(aStats)
-        setShowcase({ badges: prof.data?.featured_badges ?? [], title: prof.data?.title_id ?? null })
+        setShowcase({ badges: prof.data?.featured_badges ?? [], title: prof.data?.title_id ?? null, bolts: isBoltStyle(prof.data?.bolt_style) ? prof.data.bolt_style : DEFAULT_BOLT_STYLE })
         setTeams(tms)
         setTimeline(tl)
         setVs(vsTl ? { owner: vsProf?.data ?? null, timeline: vsTl } : null)
@@ -268,6 +269,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
   const vsName = vs?.owner?.username ?? '…'
 
   return (
+    <BoltStyleContext.Provider value={showcase?.bolts ?? DEFAULT_BOLT_STYLE}>
     <div className="space-y-8">
       {guideOpen && <WelcomeGuide onClose={() => setGuideOpen(false)} />}
 
@@ -331,9 +333,10 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
         <ShowcaseEditor
           featuredIds={showcase.badges}
           titleId={showcase.title}
+          bolts={showcase.bolts}
           owned={ownedFeatures}
           ctx={titleCtx}
-          onSaved={(b, ti) => setShowcase({ badges: b, title: ti })}
+          onSaved={(b, ti, bo) => setShowcase({ badges: b, title: ti, bolts: bo })}
           onClose={() => setEditing(false)}
         />
       )}
@@ -423,5 +426,6 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
         </>
       )}
     </div>
+    </BoltStyleContext.Provider>
   )
 }

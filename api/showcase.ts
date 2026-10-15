@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { loadTitleContext } from '../src/lib/showcaseServer.js'
-import { validateFeatured, validateTitle } from '../src/lib/titles.js'
+import { canPickBolts, DEFAULT_BOLT_STYLE, isBoltStyle, validateFeatured, validateTitle, type BoltStyle } from '../src/lib/titles.js'
 
 export async function POST(request: Request): Promise<Response> {
   const token = request.headers.get('authorization')?.replace(/^Bearer /, '')
@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   const { data: auth, error: authError } = await admin.auth.getUser(token)
   if (!auth?.user || authError) return new Response('Unauthorized', { status: 401 })
 
-  let body: { badges?: unknown; title?: unknown }
+  let body: { badges?: unknown; title?: unknown; bolts?: unknown }
   try {
     body = (await request.json()) as typeof body
   } catch {
@@ -30,9 +30,15 @@ export async function POST(request: Request): Promise<Response> {
     if (badges === null) return Response.json({ ok: false, reason: 'invalid badges' }, { status: 422 })
     if (title === undefined) return Response.json({ ok: false, reason: 'invalid title' }, { status: 422 })
 
-    const { error } = await admin.from('profiles').update({ featured_badges: badges, title_id: title }).eq('id', auth.user.id)
+    // Los rayos de los escudos especiales son el premio de quien los ha conseguido; para el resto se ignoran
+    if (body.bolts !== undefined && !isBoltStyle(body.bolts)) return Response.json({ ok: false, reason: 'invalid bolts' }, { status: 422 })
+    const current = await admin.from('profiles').select('bolt_style').eq('id', auth.user.id).maybeSingle()
+    const saved = isBoltStyle(current.data?.bolt_style) ? current.data.bolt_style : DEFAULT_BOLT_STYLE
+    const bolts: BoltStyle = canPickBolts(owned) && isBoltStyle(body.bolts) ? body.bolts : saved
+
+    const { error } = await admin.from('profiles').update({ featured_badges: badges, title_id: title, bolt_style: bolts }).eq('id', auth.user.id)
     if (error) return Response.json({ ok: false, reason: 'save error' }, { status: 500 })
-    return Response.json({ ok: true, badges, title })
+    return Response.json({ ok: true, badges, title, bolts })
   } catch (err) {
     console.error('showcase', err)
     return Response.json({ ok: false, reason: 'unavailable' }, { status: 500 })

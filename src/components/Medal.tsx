@@ -1,7 +1,9 @@
-import { useId, type ReactNode } from 'react'
+import { useContext, useId, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import type { Glyph } from '../lib/achievements'
 import type { Progress, Tier } from '../lib/badges'
+import type { BoltStyle } from '../lib/titles'
+import { BoltStyleContext } from './boltStyle'
 import { RUBY, TIER_COLOR, tierLabel, type MedalKind } from './tiers'
 
 /** Dibujos de las medallas en una cuadrícula de 24 × 24: formas planas, sin degradados */
@@ -74,8 +76,40 @@ const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; 
   // Multicolor iridiscente: muchos tonos mezclados (no los del arcoíris literal); los colores cambian y el reflejo se mueve
   legend: { stops: ['#7df9ff', '#a78bfa', '#ff7ad9', '#ffc46b', '#7dffb2', '#6ea8ff', '#e879f9', '#fff1a8', '#7df9ff'], rim: '#3b2a6b', ink: '#16121f', light: false, animated: true },
 }
+/** Rayos simples: ocho zigzags que parpadean alrededor del escudo y se apagan */
+const BOLT_PATH = 'M0 0 L4.9 -3.6 L7.7 2.5 L13.3 -3.1 L16.8 0.8 L21 -1.7'
+const BOLT_ANGLES = [-75, -30, 15, 60, 105, 150, 195, 240]
+
+function Bolts({ colors, shifting }: { colors: string[]; shifting: boolean }) {
+  return (
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {BOLT_ANGLES.map((angle, i) => {
+        const color = colors[i % colors.length]
+        const dur = 1.9 + (i % 3) * 0.45
+        const begin = `-${((i * 0.73) % dur).toFixed(2)}s`
+        // La leyenda cambia de color por el camino, como su escudo
+        const rotated = [...colors.slice(i % colors.length), ...colors.slice(0, i % colors.length), color].join(';')
+        const shift = shifting ? <animate attributeName="stroke" values={rotated} dur="6s" repeatCount="indefinite" /> : null
+        return (
+          <g key={angle} transform={`translate(28 31) rotate(${angle}) translate(24 0)`} opacity="0">
+            {/* Parpadeo de relámpago: salta, vacila y se apaga hasta el siguiente */}
+            <animate attributeName="opacity" values="0;1;0.25;0.95;0;0" keyTimes="0;0.06;0.14;0.22;0.5;1" dur={`${dur}s`} begin={begin} repeatCount="indefinite" />
+            <path d={BOLT_PATH} stroke={color} strokeWidth="5" opacity="0.4">
+              {shift}
+            </path>
+            <path d={BOLT_PATH} stroke={color} strokeWidth="2.2">
+              {shift}
+            </path>
+            <path d={BOLT_PATH} stroke="#fff" strokeWidth="0.8" opacity="0.9" />
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 /**
- * Evento perfecto y leyenda absoluta: rayos ramificados que salen del escudo por fuera, con un halo que chisporrotea. Todo se genera con un generador de números con semilla, así que es siempre igual.
+ * Rayos ramificados (evento perfecto y leyenda absoluta) que salen del escudo por fuera, con un halo que chisporrotea. Todo se genera con un generador de números con semilla, así que es siempre igual.
  */
 function rng(seed: number) {
   let v = seed
@@ -193,6 +227,7 @@ export function MedalIcon({
   single = false,
   levels = 4,
   kind = 'metal',
+  bolts,
 }: {
   glyph: Glyph
   tier: Tier
@@ -202,7 +237,12 @@ export function MedalIcon({
   levels?: number
   /** 'ruby' (evento perfecto) y 'legend' (logro supremo) tienen diseño propio al conseguirse */
   kind?: MedalKind
+  /** Rayos de los escudos especiales; sin indicarlo, los del jugador cuyo perfil se está viendo */
+  bolts?: BoltStyle
 }) {
+  const boltsFromProfile = useContext(BoltStyleContext)
+  const boltStyle = bolts ?? boltsFromProfile
+  const special = kind === 'ruby' || kind === 'legend'
   const id = useId().replace(/:/g, '')
   const reduceMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   const earned = tier > 0
@@ -210,6 +250,7 @@ export function MedalIcon({
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
       <svg width={size} height={size * 1.1} viewBox="0 0 56 62" style={{ overflow: 'visible' }} className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
+        {metal && !reduceMotion && special && boltStyle === 'simple' && <Bolts colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
         {metal ? (
           <>
             <defs>
@@ -262,7 +303,7 @@ export function MedalIcon({
             <svg x="14" y="11" width="27" height="27" viewBox="0 0 24 24" fill={metal.ink}>
               {GLYPHS[glyph]}
             </svg>
-            {!reduceMotion && (kind === 'ruby' || kind === 'legend') && <Charge id={id} colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
+            {!reduceMotion && special && boltStyle === 'forked' && <Charge id={id} colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
           </>
         ) : (
           <>

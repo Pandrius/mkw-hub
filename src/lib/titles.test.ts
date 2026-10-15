@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computeAchievements } from './achievements'
 import { computeBadges } from './badges'
 import type { TimedResult } from './form'
-import { countSqTables, featurable, titleCatalog, validateFeatured, validateTitle, type TitleContext } from './titles'
+import { BOLT_STYLES, canPickBolts, countSqTables, DEFAULT_BOLT_STYLE, featurable, isBoltStyle, titleCatalog, validateFeatured, validateTitle, type TitleContext } from './titles'
 
 const race = (eventId: string, i: number, position: number, trackId = `t${i}`, verified = true): TimedResult => ({
   eventId,
@@ -80,5 +80,20 @@ describe('insignias destacadas', () => {
 describe('countSqTables', () => {
   it('cuenta solo mesas SQ', () => {
     expect(countSqTables([{ reason: 'Table', tier: 'SQ' }, { reason: 'Table', tier: 'C' }, { reason: 'Bonus', tier: 'SQ' }])).toBe(1)
+  })
+})
+
+describe('rayos de los escudos especiales', () => {
+  const f = (id: string) => ({ id, glyph: 'crown' as const, tier: 1 as const })
+  it('solo los eligen quienes tienen el evento perfecto o la leyenda absoluta', () => {
+    expect(canPickBolts([f('ach:wins'), f('badge:races')])).toBe(false)
+    expect(canPickBolts([f('ach:wins'), f('ach:perfectEvent')])).toBe(true)
+    expect(canPickBolts([f('ach:allAchievements')])).toBe(true)
+  })
+  it('acepta los tres estilos y rechaza el resto', () => {
+    for (const s of BOLT_STYLES) expect(isBoltStyle(s)).toBe(true)
+    expect(isBoltStyle('rainbow')).toBe(false)
+    expect(isBoltStyle(null)).toBe(false)
+    expect(DEFAULT_BOLT_STYLE).toBe('simple')
   })
 })

@@ -4,7 +4,7 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import type { Tier } from '../lib/badges'
 import { supabase } from '../lib/supabase'
-import { ACHIEVEMENT_TITLES, MAX_FEATURED, titleCatalog, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
+import { ACHIEVEMENT_TITLES, BOLT_STYLES, canPickBolts, MAX_FEATURED, titleCatalog, type BoltStyle, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
 import { MedalIcon } from './Medal'
 import { Plate } from './ui'
 import { featuredName, titleHow, titleName } from './showcaseNames'
@@ -100,6 +100,7 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
 export function ShowcaseEditor({
   featuredIds,
   titleId,
+  bolts,
   owned,
   ctx,
   onSaved,
@@ -107,14 +108,18 @@ export function ShowcaseEditor({
 }: {
   featuredIds: string[]
   titleId: string | null
+  /** Rayos de los escudos especiales que lleva ahora el perfil */
+  bolts: BoltStyle
   owned: Featurable[]
   ctx: TitleContext
-  onSaved: (badges: string[], title: string | null) => void
+  onSaved: (badges: string[], title: string | null, bolts: BoltStyle) => void
   onClose: () => void
 }) {
   const { t } = useI18n()
   const [badges, setBadges] = useState<string[]>(featuredIds.filter((id) => owned.some((o) => o.id === id)))
   const [title, setTitle] = useState<string | null>(titleId)
+  const [boltStyle, setBoltStyle] = useState<BoltStyle>(bolts)
+  const pickBolts = canPickBolts(owned)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const catalog = titleCatalog(ctx)
@@ -131,10 +136,11 @@ export function ShowcaseEditor({
       const res = await fetch('/api/showcase', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ badges, title }),
+        body: JSON.stringify({ badges, title, ...(pickBolts ? { bolts: boltStyle } : {}) }),
       })
       if (!res.ok) throw new Error(String(res.status))
-      onSaved(badges, title)
+      const saved = (await res.json().catch(() => null)) as { bolts?: BoltStyle } | null
+      onSaved(badges, title, saved?.bolts ?? bolts)
       onClose()
     } catch {
       setError(true)
@@ -234,6 +240,28 @@ export function ShowcaseEditor({
           )
         })}
       </div>
+
+      {pickBolts && (
+        <div>
+          <h4 className="font-display text-base font-bold">{t('showcase.bolts')}</h4>
+          <p className="max-w-2xl text-xs text-muted">{t('showcase.boltsHint')}</p>
+          <ul className="mt-3 flex flex-wrap gap-3">
+            {BOLT_STYLES.map((style) => (
+              <li key={style}>
+                <button
+                  type="button"
+                  onClick={() => setBoltStyle(style)}
+                  aria-pressed={boltStyle === style}
+                  className={`flex flex-col items-center gap-2 border-2 px-6 py-4 ${boltStyle === style ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}
+                >
+                  <MedalIcon glyph="crown" tier={3} size={56} single kind="ruby" bolts={style} />
+                  <span className="text-sm font-semibold">{t(`bolts.${style}` as MessageKey)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={save} disabled={saving} className="btn-yellow text-base">

@@ -19,6 +19,8 @@ export type Profile = {
   /** Insignias destacadas (`ach:wins`, `badge:races`, `track:lc`…) y título del perfil */
   featured_badges?: string[]
   title_id?: string | null
+  /** Rayos de los escudos especiales (premio del evento perfecto y la leyenda absoluta) */
+  bolt_style?: 'simple' | 'forked' | 'none'
   /** Perfil de confianza: lo que sube cuenta como verificado (lo gestiona un admin) */
   trusted?: boolean
 }
