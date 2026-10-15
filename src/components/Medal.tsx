@@ -74,35 +74,106 @@ const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; 
   // Multicolor iridiscente: muchos tonos mezclados (no los del arcoíris literal); los colores cambian y el reflejo se mueve
   legend: { stops: ['#7df9ff', '#a78bfa', '#ff7ad9', '#ffc46b', '#7dffb2', '#6ea8ff', '#e879f9', '#fff1a8', '#7df9ff'], rim: '#3b2a6b', ink: '#16121f', light: false, animated: true },
 }
-/** Rayos que salen del escudo del evento perfecto y de la leyenda absoluta: un zigzag que parpadea y se apaga */
-const BOLT_PATH = 'M0 0 L4.9 -3.6 L7.7 2.5 L13.3 -3.1 L16.8 0.8 L21 -1.7'
-const BOLT_ANGLES = [-75, -30, 15, 60, 105, 150, 195, 240]
+/**
+ * Evento perfecto y leyenda absoluta: rayos ramificados que salen del escudo por fuera, con un halo que chisporrotea. Todo se genera con un generador de números con semilla, así que es siempre igual.
+ */
+function rng(seed: number) {
+  let v = seed
+  return () => {
+    v = (v * 16807) % 2147483647
+    return (v - 1) / 2147483646
+  }
+}
+type Pt = [number, number]
+const toPath = (pts: Pt[]) => 'M' + pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')
 
-function Bolts({ colors, shifting }: { colors: string[]; shifting: boolean }) {
+/** Rayo irregular entre dos puntos, con ramas cortas que salen de algunos de sus quiebros */
+function boltPath(seed: number, [x1, y1]: Pt, [x2, y2]: Pt, segs: number, jitter: number, forks: number): string {
+  const rand = rng(seed)
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.hypot(dx, dy) || 1
+  const nx = -dy / len
+  const ny = dx / len
+  const pts: Pt[] = [[x1, y1]]
+  for (let i = 1; i < segs; i++) {
+    const t = i / segs
+    const o = (rand() - 0.5) * 2 * jitter
+    pts.push([x1 + dx * t + nx * o, y1 + dy * t + ny * o])
+  }
+  pts.push([x2, y2])
+  let d = toPath(pts)
+  for (let f = 0; f < forks; f++) {
+    const k = 1 + Math.floor(rand() * (pts.length - 2))
+    const ang = Math.atan2(dy, dx) + (rand() < 0.5 ? -1 : 1) * (0.45 + rand() * 0.5)
+    const flen = len * (0.25 + rand() * 0.2)
+    const mid: Pt = [pts[k][0] + Math.cos(ang) * flen * 0.5 + (rand() - 0.5) * 2, pts[k][1] + Math.sin(ang) * flen * 0.5 + (rand() - 0.5) * 2]
+    const end: Pt = [pts[k][0] + Math.cos(ang) * flen, pts[k][1] + Math.sin(ang) * flen]
+    d += toPath([pts[k], mid, end])
+  }
+  return d
+}
+
+type Arc = { d: string; dur: number; begin: number }
+/** Rayos que salen por fuera: punto del borde, ángulo y largo */
+const OUTER_ARCS: Arc[] = (
+  [
+    [7, 0, -125, 16],
+    [28, 0, -90, 14],
+    [49, 0, -55, 16],
+    [56, 24, -8, 16],
+    [46, 48, 38, 15],
+    [28, 62, 90, 14],
+    [10, 48, 142, 15],
+    [0, 24, 188, 16],
+  ] as [number, number, number, number][]
+).map(([x, y, deg, len], i) => {
+  const r = (deg * Math.PI) / 180
+  return { d: boltPath(31 + i * 5, [x, y], [x + Math.cos(r) * len, y + Math.sin(r) * len], 6, 3, 2), dur: 1.1 + (i % 4) * 0.4, begin: i * 0.31 }
+})
+
+function Charge({ id, colors, shifting }: { id: string; colors: string[]; shifting: boolean }) {
+  const colorAt = (i: number) => colors[i % colors.length]
+  // Los colores del legend van cambiando por el camino, como su escudo
+  const shift = (i: number) =>
+    shifting ? <animate attributeName="stroke" values={[...colors.slice(i % colors.length), ...colors.slice(0, i % colors.length), colorAt(i)].join(';')} dur="5s" repeatCount="indefinite" /> : null
+  // Cada rayo se enciende en ráfagas cortas y se apaga hasta la siguiente
+  const burst = (a: Arc) => (
+    <animate attributeName="opacity" values="0;1;0.2;1;0.4;0;0" keyTimes="0;0.03;0.07;0.12;0.18;0.32;1" dur={`${a.dur}s`} begin={`-${a.begin}s`} repeatCount="indefinite" />
+  )
+  const arcs = (list: Arc[], offset: number) =>
+    list.map((a, i) => (
+      <g key={i} opacity="0">
+        {burst(a)}
+        <path d={a.d} stroke={colorAt(i + offset)} strokeWidth="2.2" opacity="0.8">
+          {shift(i + offset)}
+        </path>
+        <path d={a.d} stroke="#fff" strokeWidth="0.7" />
+      </g>
+    ))
   return (
-    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-      {BOLT_ANGLES.map((angle, i) => {
-        const color = colors[i % colors.length]
-        const dur = 1.9 + (i % 3) * 0.45
-        const begin = `-${((i * 0.73) % dur).toFixed(2)}s`
-        // La leyenda cambia de color por el camino, como su escudo
-        const rotated = [...colors.slice(i % colors.length), ...colors.slice(0, i % colors.length), color].join(';')
-        const shift = shifting ? <animate attributeName="stroke" values={rotated} dur="6s" repeatCount="indefinite" /> : null
-        return (
-          <g key={angle} transform={`translate(28 31) rotate(${angle}) translate(24 0)`} opacity="0">
-            {/* Parpadeo de relámpago: salta, vacila y se apaga hasta el siguiente */}
-            <animate attributeName="opacity" values="0;1;0.25;0.95;0;0" keyTimes="0;0.06;0.14;0.22;0.5;1" dur={`${dur}s`} begin={begin} repeatCount="indefinite" />
-            <path d={BOLT_PATH} stroke={color} strokeWidth="5" opacity="0.4">
-              {shift}
-            </path>
-            <path d={BOLT_PATH} stroke={color} strokeWidth="2.2">
-              {shift}
-            </path>
-            <path d={BOLT_PATH} stroke="#fff" strokeWidth="0.8" opacity="0.9" />
-          </g>
-        )
-      })}
-    </g>
+    <>
+      <defs>
+        {/* Los rayos chisporrotean: se deforman con ruido que cambia varias veces por segundo, con un halo difuminado */}
+        <filter id={`${id}f`} filterUnits="userSpaceOnUse" x="-24" y="-24" width="104" height="110">
+          <feTurbulence type="fractalNoise" baseFrequency="0.24 0.2" numOctaves="2" seed="1" result="n">
+            <animate attributeName="seed" values="1;5;2;8;3;6;4;9" dur="0.64s" calcMode="discrete" repeatCount="indefinite" />
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3.6" xChannelSelector="R" yChannelSelector="G" result="d" />
+          <feGaussianBlur in="d" stdDeviation="1.3" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="d" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* Rayos de fuera */}
+        <g filter={`url(#${id}f)`}>
+          {arcs(OUTER_ARCS, 2)}
+        </g>
+      </g>
+    </>
   )
 }
 
@@ -139,7 +210,6 @@ export function MedalIcon({
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
       <svg width={size} height={size * 1.1} viewBox="0 0 56 62" style={{ overflow: 'visible' }} className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
-        {metal && !reduceMotion && (kind === 'ruby' || kind === 'legend') && <Bolts colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
         {metal ? (
           <>
             <defs>
@@ -192,6 +262,7 @@ export function MedalIcon({
             <svg x="14" y="11" width="27" height="27" viewBox="0 0 24 24" fill={metal.ink}>
               {GLYPHS[glyph]}
             </svg>
+            {!reduceMotion && (kind === 'ruby' || kind === 'legend') && <Charge id={id} colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
           </>
         ) : (
           <>
