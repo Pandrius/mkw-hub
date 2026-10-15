@@ -106,7 +106,7 @@ const DEFS: Def[] = [
   {
     id: 'winEverywhere',
     glyph: 'ring',
-    thresholds: (total) => [5, 12, 25, total],
+    thresholds: (total) => [5, 12, 22, 32, total],
     count: (rows) => new Set(rows.filter((r) => r.position === 1).map((r) => r.trackId)).size,
   },
 ]

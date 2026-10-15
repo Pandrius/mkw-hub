@@ -633,7 +633,7 @@ export const es = {
   'ach.podiumEverywhere.name': 'Adicto al podio',
   'ach.podiumEverywhere.desc': 'Haz podio al menos una vez en pistas distintas (el platino pide las {total}).',
   'ach.winEverywhere.name': 'Ganador universal',
-  'ach.winEverywhere.desc': 'Gana al menos una vez en pistas distintas (el platino pide las {total}).',
+  'ach.winEverywhere.desc': 'Gana al menos una vez en pistas distintas (la esmeralda pide las {total}).',
   'badge.title': 'Insignias',
   'badge.hint': 'Premian jugar mucho, no las posiciones. Cuentan las carreras de eventos finalizados, War y Lounge.',
   'badge.tier.0': 'Sin nivel',

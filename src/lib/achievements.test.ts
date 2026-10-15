@@ -131,3 +131,12 @@ describe('niveles ajustados y esmeralda', () => {
     expect(get(rows.slice(0, 1250), 'podiums').tier).toBe(4)
   })
 })
+
+describe('Ganador universal', () => {
+  it('tiene cinco niveles: el último (esmeralda) pide ganar en todas las pistas', () => {
+    const a = computeAchievements([], 40).find((x) => x.id === 'winEverywhere')!
+    expect(a.thresholds).toEqual([5, 12, 22, 32, 40])
+    const podium = computeAchievements([], 40).find((x) => x.id === 'podiumEverywhere')!
+    expect(podium.thresholds).toEqual([10, 20, 30, 40])
+  })
+})

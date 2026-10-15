@@ -634,7 +634,7 @@ export const en: Record<MessageKey, string> = {
   'ach.podiumEverywhere.name': 'Podium addict',
   'ach.podiumEverywhere.desc': 'Reach the podium at least once on different tracks (platinum asks for all {total}).',
   'ach.winEverywhere.name': 'Universal winner',
-  'ach.winEverywhere.desc': 'Win at least once on different tracks (platinum asks for all {total}).',
+  'ach.winEverywhere.desc': 'Win at least once on different tracks (emerald asks for all {total}).',
   'badge.title': 'Badges',
   'badge.hint': 'They reward playing a lot, not positions. Races from finished events count, War and Lounge.',
   'badge.tier.0': 'No tier',

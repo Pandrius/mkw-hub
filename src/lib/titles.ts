@@ -82,7 +82,7 @@ export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier:
   { id: 'closer', achievement: 'finalRace', tier: 3 },
   { id: 'legend', achievement: 'legendEvent', tier: 1, count: 8 },
   { id: 'allTerrain', achievement: 'podiumEverywhere', tier: 4 },
-  { id: 'trackMaster', achievement: 'winEverywhere', tier: 4 },
+  { id: 'trackMaster', achievement: 'winEverywhere', tier: 5 },
 ]
 
 /** MMR máximo necesario para cada título de club */
