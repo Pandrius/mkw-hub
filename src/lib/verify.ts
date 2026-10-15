@@ -9,6 +9,8 @@ export type Verifiable = {
   vouched_by?: string | null
   /** Lo subió un perfil de confianza (lo marca un admin) */
   trusted?: boolean | null
+  /** Captura de la sala final: 'auto' (los puntos coinciden, a falta de revisar) y 'approved' la verifican; 'pending' y 'rejected', no */
+  proof_status?: 'auto' | 'pending' | 'approved' | 'rejected' | null
 }
 
 /**
@@ -20,16 +22,17 @@ export type Verifiable = {
  * Solo los eventos verificados cuentan para los logros. (Misma regla que la columna `verified` de player_results.)
  */
 export function isVerified(e: Verifiable): boolean {
-  if (e.trusted || e.vouched_by) return true
+  if (e.trusted || e.vouched_by || e.proof_status === 'auto' || e.proof_status === 'approved') return true
   return e.kind === 'lounge' ? !!e.lounge_change_id : !!e.lounge_table_id
 }
 
 export type VerifyState = 'verified' | 'unverified'
 
 /** Cómo se ha verificado, para mostrarlo */
-export function verifiedBy(e: Verifiable): 'lounge' | 'sq' | 'vouched' | 'trusted' | null {
+export function verifiedBy(e: Verifiable): 'lounge' | 'sq' | 'vouched' | 'trusted' | 'proof' | null {
   if (e.kind === 'lounge' && e.lounge_change_id) return 'lounge'
   if (e.kind === 'war' && e.lounge_table_id) return 'sq'
   if (e.vouched_by) return 'vouched'
+  if (e.proof_status === 'auto' || e.proof_status === 'approved') return 'proof'
   return e.trusted ? 'trusted' : null
 }

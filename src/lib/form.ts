@@ -15,6 +15,8 @@ export type TimedResult = {
   verified: boolean
   /** Tier de la mesa del Lounge una vez verificado ('SQ', 'C'...) */
   tier?: string | null
+  /** La war a la que pertenece la carrera la ganó el equipo del jugador (solo wars; penalties incluidas) */
+  warWon?: boolean
 }
 
 export type Streak = { current: number; best: number }

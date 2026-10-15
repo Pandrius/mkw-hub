@@ -85,7 +85,7 @@ export default function Admin() {
   const fetchRows = useCallback(async () => {
     const { data, error } = await supabase!
       .from('profiles')
-      .select('id, discord_id, username, avatar_url, role, tt_editor, strat_editor, trusted, created_at')
+      .select('id, discord_id, username, avatar_url, role, tt_editor, strat_editor, trusted, war_checker, created_at')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data as Row[]
@@ -279,6 +279,18 @@ export default function Admin() {
                     color="var(--color-kart-green)"
                     onClick={() =>
                       run(() => supabase!.rpc('set_trusted', { target: row.id, value: !row.trusted }), t('admin.trustChanged', { user: row.username }))
+                    }
+                  />
+                )}
+
+                {profile.role === 'admin' && (
+                  <PermissionToggle
+                    label={t('perm.warChecker')}
+                    on={!!row.war_checker}
+                    disabled={false}
+                    color="var(--color-kart-blue)"
+                    onClick={() =>
+                      run(() => supabase!.rpc('set_war_checker', { target: row.id, value: !row.war_checker }), t('admin.checkerChanged', { user: row.username }))
                     }
                   />
                 )}

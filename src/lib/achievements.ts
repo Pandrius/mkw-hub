@@ -15,6 +15,7 @@ export type AchievementId =
   | 'legendEvent'
   | 'redemption'
   | 'finalRace'
+  | 'warWins'
   | 'podiumEverywhere'
   | 'winEverywhere'
   | 'allAchievements'
@@ -97,6 +98,8 @@ const DEFS: Def[] = [
     },
   },
   { id: 'finalRace', glyph: 'flag', thresholds: () => [1, 5, 15, 40], count: (rows) => countWhere(rows, (r) => r.raceNo === RACES_PER_WAR && r.position === 1) },
+  // Rangos militares: soldado raso, cabo, sargento, capitán y general (ver `ach.warWins.rank.*`)
+  { id: 'warWins', glyph: 'chevrons', thresholds: () => [5, 25, 50, 100, 250], count: (rows) => new Set(rows.filter((r) => r.warWon).map((r) => r.eventId)).size },
   {
     id: 'podiumEverywhere',
     glyph: 'podium',

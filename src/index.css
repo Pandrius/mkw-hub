@@ -551,3 +551,59 @@ input[data-position]::-webkit-inner-spin-button {
     animation: none !important;
   }
 }
+
+/* Rangos de guerra (soldado raso → general): placa inclinada del color del nivel con las divisas (galones) a un lado */
+.war-rank {
+  --wr-edge: color-mix(in srgb, var(--wr) 55%, #000);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--wr);
+  color: #141414;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.war-rank__stripes {
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 16px;
+  background: #141414;
+  color: var(--wr);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.war-rank__name {
+  padding: 0 18px 0 10px;
+  display: flex;
+  align-items: center;
+}
+/* Capitán y General: franja de peligro bajo la placa, como el muro de boxes */
+.war-rank[data-level='4']::before,
+.war-rank[data-level='5']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: repeating-linear-gradient(-45deg, #141414 0 6px, transparent 6px 12px);
+  z-index: 1;
+}
+.war-rank[data-level='5']::after,
+.war-rank[data-level='4']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: chip-sweep 3.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .war-rank::after {
+    animation: none;
+  }
+}

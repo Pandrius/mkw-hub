@@ -89,6 +89,11 @@ export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier:
   { id: 'comeback', achievement: 'redemption', tier: 3 },
   { id: 'closer', achievement: 'finalRace', tier: 3 },
   { id: 'legend', achievement: 'legendEvent', tier: 1, count: 8 },
+  { id: 'warRank1', achievement: 'warWins', tier: 1 },
+  { id: 'warRank2', achievement: 'warWins', tier: 2 },
+  { id: 'warRank3', achievement: 'warWins', tier: 3 },
+  { id: 'warRank4', achievement: 'warWins', tier: 4 },
+  { id: 'warRank5', achievement: 'warWins', tier: 5 },
   { id: 'allTerrain', achievement: 'podiumEverywhere', tier: 4 },
   { id: 'trackMaster', achievement: 'winEverywhere', tier: 5 },
 ]

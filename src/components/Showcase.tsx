@@ -12,7 +12,7 @@ import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
 /** Títulos con aspecto propio (ver .title-chip en index.css); «Leyenda absoluta» tiene el suyo aparte */
 const UNIQUE_TITLES = new Set([
-  ...ACHIEVEMENT_TITLES.map((t) => t.id).filter((id) => id !== 'grandMaster'),
+  ...ACHIEVEMENT_TITLES.map((t) => t.id).filter((id) => id !== 'grandMaster' && !id.startsWith('warRank')),
   'veteran',
   'globetrotter',
   'top:10',
@@ -47,6 +47,24 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
     return (
       <span data-rank={def.param} className="rank-chip inline-block font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={pad}>
         {name}
+      </span>
+    )
+  }
+  if (def.id.startsWith('warRank')) {
+    // Rango militar: placa del color del nivel (bronce, plata, oro, platino, esmeralda) con tantos galones como el nivel
+    const level = Number(def.id.slice(-1))
+    return (
+      <span data-level={level} className="war-rank font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={{ ['--wr' as string]: TIER_COLOR[level as Tier], fontSize: pad.fontSize }}>
+        <span className="war-rank__stripes" style={{ paddingTop: pad.padding.split(' ')[0], paddingBottom: pad.padding.split(' ')[0] }}>
+          <svg width="16" height="22" viewBox="0 0 16 22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="miter" aria-hidden>
+            {Array.from({ length: level }, (_, k) => (
+              <polyline key={k} points={`1,${19 - k * 3.6} 8,${15 - k * 3.6} 15,${19 - k * 3.6}`} />
+            ))}
+          </svg>
+        </span>
+        <span className="war-rank__name" style={{ paddingTop: pad.padding.split(' ')[0], paddingBottom: pad.padding.split(' ')[0] }}>
+          {name}
+        </span>
       </span>
     )
   }
@@ -88,7 +106,7 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
         </span>
       )}
       {medals.map((m) => (
-        <span key={m.id} title={`${featuredName(m.id, t)} · ${t(tierLabel(m.tier))}`}>
+        <span key={m.id} title={`${featuredName(m.id, t, m.tier)} · ${t(tierLabel(m.tier))}`}>
           <MedalIcon glyph={m.glyph} tier={m.tier} size={30} kind={medalKindOf(m.id)} levels={Math.max(4, m.tier)} />
         </span>
       ))}
@@ -183,7 +201,7 @@ export function ShowcaseEditor({
                   >
                     <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} kind={medalKindOf(f.id)} levels={Math.max(4, f.tier)} />
                     <span className="min-w-0">
-                      <span className="block text-sm leading-tight font-semibold break-words">{featuredName(f.id, t)}</span>
+                      <span className="block text-sm leading-tight font-semibold break-words">{featuredName(f.id, t, f.tier)}</span>
                       <span className="font-mono text-[11px]" style={{ color: TIER_COLOR[f.tier] }}>
                         {t(tierLabel(f.tier))}
                       </span>

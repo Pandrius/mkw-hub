@@ -105,18 +105,12 @@ export function leadingPosition(text: string): number | null {
   return n >= 1 && n <= 12 ? n : null
 }
 
-/**
- * Empareja las líneas con los jugadores y saca la posición de cada uno.
- * - Si en la fila se lee el número de posición, se usa.
- * - Si no, se deduce por la altura: con las filas que sí tienen número se calcula cuánto mide cada fila.
- */
-export function matchRaceLines(lines: OcrLine[], players: OcrPlayer[]): OcrRaceResult {
-  // Mejor pareja jugador-línea, de la más parecida a la menos (cada línea y cada jugador una sola vez)
+/** Mejor pareja jugador-línea, de la más parecida a la menos (cada línea y cada jugador una sola vez) */
+export function pairLines(lines: OcrLine[], players: OcrPlayer[]): Map<string, { i: number; score: number }> {
   const pairs = players
     .flatMap((p) => lines.map((line, i) => ({ p, i, score: nameScore(p.name, line.text) })))
     .filter((x) => x.score >= MIN_SCORE)
     .sort((a, b) => b.score - a.score)
-
   const usedLines = new Set<number>()
   const assigned = new Map<string, { i: number; score: number }>()
   for (const x of pairs) {
@@ -124,6 +118,16 @@ export function matchRaceLines(lines: OcrLine[], players: OcrPlayer[]): OcrRaceR
     usedLines.add(x.i)
     assigned.set(x.p.key, { i: x.i, score: x.score })
   }
+  return assigned
+}
+
+/**
+ * Empareja las líneas con los jugadores y saca la posición de cada uno.
+ * - Si en la fila se lee el número de posición, se usa.
+ * - Si no, se deduce por la altura: con las filas que sí tienen número se calcula cuánto mide cada fila.
+ */
+export function matchRaceLines(lines: OcrLine[], players: OcrPlayer[]): OcrRaceResult {
+  const assigned = pairLines(lines, players)
 
   // Altura de fila a partir de las líneas con número (recta y = a + b·posición)
   const numbered = lines

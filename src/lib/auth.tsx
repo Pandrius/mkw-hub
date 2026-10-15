@@ -23,6 +23,8 @@ export type Profile = {
   bolt_style?: 'simple' | 'forked' | 'none'
   /** Perfil de confianza: lo que sube cuenta como verificado (lo gestiona un admin) */
   trusted?: boolean
+  /** Revisa las capturas de wars (lo marca un admin) */
+  war_checker?: boolean
 }
 
 /** Cada cuánto se vuelve a consultar MKC (país y equipos) al iniciar sesión */

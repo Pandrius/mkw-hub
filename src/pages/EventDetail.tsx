@@ -8,6 +8,7 @@ import PerspectiveToggle from '../components/PerspectiveToggle'
 import WarDesignPanel from '../components/WarDesignPanel'
 import WarAnalysisPanel from '../components/WarAnalysisPanel'
 import WarImagePreview from '../components/WarImagePreview'
+import WarProofPanel from '../components/WarProofPanel'
 import { EmptyState } from '../components/ui'
 import { getTrack, getTrackColor } from '../data/tracks'
 import { useI18n } from '../i18n'
@@ -258,6 +259,15 @@ export default function EventDetail() {
           if (confirm(t('event.confirmDeleteRace', { n: race.race_no }))) act(() => deleteRace(event.id, race.race_no))
         }}
       />
+
+      {isWar && !isOpen && (
+        <WarProofPanel
+          detail={detail}
+          canSubmit={!!profile && (isAdmin || event.created_by === profile.id || players.some((p) => p.profile_id === profile.id))}
+          canReview={isAdmin || profile?.war_checker === true}
+          onChanged={reload}
+        />
+      )}
 
       {event.lounge_table_id && (
         <section className="panel space-y-3 p-4">

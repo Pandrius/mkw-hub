@@ -53,17 +53,18 @@ export default function Notices() {
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm">
                   {!n.read_at && <span className="bg-kart-yellow px-1.5 py-0.5 font-mono text-[10px] font-bold text-bg uppercase">{t('notices.new')}</span>}
-                  <span>{t('notices.posted', { who: n.actor?.username ?? '?' })}</span>
+                  <span>{t(n.kind === 'war_proof' ? 'notices.proof' : 'notices.posted', { who: n.actor?.username ?? '?' })}</span>
                   <Plate>{n.event?.team_tag ?? '?'}</Plate>
                   <span className="text-muted">vs</span>
                   <Plate>{n.event?.opponent_tag ?? '?'}</Plate>
                 </p>
                 <p className="mt-1 font-mono text-xs text-muted">{day(n)}</p>
+                {n.kind === 'war_proof' && <p className="mt-1 text-xs text-muted">{t('notices.proofHint')}</p>}
                 {n.can_upload && <p className="mt-1 text-xs text-muted">{n.event?.opponent_confirmed ? t('notices.alreadyUploaded') : t('notices.uploadHint')}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to={`/eventos/${n.event_id}`} className="btn-line text-sm">
-                  {t('notices.view')}
+                  {t(n.kind === 'war_proof' ? 'notices.review' : 'notices.view')}
                 </Link>
                 {n.can_upload && !n.event?.opponent_confirmed && (
                   <Link to={`/eventos/${n.event_id}/validar`} className="btn-yellow text-sm">

@@ -13,8 +13,8 @@ export function VerifiedMark({ event, tier, className = '' }: { event: Verifiabl
       </span>
     )
   }
-  const label = { lounge: t('ver.lounge'), sq: t('ver.sq'), vouched: t('ver.vouched'), trusted: t('ver.trusted') }[by]
-  const how = { lounge: t('ver.howLounge'), sq: t('ver.howSq'), vouched: t('ver.howVouched'), trusted: t('ver.howTrusted') }[by]
+  const label = { lounge: t('ver.lounge'), sq: t('ver.sq'), vouched: t('ver.vouched'), trusted: t('ver.trusted'), proof: t('ver.proof') }[by]
+  const how = { lounge: t('ver.howLounge'), sq: t('ver.howSq'), vouched: t('ver.howVouched'), trusted: t('ver.howTrusted'), proof: t('ver.howProof') }[by]
   return (
     <span className={`${className} whitespace-nowrap`} title={how}>
       <Badge color="var(--color-kart-green)">

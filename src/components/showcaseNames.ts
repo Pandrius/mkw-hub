@@ -7,8 +7,10 @@ type Translate = (key: MessageKey, vars?: Record<string, string | number>) => st
 const trackName = (id: string) => getTrack(id)?.abbr ?? getTrack(id)?.name ?? id
 
 /** Nombre de una insignia o logro destacado */
-export function featuredName(id: string, t: Translate): string {
+export function featuredName(id: string, t: Translate, tier = 0): string {
   const [kind, key] = id.split(':')
+  // El rango de guerra se llama como su nivel actual (soldado raso, cabo...)
+  if (id === 'ach:warWins') return t(`ach.warWins.rank.${tier}` as MessageKey)
   if (kind === 'ach') return t(`ach.${key}.name` as MessageKey)
   if (kind === 'badge') return t(`badge.${key}` as MessageKey)
   return t('showcase.trackBadge', { track: trackName(key) })

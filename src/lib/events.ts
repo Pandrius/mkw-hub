@@ -38,6 +38,11 @@ export type GameEvent = {
   /** Perfil de confianza que avaló el evento */
   vouched_by?: string | null
   verified_at?: string | null
+  proof_path?: string | null
+  proof_status?: 'auto' | 'pending' | 'approved' | 'rejected' | null
+  proof_uploader?: string | null
+  /** Lo que leyó el navegador de la captura (ver proofCheck.ts) */
+  proof_reading?: unknown
 }
 
 export type EventPlayer = { id: number; event_id: string; name: string; profile_id: string | null }

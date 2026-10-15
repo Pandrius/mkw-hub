@@ -74,6 +74,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Verificación de eventos: Lounge = misma puntuación total a la hora jugada; war = validada por el rival o igual que una mesa SQ 6v6
 - [x] Los logros, insignias y títulos solo cuentan eventos verificados; las estadísticas se pueden ver con todos o solo con los verificados
 - [x] Perfiles de confianza (los marca un admin): todo lo que suben cuenta como verificado, y pueden avalar eventos en los que jugaron (botón «Avalar este evento»)
+- [x] Logro «Rango de guerra» (wars ganadas: 5 / 25 / 50 / 100 / 250 → soldado raso, cabo, sargento, capitán, general) con un título por rango
+- [x] Verificación de wars con la captura de la sala final: el navegador lee los puntos de tu equipo y los compara con la war (coinciden → verificada a falta de revisar; si no → pendiente). Rol «Revisor de wars» (lo marca un admin): se les avisa a todos y, en cuanto uno la aprueba o rechaza, desaparece el aviso de los demás (migración 0027)
 - [x] La validación del rival por sí sola ya no verifica una war (dos equipos podían inventarla): hace falta una mesa SQ del Lounge, subirla un perfil de confianza o que lo avale uno (también si valida la war un perfil de confianza rival)
 - [x] Filtros War / Lounge / SQ (la SQ se reconoce sola al verificar la mesa) y puesto en el ranking de su país
 - [ ] Modo de 24 jugadores (`mkworld24p`)

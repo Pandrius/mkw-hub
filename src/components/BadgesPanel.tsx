@@ -69,7 +69,7 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
           <MedalCard
             key={a.id}
             glyph={a.glyph}
-            name={t(`ach.${a.id}.name` as MessageKey)}
+            name={a.id === 'warWins' ? t(`ach.warWins.rank.${a.tier}` as MessageKey) : t(`ach.${a.id}.name` as MessageKey)}
             description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
             progress={a}
             thresholds={a.thresholds}
