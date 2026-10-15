@@ -111,6 +111,8 @@ export function LoungePanel({ data, isMe }: { data: LoungeData | null; isMe: boo
 
           <StatsGrid stats={stats} />
 
+          <PartnerPanel stats={stats} />
+
           <div className="grid gap-4 lg:grid-cols-2">
             <GroupTable
               title={t('lg.byFormat')}
@@ -195,14 +197,6 @@ function StatsGrid({ stats }: { stats: LoungeStats }) {
           }
         />
       )}
-      {stats.partner && (
-        <StatTile
-          label={t('lg.partner')}
-          value={<Signed value={stats.partner.diff} digits={1} />}
-          sub={t('lg.partnerSub', { me: num(stats.partner.avgScore, 1), them: num(stats.partner.avgPartnerScore, 1), n: stats.partner.tables })}
-          hint={t('lg.partnerHint')}
-        />
-      )}
     </div>
   )
 }
@@ -275,6 +269,47 @@ function WhenPanel({ stats }: { stats: LoungeStats }) {
         </dl>
       )}
       <p className="mt-3 text-xs text-muted">{t('lg.localTime')}</p>
+    </div>
+  )
+}
+
+/** Tu media frente a la de tus compañeros de equipo: en todas las mesas por equipos, solo en SQ y solo en el Lounge normal */
+function PartnerPanel({ stats }: { stats: LoungeStats }) {
+  const { t } = useI18n()
+  const num = useNum()
+  const rows = [
+    { key: 'all', label: t('lg.partnerAll'), p: stats.partnerSplit.all },
+    { key: 'sq', label: 'SQ', p: stats.partnerSplit.sq },
+    { key: 'lounge', label: t('lg.partnerLounge'), p: stats.partnerSplit.lounge },
+  ]
+  if (!rows[0].p) return null
+  return (
+    <div className="panel overflow-x-auto">
+      <div className="px-5 pt-4">
+        <SectionTitle title={t('lg.partner')} hint={t('lg.partnerHint')} />
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-bg font-display text-xs text-kart-yellow">
+          <tr>
+            <Th right={false}>{' '}</Th>
+            <Th>{t('lg.col.tables')}</Th>
+            <Th>{t('lg.partnerYou')}</Th>
+            <Th>{t('lg.partnerThem')}</Th>
+            <Th>{t('lg.partnerDiff')}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ key, label, p }) => (
+            <tr key={key} className="border-t border-line/60">
+              <td className="px-3 py-2 font-semibold">{label}</td>
+              <td className="px-3 py-2 text-right font-mono text-muted">{p?.tables ?? 0}</td>
+              <td className="px-3 py-2 text-right font-mono">{p ? num(p.avgScore, 1) : '—'}</td>
+              <td className="px-3 py-2 text-right font-mono">{p ? num(p.avgPartnerScore, 1) : '—'}</td>
+              <td className="px-3 py-2 text-right font-mono font-bold">{p ? <Signed value={p.diff} digits={1} /> : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

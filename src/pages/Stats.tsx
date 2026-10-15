@@ -71,6 +71,8 @@ export default function Stats() {
 
   const targetId = profileId ?? profile?.id
   const vsParam = params.get('vs')
+  // Con ?personalizar=1 (la foto de Discord de la cabecera) se abre directamente el editor de insignias y título
+  const openEditorParam = params.get('personalizar') === '1'
   const vsId = vsParam && vsParam !== targetId ? vsParam : null
 
   const findPlayer = async (e: React.FormEvent) => {
@@ -124,12 +126,13 @@ export default function Stats() {
         </EmptyState>
       ) : (
         <PlayerStats
-          key={`${targetId}|${vsId ?? ''}`}
+          key={`${targetId}|${vsId ?? ''}|${openEditorParam}`}
           profileId={targetId}
           isMe={targetId === profile?.id}
           meId={profile?.id ?? null}
           vsId={vsId}
           demo={targetId === profile?.id && profile?.role === 'admin' && params.get('demo') === 'logros'}
+          openEditor={targetId === profile?.id && openEditorParam}
         />
       )}
     </>
@@ -149,7 +152,7 @@ function jumpTo(id: string) {
 const LOUNGE_SYNC_KEY = 'mkwhub.loungeSync'
 const LOUNGE_SYNC_EVERY_MS = 5 * 60 * 1000
 
-function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null; demo: boolean }) {
+function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null; demo: boolean; openEditor: boolean }) {
   const { t, locale } = useI18n()
   const navigate = useNavigate()
   const [filter, setFilter] = useState<StatsFilter>('all')
@@ -159,7 +162,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
   const [achStats, setAchStats] = useState<AchievementStats | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [checking, setChecking] = useState(false)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(openEditor)
   const [showcase, setShowcase] = useState<{ badges: string[]; title: string | null } | null>(null)
   const [owner, setOwner] = useState<Owner | null>(null)
   const [teams, setTeams] = useState<Entity[]>([])
@@ -314,19 +317,6 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
         </div>
       </div>
 
-      {demo && <p className="border-l-4 border-kart-red bg-surface px-4 py-3 text-sm">{t('stats.demo')}</p>}
-
-      {!vsId && (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => jumpTo('logros')} className="btn-yellow text-sm">
-            {t('stats.jumpAch', { done: totals.earned, total: totals.possible })}
-          </button>
-          <button type="button" onClick={() => jumpTo('lounge')} className="btn-line text-sm">
-            {t('stats.jumpLounge')}
-          </button>
-        </div>
-      )}
-
       {showcase && (
         <div className="flex flex-wrap items-center gap-4">
           <ProfileShowcase featuredIds={showcase.badges} titleId={showcase.title} owned={ownedFeatures} ctx={titleCtx} />
@@ -346,6 +336,19 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
           onSaved={(b, ti) => setShowcase({ badges: b, title: ti })}
           onClose={() => setEditing(false)}
         />
+      )}
+
+      {demo && <p className="border-l-4 border-kart-red bg-surface px-4 py-3 text-sm">{t('stats.demo')}</p>}
+
+      {!vsId && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => jumpTo('logros')} className="btn-yellow text-sm">
+            {t('stats.jumpAch', { done: totals.earned, total: totals.possible })}
+          </button>
+          <button type="button" onClick={() => jumpTo('lounge')} className="btn-line text-sm">
+            {t('stats.jumpLounge')}
+          </button>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">

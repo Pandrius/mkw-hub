@@ -207,7 +207,13 @@ describe('computeLoungeStats', () => {
 
   it('compañeros: tu puntuación frente a la media de tus compañeros en mesas por equipos', () => {
     const s = computeLoungeStats(base)!
-    expect(s.partner).toEqual({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
+    expect(s.partnerSplit.all).toEqual({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
+    // Las dos mesas por equipos son SQ; las mesas del Lounge normal eran individuales (sin compañeros)
+    expect(s.partnerSplit.sq).toEqual({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
+    expect(s.partnerSplit.lounge).toBeNull()
+    const mixed = computeLoungeStats([...base, change({ time: '2026-10-09T10:00:00Z', score: 100, tier: 'CD', numTeams: 6, partnerScores: [60] })])!
+    expect(mixed.partnerSplit.lounge).toEqual({ tables: 1, avgScore: 100, avgPartnerScore: 60, diff: 40 })
+    expect(mixed.partnerSplit.all?.tables).toBe(3)
   })
 
   it('agrupa por formato y por tier', () => {

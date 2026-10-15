@@ -783,7 +783,6 @@ export const en: Record<MessageKey, string> = {
   'lg.lastTen': 'Last 10 tables',
   'lg.avgShort': 'avg {n}',
   'lg.partner': 'Versus your teammates',
-  'lg.partnerSub': 'You {me} · them {them} · {n} tables',
   'lg.partnerHint': 'Your average score minus your teammates’ average in team tables. Positive = you usually outscore them.',
   'lg.byFormat': 'By format',
   'lg.byFormatHint': 'By how the 12-player table is played',
@@ -929,4 +928,10 @@ export const en: Record<MessageKey, string> = {
   'ver.vouch': 'Vouch for this event',
   'ver.unvouch': 'Remove my vouch',
   'ver.vouchHint': 'As a trusted profile who played in it, you confirm this event is real: it will count as verified.',
+  'nav.myProfile': 'My profile: badges and title',
+  'lg.partnerAll': 'All',
+  'lg.partnerLounge': 'Lounge (no SQ)',
+  'lg.partnerYou': 'You',
+  'lg.partnerThem': 'Teammates',
+  'lg.partnerDiff': 'Difference',
 }

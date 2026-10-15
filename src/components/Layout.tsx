@@ -329,8 +329,10 @@ function AuthButton() {
     const role = profile?.role === 'moderator' || profile?.role === 'admin' ? profile.role : null
     return (
       <div className="flex items-center gap-3">
-        {avatar && <img src={avatar} alt="" className="size-8 border-2 border-kart-yellow" />}
-        <span className="max-w-40 truncate text-sm font-semibold">{name}</span>
+        <Link to="/estadisticas?personalizar=1" className="flex items-center gap-3" title={t('nav.myProfile')} aria-label={t('nav.myProfile')}>
+          {avatar && <img src={avatar} alt="" className="size-8 border-2 border-kart-yellow hover:border-ink" />}
+          <span className="max-w-40 truncate text-sm font-semibold hover:text-kart-yellow">{name}</span>
+        </Link>
         {role && (
           <span className="hidden bg-kart-yellow px-1.5 py-0.5 font-mono text-[10px] font-bold text-bg uppercase 2xl:inline">
             {t(ROLE_LABEL[role])}

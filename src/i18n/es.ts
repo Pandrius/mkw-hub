@@ -782,7 +782,6 @@ export const es = {
   'lg.lastTen': 'Últimas 10 mesas',
   'lg.avgShort': 'media {n}',
   'lg.partner': 'Frente a tus compañeros',
-  'lg.partnerSub': 'Tú {me} · ellos {them} · {n} mesas',
   'lg.partnerHint': 'Tu puntuación media menos la media de tus compañeros de equipo en las mesas por equipos. Positivo = sueles puntuar más que ellos.',
   'lg.byFormat': 'Por formato',
   'lg.byFormatHint': 'Según cómo se juega la mesa de 12 jugadores',
@@ -928,6 +927,12 @@ export const es = {
   'ver.vouch': 'Avalar este evento',
   'ver.unvouch': 'Quitar mi aval',
   'ver.vouchHint': 'Como perfil de confianza que jugó en él, confirmas que este evento es real: pasará a contar como verificado.',
+  'nav.myProfile': 'Mi perfil: insignias y título',
+  'lg.partnerAll': 'Todas',
+  'lg.partnerLounge': 'Lounge (sin SQ)',
+  'lg.partnerYou': 'Tú',
+  'lg.partnerThem': 'Compañeros',
+  'lg.partnerDiff': 'Diferencia',
 } as const
 
 export type MessageKey = keyof typeof es

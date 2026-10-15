@@ -269,6 +269,17 @@ export const MIN_GROUP = 5
 
 export type Group = { key: string; tables: number; avgScore: number; avgDelta: number; winRate: number }
 
+export type PartnerStats = { tables: number; avgScore: number; avgPartnerScore: number; diff: number }
+
+/** Tu media frente a la de tus compañeros en las mesas por equipos de la lista (null si no hay ninguna) */
+function partnerOf(rows: LoungeChange[]): PartnerStats | null {
+  const team = rows.filter((t) => t.score !== null && t.partnerScores.length > 0)
+  if (team.length === 0) return null
+  const own = mean(team.map((t) => t.score as number))
+  const partner = mean(team.map((t) => mean(t.partnerScores)))
+  return { tables: team.length, avgScore: round1(own), avgPartnerScore: round1(partner), diff: round1(own - partner) }
+}
+
 export type LoungeStats = {
   tables: number
   mmr: number
@@ -291,7 +302,8 @@ export type LoungeStats = {
   streak: { current: number; best: number }
   lastTen: { wins: number; losses: number; gain: number; avgScore: number } | null
   /** Tu puntuación frente a la media de tus compañeros de equipo (solo mesas por equipos) */
-  partner: { tables: number; avgScore: number; avgPartnerScore: number; diff: number } | null
+  /** Tu puntuación frente a la media de tus compañeros en las mesas por equipos: todas juntas, solo SQ y solo Lounge (sin SQ) */
+  partnerSplit: { all: PartnerStats | null; sq: PartnerStats | null; lounge: PartnerStats | null }
   byFormat: Group[]
   byTier: Group[]
   /** Mesas por semana (lunes UTC) de las últimas 12 semanas con actividad */
@@ -356,7 +368,6 @@ export function computeLoungeStats(changes: LoungeChange[], tzOffsetMin = 0): Lo
 
   const last = tables.slice(-10)
   const lastScored = last.filter((t) => t.score !== null)
-  const team = scored.filter((t) => t.partnerScores.length > 0)
   const bestScore = scored.reduce<LoungeChange | null>((a, c) => (!a || (c.score as number) > (a.score as number) ? c : a), null)
   const worstScore = scored.reduce<LoungeChange | null>((a, c) => (!a || (c.score as number) < (a.score as number) ? c : a), null)
   const ranked = tables.filter((t) => t.rank !== null)
@@ -390,13 +401,11 @@ export function computeLoungeStats(changes: LoungeChange[], tzOffsetMin = 0): Lo
             avgScore: round1(mean(lastScored.map((t) => t.score as number))),
           }
         : null,
-    partner: team.length
-      ? (() => {
-          const own = mean(team.map((t) => t.score as number))
-          const partner = mean(team.map((t) => mean(t.partnerScores)))
-          return { tables: team.length, avgScore: round1(own), avgPartnerScore: round1(partner), diff: round1(own - partner) }
-        })()
-      : null,
+    partnerSplit: {
+      all: partnerOf(tables),
+      sq: partnerOf(tables.filter((t) => t.tier === 'SQ')),
+      lounge: partnerOf(tables.filter((t) => t.tier !== 'SQ')),
+    },
     byFormat: FORMATS.flatMap((f) => {
       const rows = tables.filter((t) => formatOf(t.numTeams) === f)
       return rows.length ? [group(f, rows)] : []
