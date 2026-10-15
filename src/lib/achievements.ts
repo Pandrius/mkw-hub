@@ -1,7 +1,7 @@
 import { progressOf, type Progress, type Tier } from './badges.js'
 import { sortTimeline, streakOf, type TimedResult } from './form.js'
 import { POINTS } from './scoring.js'
-import { mean, RACES_PER_WAR } from './statMath.js'
+import { RACES_PER_WAR } from './statMath.js'
 
 export type AchievementId =
   | 'perfectEvent'
@@ -15,7 +15,6 @@ export type AchievementId =
   | 'legendEvent'
   | 'redemption'
   | 'finalRace'
-  | 'domination'
   | 'podiumEverywhere'
   | 'winEverywhere'
   | 'allAchievements'
@@ -56,11 +55,21 @@ function fullEvents(rows: TimedResult[]): number[][] {
   return [...byEvent.values()].filter((rs) => rs.length >= RACES_PER_WAR).map((rs) => rs.map((r) => r.position))
 }
 
-/** Pistas "dominadas": con suficientes carreras y una posición media muy buena (dan derecho al título «Dueño de …») */
+/**
+ * Pistas "dominadas" (dan derecho al título «Dueño de …»): alguna vez, con al menos DOMINATION_RACES carreras en ella, la posición
+ * media llegó a DOMINATION_AVG_POS o mejor. Es una marca que se alcanza una vez: bajar la media después no la quita.
+ */
 export function ownedTracks(rows: TimedResult[]): string[] {
-  const byTrack = new Map<string, number[]>()
-  for (const r of rows) byTrack.set(r.trackId, [...(byTrack.get(r.trackId) ?? []), r.position])
-  return [...byTrack].filter(([, ps]) => ps.length >= DOMINATION_RACES && mean(ps) <= DOMINATION_AVG_POS).map(([id]) => id)
+  const state = new Map<string, { n: number; sum: number }>()
+  const owned = new Set<string>()
+  for (const r of sortTimeline(rows)) {
+    const s = state.get(r.trackId) ?? { n: 0, sum: 0 }
+    s.n++
+    s.sum += r.position
+    state.set(r.trackId, s)
+    if (s.n >= DOMINATION_RACES && s.sum / s.n <= DOMINATION_AVG_POS) owned.add(r.trackId)
+  }
+  return [...owned]
 }
 
 const countWhere = (rows: TimedResult[], test: (r: TimedResult) => boolean) => rows.filter(test).length
@@ -108,12 +117,6 @@ const DEFS: Def[] = [
     },
   },
   { id: 'finalRace', glyph: 'flag', thresholds: () => [1, 5, 15, 40], count: (rows) => countWhere(rows, (r) => r.raceNo === RACES_PER_WAR && r.position === 1) },
-  {
-    id: 'domination',
-    glyph: 'ring',
-    thresholds: () => [1, 3, 6, 12],
-    count: (rows) => ownedTracks(rows).length,
-  },
   {
     id: 'podiumEverywhere',
     glyph: 'podium',

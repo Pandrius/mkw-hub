@@ -68,6 +68,11 @@ const METALS: Record<1 | 2 | 3 | 4 | 5, { stops: string[]; rim: string; ink: str
   3: { stops: ['#fff6b0', '#ffd500', '#b58300', '#f2c200', '#fff2a0'], rim: '#664500', ink: '#4a3200' },
   4: { stops: ['#eaffff', '#3fe0fa', '#0a8aa6', '#55d6ec', '#cdf8ff'], rim: '#04506a', ink: '#04384a' },
 }
+/** Los dos logros únicos usan el mismo escudo con su propio metal: rojo rubí y negro con filo dorado */
+const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; ink: string; light: boolean }> = {
+  ruby: { stops: ['#ff8a96', '#e8112d', '#8c0a1d', '#d4112b', '#ff6b7d'], rim: '#3a040c', ink: '#fff0f2', light: true },
+  legend: { stops: ['#5b5b63', '#2a2a30', '#050507', '#222228', '#55555d'], rim: '#c99700', ink: '#ffd500', light: true },
+}
 const STOP_AT = [0, 0.3, 0.5, 0.72, 1]
 
 /**
@@ -93,9 +98,7 @@ export function MedalIcon({
 }) {
   const id = useId().replace(/:/g, '')
   const earned = tier > 0
-  if (earned && kind === 'ruby') return <RubyGem glyph={glyph} size={size} />
-  if (earned && kind === 'legend') return <LegendEmblem size={size} />
-  const metal = earned ? METALS[tier as 1 | 2 | 3 | 4 | 5] : null
+  const metal: { stops: string[]; rim: string; ink: string; light?: boolean } | null = !earned ? null : kind === 'metal' ? METALS[tier as 1 | 2 | 3 | 4 | 5] : SPECIAL_METALS[kind]
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
       <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
@@ -122,7 +125,7 @@ export function MedalIcon({
               <polygon points="0,0 34,0 0,36" fill="#fff" opacity="0.28" />
               <polygon points="56,62 56,28 24,62" fill="#000" opacity="0.14" />
             </g>
-            <svg x="14.5" y="11.5" width="27" height="27" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
+            <svg x="14.5" y="11.5" width="27" height="27" viewBox="0 0 24 24" fill={metal.light ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.55)'}>
               {GLYPHS[glyph]}
             </svg>
             <svg x="14" y="11" width="27" height="27" viewBox="0 0 24 24" fill={metal.ink}>
@@ -281,83 +284,21 @@ export function MedalCard({
   )
 }
 
-const SHIELD = '7,0 49,0 56,9 56,40 28,62 0,40 0,9'
-
-/** Fila de cuadros de bandera a cuadros recortada por el escudo (el mismo motivo de la meta que usa la web) */
-function CheckerBand({ y, size, a, b, clip }: { y: number; size: number; a: string; b: string; clip: string }) {
-  const cols = Math.ceil(56 / size)
-  return (
-    <g clipPath={`url(#${clip})`}>
-      {[0, 1].flatMap((row) =>
-        Array.from({ length: cols }, (_, c) => <rect key={`${row}-${c}`} x={c * size} y={y + row * size} width={size} height={size} fill={(c + row) % 2 === 0 ? a : b} />),
-      )}
-    </g>
-  )
-}
+/** Estrellitas que parpadean alrededor del logro supremo: posición (%) y retraso (s) */
+const SPARKLES: [number, number, number][] = [
+  [6, 18, 0],
+  [14, 78, 0.7],
+  [31, 10, 1.4],
+  [47, 90, 0.3],
+  [63, 6, 1.9],
+  [76, 84, 1.1],
+  [88, 22, 0.5],
+  [94, 70, 1.6],
+]
 
 /**
- * Evento perfecto: un escudo rojo rubí de colores planos y trazo grueso, con la corona y una franja de bandera a cuadros.
- * Mismo lenguaje que el resto de la web (sin brillos ni degradados), pero es el único rojo.
- */
-export function RubyGem({ glyph, size = 64 }: { glyph: Glyph; size?: number }) {
-  const clip = useId().replace(/:/g, '') + 'r'
-  return (
-    <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
-      <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block">
-        <defs>
-          <clipPath id={clip}>
-            <polygon points={SHIELD} />
-          </clipPath>
-        </defs>
-        <polygon points={SHIELD} fill="#e8112d" />
-        <g clipPath={`url(#${clip})`}>
-          <polygon points="0,0 28,0 28,62 0,40" fill="#b30c22" />
-          <polygon points="7,0 49,0 44,6 12,6" fill="#ff6b7d" />
-          <polygon points="28,6 44,6 28,26" fill="#ff4a60" />
-        </g>
-        <CheckerBand y={39} size={4} a="#ffffff" b="#1a0207" clip={clip} />
-        <svg x="14" y="9" width="28" height="28" viewBox="0 0 24 24" fill="#ffffff">
-          {GLYPHS[glyph]}
-        </svg>
-        <polygon points={SHIELD} fill="none" stroke="#1a0207" strokeWidth="2.4" strokeLinejoin="round" />
-      </svg>
-      <span className="size-1.5 bg-kart-red" />
-    </div>
-  )
-}
-
-/**
- * Logro supremo: escudo negro con borde de franjas de peligro amarillas y negras (las de la web), trofeo amarillo y una franja de
- * meta. Es el único negro y amarillo, y el más grande de todos.
- */
-export function LegendEmblem({ size = 150 }: { size?: number }) {
-  const id = useId().replace(/:/g, '')
-  return (
-    <div className="shrink-0" aria-hidden>
-      <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block">
-        <defs>
-          <pattern id={`${id}h`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
-            <rect width="6" height="6" fill="#141414" />
-            <rect width="3" height="6" fill="#ffd500" />
-          </pattern>
-          <clipPath id={`${id}c`}>
-            <polygon points="9,4 47,4 52,11 52,39 28,57 4,39 4,11" />
-          </clipPath>
-        </defs>
-        <polygon points={SHIELD} fill={`url(#${id}h)`} stroke="#141414" strokeWidth="2.4" strokeLinejoin="round" />
-        <polygon points="9,4 47,4 52,11 52,39 28,57 4,39 4,11" fill="#141414" stroke="#ffd500" strokeWidth="1.6" strokeLinejoin="round" />
-        <CheckerBand y={36} size={3.5} a="#ffd500" b="#141414" clip={`${id}c`} />
-        <svg x="12" y="8" width="32" height="32" viewBox="0 0 24 24" fill="#ffd500">
-          {GLYPHS.trophy}
-        </svg>
-      </svg>
-    </div>
-  )
-}
-
-/**
- * Logro supremo: todos los demás conseguidos. El único bloque entero en amarillo de la web, con franjas de peligro, meta a cuadros
- * en movimiento y la cifra enorme en contorno, como un cartel de boxes. Sin conseguir, un panel apagado con lo que falta.
+ * Logro supremo: todos los demás conseguidos. Marco de colores que cambia sin parar, texto con destello, estrellitas y un escudo
+ * negro. Sin conseguir se ve apagado, con cuántos faltan.
  */
 export function GrandCard({
   glyph,
@@ -379,60 +320,39 @@ export function GrandCard({
   doneLabel: string
 }) {
   const earned = progress.tier > 0
-  const done = Math.min(progress.count, total)
-  const pct = Math.round((done / total) * 100)
-  if (!earned) {
-    return (
-      <div className="panel relative overflow-hidden border-dashed">
-        <div className="relative flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-6 opacity-70 sm:px-10">
-          <MedalIcon glyph={glyph} tier={0} size={96} single />
-          <div className="min-w-0 flex-1 basis-72">
-            <p className="font-mono text-xs font-bold tracking-widest text-muted">{kicker}</p>
-            <h4 className="mt-1 font-display text-4xl leading-[0.95] font-black uppercase sm:text-6xl">{name}</h4>
-            <p className="mt-2 max-w-xl text-sm text-muted">{description}</p>
-            <div className="mt-4 h-2 max-w-xl bg-line" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={total} aria-label={name}>
-              <div className="h-full bg-kart-yellow" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="mt-1.5 font-mono text-xs text-muted">
-              <span className="font-bold text-ink">{done}</span> / {total} {countLabel}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const pct = Math.round((Math.min(progress.count, total) / total) * 100)
   return (
-    <div className="relative overflow-hidden bg-kart-yellow text-bg">
-      <div className="hazard h-2.5" aria-hidden />
-      <div className="checker checker-run h-3" aria-hidden />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-display text-[9rem] leading-none font-black text-transparent select-none sm:text-[13rem]"
-        style={{ WebkitTextStroke: '3px rgba(20,20,20,0.45)' }}
-      >
-        {total}
-      </span>
-      <div className="relative flex flex-wrap items-center gap-x-10 gap-y-5 px-6 py-8 sm:px-12">
-        <LegendEmblem size={150} />
-        <div className="min-w-0 flex-1 basis-80">
-          <p className="inline-block bg-bg px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-kart-yellow">{kicker}</p>
-          <h4 className="mt-2 font-display text-5xl leading-[0.9] font-black uppercase sm:text-7xl">{name}</h4>
-          <p className="mt-3 max-w-2xl text-sm font-semibold">{description}</p>
-          <div className="mt-5 max-w-2xl">
-            <div className="h-3 bg-bg/25" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={total} aria-label={name}>
-              <div className="h-full bg-bg" style={{ width: '100%' }} />
+    <div className={`relative p-[3px] ${earned ? 'glam-frame' : 'bg-line'}`}>
+      <div className="relative overflow-hidden bg-bg">
+        {earned && <div className="glam-sweep pointer-events-none absolute inset-0" aria-hidden />}
+        {earned &&
+          SPARKLES.map(([x, y, delay], i) => (
+            <svg key={i} aria-hidden viewBox="0 0 10 10" className="glam-star pointer-events-none absolute size-4 fill-white" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${delay}s` }}>
+              <polygon points="5,0 6.2,3.8 10,5 6.2,6.2 5,10 3.8,6.2 0,5 3.8,3.8" />
+            </svg>
+          ))}
+        <div className={`relative flex flex-wrap items-center gap-x-10 gap-y-5 px-6 py-8 sm:px-12 ${earned ? '' : 'opacity-60'}`}>
+          <div className={earned ? 'glam-float' : ''}>
+            <MedalIcon glyph={glyph} tier={earned ? 4 : 0} size={150} single kind="legend" />
+          </div>
+          <div className="min-w-0 flex-1 basis-80">
+            <p className="font-mono text-xs font-bold tracking-[0.35em] text-kart-yellow">{kicker}</p>
+            <h4 className={`mt-1 font-display text-5xl leading-[0.92] font-black uppercase sm:text-7xl ${earned ? 'glam-text' : 'text-muted'}`}>{name}</h4>
+            <p className="mt-3 max-w-2xl text-sm text-ink/80">{description}</p>
+            <div className="mt-5 max-w-2xl">
+              <div className="h-2.5 bg-line" role="progressbar" aria-valuenow={progress.count} aria-valuemin={0} aria-valuemax={total} aria-label={name}>
+                <div className={`h-full ${earned ? 'glam-bar' : ''}`} style={{ width: `${pct}%`, background: earned ? undefined : TIER_COLOR[4] }} />
+              </div>
+              <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
+                <span>
+                  <span className="font-bold text-ink">{Math.min(progress.count, total)}</span> / {total} {countLabel}
+                </span>
+                {earned && <span className="font-bold uppercase text-kart-yellow">{doneLabel}</span>}
+              </p>
             </div>
-            <p className="mt-1.5 flex justify-between font-mono text-xs font-bold">
-              <span>
-                {done} / {total} {countLabel}
-              </span>
-              <span className="uppercase">{doneLabel}</span>
-            </p>
           </div>
         </div>
       </div>
-      <div className="checker checker-run h-3" aria-hidden />
-      <div className="hazard h-2.5" aria-hidden />
     </div>
   )
 }

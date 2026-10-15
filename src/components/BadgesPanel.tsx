@@ -1,7 +1,7 @@
 import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { achievementTotals, BIG_EVENT_POINTS, DOMINATION_AVG_POS, DOMINATION_RACES, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
@@ -19,8 +19,6 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
     big: BIG_EVENT_POINTS,
     legend: LEGEND_EVENT_POINTS,
     perfect: PERFECT_EVENT_POINTS,
-    races: DOMINATION_RACES,
-    avg: DOMINATION_AVG_POS,
     from: REDEMPTION_FROM,
     total: totalTracks,
   }
