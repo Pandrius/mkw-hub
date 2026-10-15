@@ -5,8 +5,8 @@ import WarImagePreview from '../components/WarImagePreview'
 import { EmptyState, PageHeader, Plate } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
-import { teamsOf } from '../lib/compare'
 import { acceptOpponentWar, getEvent, getMirrorOf, rejectOpponentWar, type EventDetail } from '../lib/events'
+import { canValidateWar } from '../lib/notices'
 import { mirrorEventDetail, NO_CORRECTIONS, warPlayerNames, type WarCorrections } from '../lib/mirrorWar'
 import { buildWarTable } from '../lib/warTable'
 
@@ -19,10 +19,10 @@ type Group = 'teamNames' | 'opponentNames' | 'penaltyLabels'
 export default function ValidateWar() {
   const { t } = useI18n()
   const { eventId = '' } = useParams()
-  const { profile, isAdmin, loading: authLoading } = useAuth()
+  const { profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [detail, setDetail] = useState<EventDetail | null | undefined>(undefined)
-  const [myTeams, setMyTeams] = useState<number[] | null>(null)
+  const [allowed, setAllowed] = useState<boolean | null>(null)
   const [copyId, setCopyId] = useState<string | null>(null)
   const [fix, setFix] = useState<WarCorrections>(NO_CORRECTIONS)
   const [busy, setBusy] = useState(false)
@@ -50,14 +50,14 @@ export default function ValidateWar() {
   useEffect(() => {
     if (!profile) return
     let cancelled = false
-    teamsOf(profile.id).then(
-      (teams) => !cancelled && setMyTeams(teams.filter((x) => x.kind === 'team').map((x) => x.id)),
-      () => !cancelled && setMyTeams([]),
+    canValidateWar(eventId).then(
+      (ok) => !cancelled && setAllowed(ok),
+      () => !cancelled && setAllowed(false),
     )
     return () => {
       cancelled = true
     }
-  }, [profile])
+  }, [profile, eventId])
 
   const names = useMemo(() => (detail ? warPlayerNames(detail) : null), [detail])
   const mirrored = useMemo(() => (detail ? mirrorEventDetail(detail, fix) : null), [detail, fix])
@@ -69,13 +69,14 @@ export default function ValidateWar() {
     [mirrored],
   )
 
-  if (authLoading || detail === undefined || (profile && myTeams === null)) return <p className="text-muted">{t('common.loading')}</p>
+  if (authLoading || detail === undefined || (profile && allowed === null)) return <p className="text-muted">{t('common.loading')}</p>
   if (!profile) return <EmptyState title={t('stats.signInTitle')}>{t('stats.signInText')}</EmptyState>
   if (!detail || !names || !mirrored || !table) return <EmptyState title={t('event.notFound')} />
 
   const { event } = detail
-  const ready = event.kind === 'war' && event.status === 'finished' && event.team_id !== null && event.opponent_team_id !== null && !event.mirror_of
-  const allowed = isAdmin || (myTeams ?? []).includes(event.opponent_team_id ?? -1)
+  const ready = event.kind === 'war' && event.status === 'finished' && !event.mirror_of
+  // Equipo rival registrado: su página; si no está registrado, los avisos
+  const backTo = event.opponent_team_id ? `/equipos/${event.opponent_team_id}` : '/avisos'
   const validated = event.opponent_confirmed === true
   const rejected = event.opponent_confirmed === false
 
@@ -115,7 +116,7 @@ export default function ValidateWar() {
     if (!confirm(t('validate.confirmReject'))) return
     void run(async () => {
       await rejectOpponentWar(eventId)
-      navigate(`/equipos/${event.opponent_team_id}`)
+      navigate(backTo)
     })
   }
 
@@ -123,8 +124,8 @@ export default function ValidateWar() {
 
   return (
     <div className="space-y-6">
-      <Link to={`/equipos/${event.opponent_team_id}`} className="text-sm text-muted hover:text-ink">
-        {t('validate.back', { team: event.opponent_tag ?? '' })}
+      <Link to={backTo} className="text-sm text-muted hover:text-ink">
+        {event.opponent_team_id ? t('validate.back', { team: event.opponent_tag ?? '' }) : t('validate.backNotices')}
       </Link>
       <PageHeader title={t('validate.title')} subtitle={t('validate.subtitle', { tag: event.team_tag ?? '?' })} />
 

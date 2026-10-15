@@ -4,6 +4,7 @@ import { useI18n, type Lang } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { teamsOf } from '../lib/compare'
+import { countUnreadNotices } from '../lib/notices'
 import { listPendingValidations } from '../lib/events'
 import { ROLE_LABEL } from '../lib/roles'
 import { isSearchShortcut } from '../lib/search'
@@ -78,6 +79,37 @@ function useMyTeam(): { teamId: number | null; pending: number } {
   return { teamId: teamIds.length ? Math.min(...teamIds) : null, pending: teamIds.length ? pending : 0 }
 }
 
+/** Avisos sin leer (wars en las que te han apuntado); se vuelve a mirar cada pocos minutos y al volver a la pestaña */
+function useUnreadNotices(): number {
+  const { profile } = useAuth()
+  const [count, setCount] = useState(0)
+  const profileId = profile?.id
+
+  useEffect(() => {
+    if (!profileId) return
+    let cancelled = false
+    const load = () =>
+      countUnreadNotices().then(
+        (n) => !cancelled && setCount(n),
+        () => {
+          // sin conexión: se deja el último número
+        },
+      )
+    void load()
+    const timer = setInterval(load, 120_000)
+    window.addEventListener('focus', load)
+    window.addEventListener('notices-read', load)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      window.removeEventListener('focus', load)
+      window.removeEventListener('notices-read', load)
+    }
+  }, [profileId])
+
+  return profileId ? count : 0
+}
+
 /**
  * Desde qué ancho se ve el menú de escritorio: en 1024 px caben los 6 botones, y los moderadores
  * (con el de Admin) necesitan 1280 px. Por debajo se usa el menú desplegable.
@@ -103,8 +135,9 @@ const BREAKPOINT = {
 
 export default function Layout() {
   const [open, setOpen] = useState(false)
-  const { isModerator } = useAuth()
+  const { isModerator, profile } = useAuth()
   const { t } = useI18n()
+  const unread = useUnreadNotices()
   const { teamId: myTeamId, pending: pendingWars } = useMyTeam()
   const bp = isModerator ? BREAKPOINT.xl : BREAKPOINT.lg
   const desktopFrom = isModerator ? 'xl' : 'lg'
@@ -166,6 +199,20 @@ export default function Layout() {
             <div className="hidden w-60 2xl:block">
               <GlobalSearch inputRef={searchRef} showShortcut />
             </div>
+            {profile && (
+              <Link to="/avisos" className="flex items-center gap-1.5 font-mono text-xs font-bold text-muted hover:text-kart-yellow">
+                {t('nav.notices')}
+                {unread > 0 && (
+                  <span
+                    className="min-w-5 rounded-full bg-kart-red px-1.5 py-0.5 text-center text-[11px] leading-none text-white"
+                    title={t('nav.noticesTitle', { n: unread })}
+                    aria-label={t('nav.noticesTitle', { n: unread })}
+                  >
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            )}
             <button
               className="font-mono text-xs font-bold text-muted hover:text-kart-yellow 2xl:hidden"
               onClick={() => setTabletSearch((s) => !s)}
@@ -204,6 +251,7 @@ export default function Layout() {
             {nav.map((item) => (
               <NavItem key={item.to} to={item.to} label={t(item.label)} exclude={item.exclude} badge={item.badge} desktopFrom={desktopFrom} onClick={closeMenu} />
             ))}
+            {profile && <NavItem to="/avisos" label={t('nav.notices')} badge={unread} badgeTitle="nav.noticesTitle" desktopFrom={desktopFrom} onClick={closeMenu} />}
             <div className="mt-4 flex items-center justify-between gap-4">
               <AuthButton />
               <LanguageSwitch />
@@ -251,6 +299,7 @@ function NavItem({
   label,
   exclude,
   badge,
+  badgeTitle = 'nav.pendingTitle',
   desktopFrom,
   onClick,
 }: {
@@ -258,6 +307,7 @@ function NavItem({
   label: string
   exclude?: string
   badge?: number
+  badgeTitle?: MessageKey
   desktopFrom: 'lg' | 'xl'
   onClick?: () => void
 }) {
@@ -280,8 +330,8 @@ function NavItem({
           {!!badge && (
             <span
               className="ml-1.5 min-w-5 rounded-full bg-kart-red px-1.5 py-0.5 text-center font-mono text-[11px] leading-none font-bold text-white"
-              title={t('nav.pendingTitle', { n: badge })}
-              aria-label={t('nav.pendingTitle', { n: badge })}
+              title={t(badgeTitle, { n: badge })}
+              aria-label={t(badgeTitle, { n: badge })}
             >
               {badge}
             </span>

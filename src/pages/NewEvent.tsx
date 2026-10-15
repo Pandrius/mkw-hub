@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import PlayerInput from '../components/PlayerInput'
 import { PlayedAtPicker } from '../components/PlayedAtPicker'
 import { SearchBox } from '../components/SearchBox'
@@ -19,9 +19,12 @@ export default function NewEvent() {
   // Equipos
   const [myTeams, setMyTeams] = useState<Entity[]>([])
   const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([])
-  const [loadingTeams, setLoadingTeams] = useState(true)
 
   const [selectedMyTeam, setSelectedMyTeam] = useState<number | null>(null)
+  // Equipo predeterminado (Nebulosa si es de los tuyos): de él salen las sugerencias de nombres aunque juegues con otro equipo
+  const [defaultTeam, setDefaultTeam] = useState<number | null>(null)
+  // War con un equipo que no está registrado (sub-equipo, mixto, otra competición)
+  const [freeHome, setFreeHome] = useState(false)
   const [teamTag, setTeamTag] = useState('')
   const [teamName, setTeamName] = useState('')
 
@@ -45,23 +48,28 @@ export default function NewEvent() {
       .then(([mine, all]) => {
         setMyTeams(mine)
         setAllTeams(all)
-        // Auto-seleccionar primer equipo propio si existe
-        if (mine.length > 0 && mine[0].kind === 'team') {
-          setSelectedMyTeam(mine[0].id)
-          setTeamTag(mine[0].tag)
-          setTeamName(mine[0].name)
+        // Equipo predeterminado: Nebulosa si lo tienes, si no el primero. Sin equipo, se empieza con un equipo libre
+        const own = mine.filter((m): m is Extract<Entity, { kind: 'team' }> => m.kind === 'team')
+        const preferred = own.find((m) => /nebulosa/i.test(m.name)) ?? own[0]
+        if (preferred) {
+          setSelectedMyTeam(preferred.id)
+          setDefaultTeam(preferred.id)
+          setTeamTag(preferred.tag)
+          setTeamName(preferred.name)
+        } else {
+          setFreeHome(true)
         }
-        setLoadingTeams(false)
       })
-      .catch(() => setLoadingTeams(false))
+      .catch(() => setFreeHome(true))
   }, [profile])
 
   // Miembros del equipo propio seleccionado
   const currentTeamMembers = useMemo(() => {
-    if (!selectedMyTeam) return []
-    const found = allTeams.find((t) => t.id === selectedMyTeam)
+    const id = selectedMyTeam ?? defaultTeam
+    if (!id) return []
+    const found = allTeams.find((t) => t.id === id)
     return found?.members ?? []
-  }, [selectedMyTeam, allTeams])
+  }, [selectedMyTeam, defaultTeam, allTeams])
 
   // Nombres sugeridos al escribir cada jugador (miembros registrados de cada equipo)
   const homeSuggestions = useMemo(() => currentTeamMembers.map((m) => m.username), [currentTeamMembers])
@@ -79,7 +87,15 @@ export default function NewEvent() {
   if (loading) return <p className="text-muted">{t('common.loading')}</p>
   if (!profile) return <EmptyState title={t('stats.signInTitle')}>{t('stats.signInText')}</EmptyState>
 
+  const startFreeHome = () => {
+    setFreeHome(true)
+    setSelectedMyTeam(null)
+    setTeamTag('')
+    setTeamName('')
+  }
+
   const selectHomeTeam = (id: number) => {
+    setFreeHome(false)
     setSelectedMyTeam(id)
     const tm = allTeams.find((t) => t.id === id) || (myTeams.find((t) => t.kind === 'team' && t.id === id) as Extract<Entity, { kind: 'team' }>)
     if (tm) {
@@ -128,7 +144,7 @@ export default function NewEvent() {
         teamTag: teamTag.trim(),
         opponentTag: opponentTag.trim(),
         players: homeEntries,
-        teamId: kind === 'war' ? selectedMyTeam : null,
+        teamId: kind === 'war' && !freeHome ? selectedMyTeam : null,
         teamName: kind === 'war' ? teamName.trim() || null : null,
         opponentTeamId: kind === 'war' ? selectedOpponentTeam?.id ?? null : null,
         opponentName: kind === 'war' ? opponentName.trim() || null : null,
@@ -141,8 +157,6 @@ export default function NewEvent() {
       setSaving(false)
     }
   }
-
-  const canCreateWar = myTeams.length > 0 || isAdmin
 
   return (
     <>
@@ -162,42 +176,38 @@ export default function NewEvent() {
 
         {kind === 'war' ? (
           <>
-            {!loadingTeams && !canCreateWar && (
-              <div className="border-2 border-kart-red/60 bg-kart-red/10 p-4">
-                <p className="font-semibold text-kart-red">{t('event.noTeamWarning')}</p>
-                <Link to="/equipos" className="mt-2 inline-block font-mono text-xs font-bold text-kart-yellow hover:underline">
-                  → {t('event.goToTeams')}
-                </Link>
-              </div>
-            )}
-
-            {/* Selector de equipo propio */}
+            {/* Selector de equipo propio: tus equipos registrados u otro equipo libre */}
             <div>
               <label className="mb-1 block text-sm font-semibold text-ink">{t('event.selectMyTeam')}</label>
-              {myTeams.filter((tm) => tm.kind === 'team').length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {myTeams.filter((tm): tm is Extract<Entity, { kind: 'team' }> => tm.kind === 'team').map((tm) => (
+              <div className="flex flex-wrap gap-2">
+                {myTeams
+                  .filter((tm): tm is Extract<Entity, { kind: 'team' }> => tm.kind === 'team')
+                  .map((tm) => (
                     <button
                       key={tm.id}
                       type="button"
                       onClick={() => selectHomeTeam(tm.id)}
                       className={`flex items-center gap-2 border-2 px-3 py-2 transition-colors ${
-                        selectedMyTeam === tm.id ? 'border-kart-yellow bg-kart-yellow/10' : 'border-line hover:border-line/90'
+                        !freeHome && selectedMyTeam === tm.id ? 'border-kart-yellow bg-kart-yellow/10' : 'border-line hover:border-line/90'
                       }`}
                     >
-                      <Plate color={selectedMyTeam === tm.id ? 'var(--color-kart-yellow)' : undefined}>
-                        {tm.tag}
-                      </Plate>
+                      <Plate color={!freeHome && selectedMyTeam === tm.id ? 'var(--color-kart-yellow)' : undefined}>{tm.tag}</Plate>
                       <span className="font-display text-lg font-bold">{tm.name}</span>
                     </button>
                   ))}
-                </div>
-              ) : isAdmin ? (
-                <select
-                  value={selectedMyTeam ?? ''}
-                  onChange={(e) => selectHomeTeam(Number(e.target.value))}
-                  className="field"
+                <button
+                  type="button"
+                  onClick={startFreeHome}
+                  aria-pressed={freeHome}
+                  className={`flex items-center gap-2 border-2 px-3 py-2 transition-colors ${
+                    freeHome ? 'border-kart-yellow bg-kart-yellow/10' : 'border-line hover:border-line/90'
+                  }`}
                 >
+                  <span className="font-display text-lg font-bold">{t('event.freeTeam')}</span>
+                </button>
+              </div>
+              {myTeams.every((tm) => tm.kind !== 'team') && isAdmin && !freeHome && (
+                <select value={selectedMyTeam ?? ''} onChange={(e) => selectHomeTeam(Number(e.target.value))} className="field mt-2">
                   <option value="">Selecciona equipo (modo admin)</option>
                   {allTeams.map((tm) => (
                     <option key={tm.id} value={tm.id}>
@@ -205,7 +215,22 @@ export default function NewEvent() {
                     </option>
                   ))}
                 </select>
-              ) : null}
+              )}
+              {freeHome && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-muted">{t('event.freeTeamHint')}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label>
+                      <span className="mb-1 block text-xs text-muted">{t('event.ownTag')}</span>
+                      <input required maxLength={12} value={teamTag} onChange={(e) => setTeamTag(e.target.value)} placeholder="TAG" className="field" />
+                    </label>
+                    <label>
+                      <span className="mb-1 block text-xs text-muted">{t('event.ownName')}</span>
+                      <input maxLength={80} value={teamName} onChange={(e) => setTeamName(e.target.value)} className="field" />
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Equipo Rival */}
@@ -274,6 +299,7 @@ export default function NewEvent() {
               <div>
                 <p className="text-base font-bold text-ink">{t('event.playersOptional')}</p>
                 <p className="text-xs text-muted">{t('event.playersOptionalHint')}</p>
+                <p className="mt-1 text-xs text-muted">{t('event.notifyHint')}</p>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -346,7 +372,7 @@ export default function NewEvent() {
         {error && <p className="text-sm text-kart-red">{error}</p>}
         <button
           type="submit"
-          disabled={saving || (kind === 'war' && !canCreateWar)}
+          disabled={saving}
           className="btn-yellow text-base disabled:opacity-50"
         >
           {saving ? t('event.starting') : t('event.start')}
