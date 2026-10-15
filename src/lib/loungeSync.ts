@@ -13,6 +13,7 @@ import {
   matchLoungeEvents,
   matchWars,
   parseChanges,
+  partnerMmrBefore,
   TABLE_LAG_MS,
   ZONE_SLACK_MS,
   type LoungeChange,
@@ -119,6 +120,14 @@ async function syncAccount(admin: SupabaseClient, profileId: string, found: { pl
     (a, b) => a.time.localeCompare(b.time) || a.changeId - b.changeId,
   )
 
+  // El MMR de los compañeros se averigua aparte y tarda: lo que ya estaba guardado se conserva al volver a guardar el historial
+  const { data: stored } = await admin.from('lounge_changes').select('change_id, reason, partner_mmrs').eq('profile_id', profileId).limit(5000)
+  const known = new Map((stored ?? []).map((r) => [`${r.reason}|${r.change_id}`, r.partner_mmrs as (number | null)[]]))
+  for (const c of changes) {
+    const k = known.get(`${c.reason}|${c.changeId}`)
+    if (k && k.length === c.partnerIds.length) c.partnerMmrs = k
+  }
+
   const { error } = await admin.from('lounge_players').upsert({
     profile_id: profileId,
     lounge_id: current.playerId,
@@ -165,6 +174,8 @@ async function syncAccount(admin: SupabaseClient, profileId: string, found: { pl
       reason: c.reason,
       score: c.score,
       partner_scores: c.partnerScores,
+      partner_ids: c.partnerIds,
+      partner_mmrs: c.partnerMmrs,
       rank: c.rank,
       tier: c.tier,
       num_teams: c.numTeams,
@@ -173,6 +184,7 @@ async function syncAccount(admin: SupabaseClient, profileId: string, found: { pl
     const { error: e } = await admin.from('lounge_changes').upsert(rows, { onConflict: 'profile_id,reason,change_id' })
     if (e) throw new Error(e.message)
   }
+  await fillPartnerMmrs(admin, profileId, changes).catch((err) => console.error('partner mmr', err))
   return changes
 }
 
@@ -394,4 +406,68 @@ export async function reverifyPending(
     }
   }
   return out
+}
+
+/** Tiempo máximo de cada sincronización dedicado a averiguar el MMR de los compañeros (lo que falte se completa en la siguiente) */
+const PARTNER_BUDGET_MS = 14_000
+const PARTNER_CONCURRENCY = 6
+
+/**
+ * Averigua el MMR que tenían tus compañeros de SQ antes de cada mesa: se pide el historial de cada compañero (por id) y se busca
+ * el cambio de esa misma mesa. Se guarda en lounge_changes.partner_mmrs; las mesas sin resolver se reintentan en la siguiente.
+ */
+export async function fillPartnerMmrs(admin: SupabaseClient, profileId: string, changes: LoungeChange[]): Promise<number> {
+  const need = changes.filter(
+    (c) =>
+      c.reason === 'Table' &&
+      c.tier === 'SQ' &&
+      c.partnerIds.length > 0 &&
+      c.partnerScores.length === c.partnerIds.length &&
+      c.partnerMmrs.length !== c.partnerIds.length,
+  )
+  if (need.length === 0) return 0
+
+  const keys = [...new Set(need.flatMap((c) => c.partnerIds.map((id) => `${id}|${c.season}`)))]
+  const history = new Map<string, LoungeChange[]>()
+  const started = Date.now()
+  let next = 0
+  await Promise.all(
+    Array.from({ length: PARTNER_CONCURRENCY }, async () => {
+      while (next < keys.length && Date.now() - started < PARTNER_BUDGET_MS) {
+        const key = keys[next++]
+        const [id, season] = key.split('|')
+        try {
+          const d = await loungeGet<PlayerDetails>(`player/details?id=${id}&game=${LOUNGE_GAME}&season=${season}`)
+          history.set(key, parseChanges(d?.mmrChanges, Number(season)))
+        } catch {
+          // se reintenta en la siguiente sincronización
+        }
+      }
+    }),
+  )
+
+  let filled = 0
+  const done: { c: LoungeChange; mmrs: (number | null)[] }[] = []
+  for (const c of need) {
+    const lists = c.partnerIds.map((id) => history.get(`${id}|${c.season}`))
+    if (lists.some((l) => l === undefined)) continue
+    done.push({ c, mmrs: c.partnerIds.map((_, i) => partnerMmrBefore(c, c.partnerScores[i], lists[i] ?? [])) })
+  }
+  for (const part of chunks(done, 10)) {
+    await Promise.all(
+      part.map(async ({ c, mmrs }) => {
+        const { error } = await admin
+          .from('lounge_changes')
+          .update({ partner_mmrs: mmrs })
+          .eq('profile_id', profileId)
+          .eq('reason', 'Table')
+          .eq('change_id', c.changeId)
+        if (!error) {
+          c.partnerMmrs = mmrs
+          filled++
+        }
+      }),
+    )
+  }
+  return filled
 }

@@ -27,6 +27,10 @@ export type LoungeChange = {
   reason: string
   score: number | null
   partnerScores: number[]
+  /** Jugadores del Lounge que eran tus compañeros de equipo, en el mismo orden que partnerScores */
+  partnerIds: number[]
+  /** MMR de cada compañero justo antes de la mesa (null = no se pudo averiguar); se rellena aparte */
+  partnerMmrs: (number | null)[]
   /** Posición del equipo en la mesa */
   rank: number | null
   /** Q, SQ, A..G (y mezclas como CD, DE, EF) */
@@ -44,6 +48,7 @@ export type RawChange = {
   time?: string
   score?: number
   partnerScores?: number[]
+  partnerIds?: number[]
   rank?: number
   tier?: string
   numTeams?: number
@@ -67,6 +72,8 @@ export function parseChanges(raw: RawChange[] | null | undefined, season: number
       reason: c.reason,
       score: isNum(c.score) ? c.score : null,
       partnerScores: (c.partnerScores ?? []).filter(isNum),
+      partnerIds: (c.partnerIds ?? []).filter(isNum),
+      partnerMmrs: [],
       rank: isNum(c.rank) ? c.rank : null,
       tier: c.tier ?? null,
       numTeams: isNum(c.numTeams) ? c.numTeams : null,
@@ -74,6 +81,18 @@ export function parseChanges(raw: RawChange[] | null | undefined, season: number
     })
   }
   return out.sort((a, b) => a.time.localeCompare(b.time) || a.changeId - b.changeId)
+}
+
+/**
+ * MMR que tenía un compañero justo antes de una mesa: en su propio historial se busca el cambio de esa misma mesa (mismo tier,
+ * misma puntuación y la misma hora) y se resta lo que subió o bajó. null si no aparece.
+ */
+export function partnerMmrBefore(own: LoungeChange, partnerScore: number, partnerChanges: LoungeChange[]): number | null {
+  const at = Date.parse(own.time)
+  const found = partnerChanges.find(
+    (c) => c.reason === 'Table' && c.tier === own.tier && c.score === partnerScore && Math.abs(Date.parse(c.time) - at) <= 2 * MIN,
+  )
+  return found ? found.newMmr - found.delta : null
 }
 
 // ───────────────────────── Verificación ─────────────────────────
@@ -269,7 +288,16 @@ export const MIN_GROUP = 5
 
 export type Group = { key: string; tables: number; avgScore: number; avgDelta: number; winRate: number }
 
-export type PartnerStats = { tables: number; avgScore: number; avgPartnerScore: number; diff: number }
+export type PartnerStats = {
+  tables: number
+  avgScore: number
+  avgPartnerScore: number
+  diff: number
+  /** MMR medio de tus compañeros antes de cada mesa, y el tuyo en esas mismas mesas (null si aún no se conoce) */
+  avgPartnerMmr: number | null
+  avgOwnMmr: number | null
+  mmrTables: number
+}
 
 /** Tu media frente a la de tus compañeros en las mesas por equipos de la lista (null si no hay ninguna) */
 function partnerOf(rows: LoungeChange[]): PartnerStats | null {
@@ -277,7 +305,18 @@ function partnerOf(rows: LoungeChange[]): PartnerStats | null {
   if (team.length === 0) return null
   const own = mean(team.map((t) => t.score as number))
   const partner = mean(team.map((t) => mean(t.partnerScores)))
-  return { tables: team.length, avgScore: round1(own), avgPartnerScore: round1(partner), diff: round1(own - partner) }
+  // MMR: solo las mesas donde se conoce el de algún compañero
+  const withMmr = team.filter((t) => t.partnerMmrs.some((m) => m !== null))
+  const partnerMmrs = withMmr.map((t) => mean(t.partnerMmrs.filter((m): m is number => m !== null)))
+  return {
+    tables: team.length,
+    avgScore: round1(own),
+    avgPartnerScore: round1(partner),
+    diff: round1(own - partner),
+    avgPartnerMmr: withMmr.length ? Math.round(mean(partnerMmrs)) : null,
+    avgOwnMmr: withMmr.length ? Math.round(mean(withMmr.map((t) => t.newMmr - t.delta))) : null,
+    mmrTables: withMmr.length,
+  }
 }
 
 export type LoungeStats = {

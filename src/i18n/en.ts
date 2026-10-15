@@ -934,4 +934,7 @@ export const en: Record<MessageKey, string> = {
   'lg.partnerYou': 'You',
   'lg.partnerThem': 'Teammates',
   'lg.partnerDiff': 'Difference',
+  'lg.partnerMmrYou': 'Your MMR',
+  'lg.partnerMmrThem': 'Teammates MMR',
+  'lg.partnerMmrHint': 'Average MMR right before each table, yours and your teammates’, over the tables where it is known. Only computed for SQ and filled in a bit more at every sync. In brackets, the tables with data.',
 }

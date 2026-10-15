@@ -296,6 +296,8 @@ function PartnerPanel({ stats }: { stats: LoungeStats }) {
             <Th>{t('lg.partnerYou')}</Th>
             <Th>{t('lg.partnerThem')}</Th>
             <Th>{t('lg.partnerDiff')}</Th>
+            <Th hint={t('lg.partnerMmrHint')}>{t('lg.partnerMmrYou')}</Th>
+            <Th hint={t('lg.partnerMmrHint')}>{t('lg.partnerMmrThem')}</Th>
           </tr>
         </thead>
         <tbody>
@@ -306,6 +308,11 @@ function PartnerPanel({ stats }: { stats: LoungeStats }) {
               <td className="px-3 py-2 text-right font-mono">{p ? num(p.avgScore, 1) : '—'}</td>
               <td className="px-3 py-2 text-right font-mono">{p ? num(p.avgPartnerScore, 1) : '—'}</td>
               <td className="px-3 py-2 text-right font-mono font-bold">{p ? <Signed value={p.diff} digits={1} /> : '—'}</td>
+              <td className="px-3 py-2 text-right font-mono">{p?.avgOwnMmr != null ? num(p.avgOwnMmr, 0) : '—'}</td>
+              <td className="px-3 py-2 text-right font-mono font-bold">
+                {p?.avgPartnerMmr != null ? num(p.avgPartnerMmr, 0) : '—'}
+                {p?.avgPartnerMmr != null && p.mmrTables < p.tables && <span className="ml-1 text-[10px] font-normal text-muted">({p.mmrTables}/{p.tables})</span>}
+              </td>
             </tr>
           ))}
         </tbody>

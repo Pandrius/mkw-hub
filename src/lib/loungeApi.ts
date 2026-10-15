@@ -58,6 +58,8 @@ type ChangeRow = {
   reason: string
   score: number | null
   partner_scores: number[]
+  partner_ids: number[]
+  partner_mmrs: (number | null)[]
   rank: number | null
   tier: string | null
   num_teams: number | null
@@ -101,6 +103,8 @@ export async function getLoungeData(profileId: string): Promise<LoungeData | nul
       reason: c.reason,
       score: c.score,
       partnerScores: c.partner_scores ?? [],
+      partnerIds: c.partner_ids ?? [],
+      partnerMmrs: c.partner_mmrs ?? [],
       rank: c.rank,
       tier: c.tier,
       numTeams: c.num_teams,

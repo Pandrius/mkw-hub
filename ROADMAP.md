@@ -67,6 +67,7 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 
 ### 3a. Lounge de MKCentral (solo 12p por ahora)
 - [x] Cuenta enlazada automáticamente con el Discord verificado del inicio de sesión (`api/lounge.ts`)
+- [x] Compañeros de equipo: tu puntuación frente a la suya (todas, SQ y Lounge) y el MMR medio de tus compañeros de SQ
 - [x] Historial de MMR de todas las temporadas, gráfica y estadísticas (formato, tier, SQ, compañeros, semanas, mejor día y hora)
 - [x] Verificación de eventos: Lounge = misma puntuación total a la hora jugada; war = validada por el rival o igual que una mesa SQ 6v6
 - [x] Los logros, insignias y títulos solo cuentan eventos verificados; las estadísticas se pueden ver con todos o solo con los verificados

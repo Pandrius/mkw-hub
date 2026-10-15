@@ -933,6 +933,9 @@ export const es = {
   'lg.partnerYou': 'Tú',
   'lg.partnerThem': 'Compañeros',
   'lg.partnerDiff': 'Diferencia',
+  'lg.partnerMmrYou': 'Tu MMR',
+  'lg.partnerMmrThem': 'MMR compañeros',
+  'lg.partnerMmrHint': 'MMR medio justo antes de cada mesa, tuyo y de tus compañeros, en las mesas donde se conoce. Solo se calcula en SQ y se va completando en cada sincronización. Entre paréntesis, las mesas con dato.',
 } as const
 
 export type MessageKey = keyof typeof es

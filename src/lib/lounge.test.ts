@@ -9,6 +9,7 @@ import {
   matchWars,
   mmrSeries,
   parseChanges,
+  partnerMmrBefore,
   topPercent,
   weekStart,
   type LoungeChange,
@@ -25,6 +26,8 @@ function change(over: Partial<LoungeChange> & { time: string }): LoungeChange {
     reason: 'Table',
     score: 80,
     partnerScores: [],
+    partnerIds: [],
+    partnerMmrs: [],
     rank: 5,
     tier: 'C',
     numTeams: 12,
@@ -207,12 +210,12 @@ describe('computeLoungeStats', () => {
 
   it('compañeros: tu puntuación frente a la media de tus compañeros en mesas por equipos', () => {
     const s = computeLoungeStats(base)!
-    expect(s.partnerSplit.all).toEqual({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
+    expect(s.partnerSplit.all).toMatchObject({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0, avgPartnerMmr: null, mmrTables: 0 })
     // Las dos mesas por equipos son SQ; las mesas del Lounge normal eran individuales (sin compañeros)
-    expect(s.partnerSplit.sq).toEqual({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
+    expect(s.partnerSplit.sq).toMatchObject({ tables: 2, avgScore: 85, avgPartnerScore: 85, diff: 0 })
     expect(s.partnerSplit.lounge).toBeNull()
     const mixed = computeLoungeStats([...base, change({ time: '2026-10-09T10:00:00Z', score: 100, tier: 'CD', numTeams: 6, partnerScores: [60] })])!
-    expect(mixed.partnerSplit.lounge).toEqual({ tables: 1, avgScore: 100, avgPartnerScore: 60, diff: 40 })
+    expect(mixed.partnerSplit.lounge).toMatchObject({ tables: 1, avgScore: 100, avgPartnerScore: 60, diff: 40 })
     expect(mixed.partnerSplit.all?.tables).toBe(3)
   })
 
@@ -243,6 +246,40 @@ describe('computeLoungeStats', () => {
     expect(s.weekly).toEqual([{ week: '2026-10-05', tables: 4, delta: 200 }])
     expect(weekStart('2026-10-11T23:59:00Z')).toBe('2026-10-05')
     expect(weekStart('2026-10-12T00:00:00Z')).toBe('2026-10-12')
+  })
+})
+
+describe('MMR de los compañeros', () => {
+  const sqChange = (id: number, time: string, score: number, newMmr: number, delta: number, partnerScores: number[], partnerIds: number[], partnerMmrs: (number | null)[] = []) =>
+    change({ changeId: id, time, tier: 'SQ', numTeams: 6, score, newMmr, delta, partnerScores, partnerIds, partnerMmrs })
+
+  it('partnerMmrBefore: el cambio de esa mesa en el historial del compañero, menos lo que subió', () => {
+    const own = sqChange(1, '2026-10-14T01:59:59Z', 102, 7360, 173, [84], [72449])
+    const theirs = [
+      sqChange(9, '2026-10-14T01:59:59Z', 84, 6498, 173, [102], [14073]),
+      sqChange(8, '2026-10-12T19:00:00Z', 84, 6000, 20, [90], [1]),
+    ]
+    expect(partnerMmrBefore(own, 84, theirs)).toBe(6325)
+    expect(partnerMmrBefore(own, 85, theirs)).toBeNull()
+    expect(partnerMmrBefore({ ...own, time: '2026-10-14T05:00:00Z' }, 84, theirs)).toBeNull()
+  })
+
+  it('media de MMR de los compañeros y la tuya en las mismas mesas, solo con las que se conocen', () => {
+    const rows = [
+      sqChange(1, '2026-10-05T10:00:00Z', 100, 7100, 100, [80, 70], [1, 2], [6000, 6200]), // tú antes: 7000; compañeros: 6100
+      sqChange(2, '2026-10-06T10:00:00Z', 90, 7150, 50, [80], [3], [6800]), // tú antes: 7100; compañero: 6800
+      sqChange(3, '2026-10-07T10:00:00Z', 90, 7150, 50, [80], [4]), // sin MMR conocido: no cuenta para el MMR
+    ]
+    const p = computeLoungeStats(rows)!.partnerSplit.sq!
+    expect(p.tables).toBe(3)
+    expect(p.mmrTables).toBe(2)
+    expect(p.avgPartnerMmr).toBe(6450)
+    expect(p.avgOwnMmr).toBe(7050)
+  })
+
+  it('con algún compañero desconocido usa los que sí se conocen', () => {
+    const rows = [sqChange(1, '2026-10-05T10:00:00Z', 100, 7100, 100, [80, 70], [1, 2], [6000, null])]
+    expect(computeLoungeStats(rows)!.partnerSplit.sq?.avgPartnerMmr).toBe(6000)
   })
 })
 
