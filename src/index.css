@@ -353,3 +353,201 @@ input[data-position]::-webkit-inner-spin-button {
   --rank-ink: #ffe27a;
   --rank-edge: #f1c232;
 }
+
+/* Reflejo que recorre los títulos con brillo (rangos del Lounge y los más difíciles) */
+.rank-chip,
+.title-chip {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+@keyframes chip-sweep {
+  0% {
+    transform: translateX(-130%) skewX(-20deg);
+  }
+  50%,
+  100% {
+    transform: translateX(330%) skewX(-20deg);
+  }
+}
+.rank-chip::after,
+.title-chip[data-title='podiumKing']::after,
+.title-chip[data-title='legend']::after,
+.title-chip[data-title='trackMaster']::after,
+.title-chip[data-title='top-1']::after,
+.title-chip[data-title='top-5']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: chip-sweep 3.4s ease-in-out infinite;
+  animation-delay: var(--sweep-delay, 0s);
+  pointer-events: none;
+  z-index: -1;
+}
+.rank-chip[data-rank='silver'] { --sweep-delay: 0.35s; }
+.rank-chip[data-rank='gold'] { --sweep-delay: 0.7s; }
+.rank-chip[data-rank='platinum'] { --sweep-delay: 1.05s; }
+.rank-chip[data-rank='sapphire'] { --sweep-delay: 1.4s; }
+.rank-chip[data-rank='ruby'] { --sweep-delay: 1.75s; }
+.rank-chip[data-rank='diamond'] { --sweep-delay: 2.1s; }
+.rank-chip[data-rank='master'] { --sweep-delay: 2.45s; }
+.rank-chip[data-rank='grandmaster'] { --sweep-delay: 2.8s; }
+.rank-chip[data-rank='diamond']::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent); }
+.rank-chip[data-rank='grandmaster']::after,
+.title-chip[data-title='top-1']::after { background: linear-gradient(90deg, transparent, rgba(255, 226, 122, 0.75), transparent); }
+
+/* Títulos «genéricos»: cada uno con su propio aspecto, relacionado con lo que premia */
+.title-chip {
+  background: var(--tc-bg);
+  color: var(--tc-ink);
+  box-shadow: inset 0 0 0 var(--tc-line, 1px) var(--tc-edge, transparent);
+}
+/* Perfeccionista: certificado carmesí con filete claro */
+.title-chip[data-title='perfectionist'] {
+  --tc-bg: #b3122a;
+  --tc-ink: #fff;
+  --tc-edge: #ffd2d8;
+  --tc-line: 2px;
+}
+/* Intocable: negro con brillo rojo que late */
+@keyframes untouchable-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px #e11d2e, 0 0 4px rgba(225, 29, 46, 0.35); }
+  50% { box-shadow: inset 0 0 0 2px #ff5a66, 0 0 12px rgba(255, 60, 75, 0.8); }
+}
+.title-chip[data-title='untouchable'] {
+  --tc-bg: #0b0b0d;
+  --tc-ink: #ff4d5a;
+  animation: untouchable-pulse 2.2s ease-in-out infinite;
+}
+/* Ganador nato: verde bosque con hojas */
+.title-chip[data-title='natureWinner'] {
+  --tc-bg: radial-gradient(circle at 15% 120%, #3f9d3a 0 28%, transparent 29%), radial-gradient(circle at 90% -20%, #3f9d3a 0 26%, transparent 27%), #1f5a2a;
+  --tc-ink: #d9f7b8;
+  --tc-edge: #0f3517;
+}
+/* Rey del podio: tres bandas, oro en el centro, plata y bronce a los lados */
+.title-chip[data-title='podiumKing'] {
+  --tc-bg: linear-gradient(90deg, #c98a4b 0 22%, #f5c542 22% 78%, #cfd3d8 78% 100%);
+  --tc-ink: #231800;
+  --tc-edge: #6b4a10;
+}
+/* Imparable: llama que se mueve sin parar */
+@keyframes flame-run {
+  to { background-position: 200% 0; }
+}
+.title-chip[data-title='unstoppable'] {
+  --tc-bg: linear-gradient(100deg, #ff3d00, #ff9a1f, #ffd500, #ff9a1f, #ff3d00);
+  --tc-ink: #2a0a00;
+  background-size: 200% 100%;
+  animation: flame-run 1.6s linear infinite;
+}
+/* Piloto de hierro: acero cepillado oscuro con remaches */
+.title-chip[data-title='ironDriver'] {
+  --tc-bg: radial-gradient(circle at 6px 50%, #cfd4d9 0 1.5px, transparent 2px), radial-gradient(circle at calc(100% - 6px) 50%, #cfd4d9 0 1.5px, transparent 2px), repeating-linear-gradient(90deg, #3a3f45 0 2px, #484e55 2px 4px);
+  --tc-ink: #e8ecef;
+  --tc-edge: #1b1e22;
+  --tc-line: 2px;
+}
+/* Piloto limpio: blanco impecable con filete turquesa */
+.title-chip[data-title='cleanDriver'] {
+  --tc-bg: linear-gradient(180deg, #ffffff, #e9f8fb);
+  --tc-ink: #0a5560;
+  --tc-edge: #21b8cc;
+  --tc-line: 2px;
+}
+/* Remontador: franjas que suben de abajo hacia arriba */
+@keyframes climb {
+  to { background-position: 0 -14px; }
+}
+.title-chip[data-title='comeback'] {
+  --tc-bg: repeating-linear-gradient(0deg, #0e7a5a 0 7px, #12946e 7px 14px);
+  --tc-ink: #eafff6;
+  --tc-edge: #064634;
+  background-size: 100% 14px;
+  animation: climb 1.4s linear infinite;
+}
+/* Cierra a lo grande: borde de bandera de cuadros */
+.title-chip[data-title='closer'] {
+  border: 4px solid transparent;
+  background: linear-gradient(#fff, #fff) padding-box, repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 8px 8px border-box;
+  color: #111;
+  box-shadow: none;
+}
+/* Leyenda: esmeralda profunda con borde de oro */
+.title-chip[data-title='legend'] {
+  --tc-bg: linear-gradient(135deg, #04573a 0%, #12b27a 45%, #067a52 70%, #03402a 100%);
+  --tc-ink: #fff3b8;
+  --tc-edge: #f1c232;
+  --tc-line: 2px;
+}
+/* Todoterreno: barro con dibujo de neumático */
+.title-chip[data-title='allTerrain'] {
+  --tc-bg: repeating-linear-gradient(135deg, #5b3a1e 0 6px, #6f4a28 6px 9px);
+  --tc-ink: #ffe9c9;
+  --tc-edge: #2f1d0d;
+  --tc-line: 2px;
+}
+/* Maestro de pistas: azul marino con doble filete dorado */
+.title-chip[data-title='trackMaster'] {
+  --tc-bg: linear-gradient(135deg, #0b1b4d, #1d3f9f 55%, #0b1b4d);
+  --tc-ink: #ffe27a;
+  box-shadow: inset 0 0 0 2px #f1c232, inset 0 0 0 4px #0b1b4d, inset 0 0 0 5px #f1c232;
+}
+/* Veterano: lona caqui con costura */
+.title-chip[data-title='veteran'] {
+  --tc-bg: #7d7a45;
+  --tc-ink: #1f1e0c;
+  box-shadow: inset 0 0 0 2px #7d7a45, inset 0 0 0 3px #d8d49a;
+  outline: 1px dashed #d8d49a;
+  outline-offset: -4px;
+}
+/* Trotamundos: mapa azul con líneas de ruta */
+.title-chip[data-title='globetrotter'] {
+  --tc-bg: repeating-linear-gradient(90deg, transparent 0 11px, rgba(255, 255, 255, 0.18) 11px 12px), repeating-linear-gradient(0deg, transparent 0 8px, rgba(255, 255, 255, 0.18) 8px 9px), linear-gradient(135deg, #0a5f9e, #14a3c7);
+  --tc-ink: #ffffff;
+  --tc-edge: #063d66;
+}
+/* Top 10 %: azul hielo liso */
+.title-chip[data-title='top-10'] {
+  --tc-bg: linear-gradient(180deg, #d7ecff, #a9d3f7);
+  --tc-ink: #0b2a4a;
+  --tc-edge: #5a9fd6;
+  --tc-line: 2px;
+}
+/* Top 5 %: magenta eléctrico */
+.title-chip[data-title='top-5'] {
+  --tc-bg: linear-gradient(135deg, #7a1fb5, #e12bd0 50%, #7a1fb5);
+  --tc-ink: #fff;
+  --tc-edge: #3d0a63;
+}
+/* Top 1 %: negro con oro y brillo que respira */
+@keyframes top1-glow {
+  0%, 100% { box-shadow: inset 0 0 0 2px #f1c232, 0 0 4px rgba(241, 194, 50, 0.3); }
+  50% { box-shadow: inset 0 0 0 2px #ffe27a, 0 0 14px rgba(255, 213, 74, 0.85); }
+}
+.title-chip[data-title='top-1'] {
+  --tc-bg: #0b0b0b;
+  --tc-ink: #ffd34d;
+  animation: top1-glow 2.4s ease-in-out infinite;
+}
+/* Jugador de SQ: dos equipos de 6, rojo contra azul */
+.title-chip[data-title='sqPlayer'] {
+  --tc-bg: linear-gradient(105deg, #d6262e 0 50%, #1f5fd1 50% 100%);
+  --tc-ink: #fff;
+  --tc-edge: #101010;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-chip::after,
+  .title-chip::after {
+    animation: none;
+    display: none;
+  }
+  .title-chip {
+    animation: none !important;
+  }
+}

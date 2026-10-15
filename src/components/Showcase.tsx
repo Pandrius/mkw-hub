@@ -4,11 +4,22 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import type { Tier } from '../lib/badges'
 import { supabase } from '../lib/supabase'
-import { MAX_FEATURED, titleCatalog, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
+import { ACHIEVEMENT_TITLES, MAX_FEATURED, titleCatalog, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
 import { MedalIcon } from './Medal'
 import { Plate } from './ui'
 import { featuredName, titleHow, titleName } from './showcaseNames'
 import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
+
+/** Títulos con aspecto propio (ver .title-chip en index.css); «Leyenda absoluta» tiene el suyo aparte */
+const UNIQUE_TITLES = new Set([
+  ...ACHIEVEMENT_TITLES.map((t) => t.id).filter((id) => id !== 'grandMaster'),
+  'veteran',
+  'globetrotter',
+  'top:10',
+  'top:5',
+  'top:1',
+  'sqPlayer',
+])
 
 /**
  * Un título como se ve en el perfil. «Dueño de …» lleva la placa de la pista (mismo color y letras que su abreviatura; Rainbow Road,
@@ -43,6 +54,13 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
     return (
       <span className="inline-block border-2 border-line bg-bg font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={pad}>
         <span className="title-multi">{name}</span>
+      </span>
+    )
+  }
+  if (UNIQUE_TITLES.has(def.id)) {
+    return (
+      <span data-title={def.id.replace(':', '-')} className="title-chip inline-block font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={pad}>
+        {name}
       </span>
     )
   }
