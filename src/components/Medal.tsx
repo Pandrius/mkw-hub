@@ -74,6 +74,38 @@ const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; 
   // Multicolor iridiscente: muchos tonos mezclados (no los del arcoíris literal); los colores cambian y el reflejo se mueve
   legend: { stops: ['#7df9ff', '#a78bfa', '#ff7ad9', '#ffc46b', '#7dffb2', '#6ea8ff', '#e879f9', '#fff1a8', '#7df9ff'], rim: '#3b2a6b', ink: '#16121f', light: false, animated: true },
 }
+/** Rayos que salen del escudo del evento perfecto y de la leyenda absoluta: un zigzag que parpadea y se apaga */
+const BOLT_PATH = 'M0 0 L4.9 -3.6 L7.7 2.5 L13.3 -3.1 L16.8 0.8 L21 -1.7'
+const BOLT_ANGLES = [-75, -30, 15, 60, 105, 150, 195, 240]
+
+function Bolts({ colors, shifting }: { colors: string[]; shifting: boolean }) {
+  return (
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {BOLT_ANGLES.map((angle, i) => {
+        const color = colors[i % colors.length]
+        const dur = 1.9 + (i % 3) * 0.45
+        const begin = `-${((i * 0.73) % dur).toFixed(2)}s`
+        // La leyenda cambia de color por el camino, como su escudo
+        const rotated = [...colors.slice(i % colors.length), ...colors.slice(0, i % colors.length), color].join(';')
+        const shift = shifting ? <animate attributeName="stroke" values={rotated} dur="6s" repeatCount="indefinite" /> : null
+        return (
+          <g key={angle} transform={`translate(28 31) rotate(${angle}) translate(24 0)`} opacity="0">
+            {/* Parpadeo de relámpago: salta, vacila y se apaga hasta el siguiente */}
+            <animate attributeName="opacity" values="0;1;0.25;0.95;0;0" keyTimes="0;0.06;0.14;0.22;0.5;1" dur={`${dur}s`} begin={begin} repeatCount="indefinite" />
+            <path d={BOLT_PATH} stroke={color} strokeWidth="5" opacity="0.4">
+              {shift}
+            </path>
+            <path d={BOLT_PATH} stroke={color} strokeWidth="2.2">
+              {shift}
+            </path>
+            <path d={BOLT_PATH} stroke="#fff" strokeWidth="0.8" opacity="0.9" />
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 /** Segundos de adelanto del reflejo de cada medalla (0 a 3,5), sacado de su id para que no brillen todas a la vez */
 const shineOffset = (id: string) => (Array.from(id).reduce((a, ch) => a + ch.charCodeAt(0), 0) % 36) / 10
 const STOP_AT = [0, 0.3, 0.5, 0.72, 1]
@@ -106,7 +138,8 @@ export function MedalIcon({
   const metal: { stops: string[]; rim: string; ink: string; light?: boolean; animated?: boolean } | null = !earned ? null : kind === 'metal' ? METALS[tier as 1 | 2 | 3 | 4 | 5] : SPECIAL_METALS[kind]
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
-      <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
+      <svg width={size} height={size * 1.1} viewBox="0 0 56 62" style={{ overflow: 'visible' }} className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
+        {metal && !reduceMotion && (kind === 'ruby' || kind === 'legend') && <Bolts colors={metal.animated ? metal.stops : metal.stops.filter((_, i) => i !== 2)} shifting={!!metal.animated} />}
         {metal ? (
           <>
             <defs>
