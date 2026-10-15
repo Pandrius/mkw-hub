@@ -69,11 +69,13 @@ const METALS: Record<1 | 2 | 3 | 4 | 5, { stops: string[]; rim: string; ink: str
   4: { stops: ['#eaffff', '#3fe0fa', '#0a8aa6', '#55d6ec', '#cdf8ff'], rim: '#04506a', ink: '#04384a' },
 }
 /** Los dos logros únicos usan el mismo escudo con su propio metal: rojo rubí y negro con filo dorado */
-const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; ink: string; light: boolean }> = {
-  ruby: { stops: ['#ff8a96', '#e8112d', '#8c0a1d', '#d4112b', '#ff6b7d'], rim: '#3a040c', ink: '#fff0f2', light: true },
-  legend: { stops: ['#5b5b63', '#2a2a30', '#050507', '#222228', '#55555d'], rim: '#c99700', ink: '#ffd500', light: true },
+const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; ink: string; light: boolean; animated?: boolean }> = {
+  ruby: { stops: ['#ff8a96', '#e8112d', '#8c0a1d', '#d4112b', '#ff6b7d'], rim: '#3a040c', ink: '#14040a', light: false },
+  // Multicolor iridiscente: muchos tonos mezclados (no los del arcoíris literal); los colores cambian y el reflejo se mueve
+  legend: { stops: ['#7df9ff', '#a78bfa', '#ff7ad9', '#ffc46b', '#7dffb2', '#6ea8ff', '#e879f9', '#fff1a8', '#7df9ff'], rim: '#3b2a6b', ink: '#16121f', light: false, animated: true },
 }
 const STOP_AT = [0, 0.3, 0.5, 0.72, 1]
+const stopAt = (i: number, n: number) => (n === STOP_AT.length ? STOP_AT[i] : i / (n - 1))
 
 /**
  * Medalla: escudo de metal (bronce, plata, oro o platino) con bisel, brillo y el dibujo grabado en relieve.
@@ -98,31 +100,41 @@ export function MedalIcon({
 }) {
   const id = useId().replace(/:/g, '')
   const earned = tier > 0
-  const metal: { stops: string[]; rim: string; ink: string; light?: boolean } | null = !earned ? null : kind === 'metal' ? METALS[tier as 1 | 2 | 3 | 4 | 5] : SPECIAL_METALS[kind]
+  const metal: { stops: string[]; rim: string; ink: string; light?: boolean; animated?: boolean } | null = !earned ? null : kind === 'metal' ? METALS[tier as 1 | 2 | 3 | 4 | 5] : SPECIAL_METALS[kind]
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5" aria-hidden>
       <svg width={size} height={size * 1.1} viewBox="0 0 56 62" className="block drop-shadow-[0_2px_2px_rgba(0,0,0,0.55)]">
         {metal ? (
           <>
             <defs>
-              <linearGradient id={`${id}o`} x1="0" y1="0" x2="1" y2="1">
+              <linearGradient id={`${id}o`} {...(metal.animated ? { gradientUnits: 'userSpaceOnUse', x1: 0, y1: 0, x2: 56, y2: 62, spreadMethod: 'repeat' } : { x1: 0, y1: 0, x2: 1, y2: 1 })}>
                 {metal.stops.map((c, i) => (
-                  <stop key={i} offset={STOP_AT[i]} stopColor={c} />
+                  <stop key={i} offset={stopAt(i, metal.stops.length)} stopColor={c} />
                 ))}
+                {metal.animated && <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="56 62" dur="5s" repeatCount="indefinite" />}
               </linearGradient>
-              <linearGradient id={`${id}i`} x1="1" y1="1" x2="0" y2="0">
+              <linearGradient id={`${id}i`} {...(metal.animated ? { gradientUnits: 'userSpaceOnUse', x1: 56, y1: 62, x2: 0, y2: 0, spreadMethod: 'repeat' } : { x1: 1, y1: 1, x2: 0, y2: 0 })}>
                 {metal.stops.map((c, i) => (
-                  <stop key={i} offset={STOP_AT[i]} stopColor={c} />
+                  <stop key={i} offset={stopAt(i, metal.stops.length)} stopColor={c} />
                 ))}
+                {metal.animated && <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="-56 -62" dur="7s" repeatCount="indefinite" />}
               </linearGradient>
               <clipPath id={`${id}c`}>
                 <polygon points="9,3 47,3 53,10 53,39 28,58 3,39 3,10" />
               </clipPath>
             </defs>
-            <polygon points="7,0 49,0 56,9 56,40 28,62 0,40 0,9" fill={`url(#${id}o)`} stroke={metal.rim} strokeWidth="1.2" strokeLinejoin="round" />
-            <polygon points="9,3 47,3 53,10 53,39 28,58 3,39 3,10" fill={`url(#${id}i)`} stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" strokeLinejoin="round" />
+            <g>
+              <polygon points="7,0 49,0 56,9 56,40 28,62 0,40 0,9" fill={`url(#${id}o)`} stroke={metal.rim} strokeWidth="1.2" strokeLinejoin="round" />
+              <polygon points="9,3 47,3 53,10 53,39 28,58 3,39 3,10" fill={`url(#${id}i)`} stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" strokeLinejoin="round" />
+            </g>
             <g clipPath={`url(#${id}c)`}>
-              <polygon points="0,0 34,0 0,36" fill="#fff" opacity="0.28" />
+              {metal.animated ? (
+                <polygon points="-20,0 -4,0 26,62 10,62" fill="#fff" opacity="0.6">
+                  <animateTransform attributeName="transform" type="translate" from="-30 0" to="95 0" dur="3.2s" repeatCount="indefinite" />
+                </polygon>
+              ) : (
+                <polygon points="0,0 34,0 0,36" fill="#fff" opacity="0.28" />
+              )}
               <polygon points="56,62 56,28 24,62" fill="#000" opacity="0.14" />
             </g>
             <svg x="14.5" y="11.5" width="27" height="27" viewBox="0 0 24 24" fill={metal.light ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.55)'}>
