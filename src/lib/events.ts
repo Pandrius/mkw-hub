@@ -35,6 +35,8 @@ export type GameEvent = {
   lounge_table_id?: number | null
   lounge_tier?: string | null
   trusted?: boolean
+  /** Perfil de confianza que avaló el evento */
+  vouched_by?: string | null
   verified_at?: string | null
 }
 
@@ -157,6 +159,8 @@ export function saveRace(
 }
 
 export const deleteRace = (eventId: string, raceNo: number) => rpc<void>('delete_race', { target: eventId, race_no: raceNo })
+/** Un perfil de confianza que jugó en el evento (o un admin) lo avala (value = false retira su aval) */
+export const vouchEvent = (eventId: string, value = true) => rpc<void>('vouch_event', { target: eventId, value })
 export const finishEvent = (eventId: string) => rpc<void>('finish_event', { target: eventId })
 export const deleteEvent = (eventId: string) => rpc<void>('delete_event', { target: eventId })
 /** El equipo rival rechaza una war apuntada por el otro equipo (para validarla, acceptOpponentWar) */

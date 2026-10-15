@@ -32,6 +32,7 @@ import { loungeTableImage } from '../lib/lounge'
 import { formatDate } from '../lib/time'
 import { VerifiedMark } from '../components/VerifiedMark'
 import { isVerified, verifiedBy } from '../lib/verify'
+import { vouchEvent } from '../lib/events'
 import { buildWarTable, lorenziEditorUrl, lorenziText, type WarTable } from '../lib/warTable'
 
 export default function EventDetail() {
@@ -105,6 +106,10 @@ export default function EventDetail() {
     })
   }
 
+  const canVouch =
+    !isOpen && !!profile && (isAdmin || (profile.trusted === true && players.some((p) => p.profile_id === profile.id)))
+  const vouch = (value: boolean) => act(() => vouchEvent(event.id, value))
+
   const recheck = async () => {
     setChecking(true)
     await requestLoungeSync()
@@ -157,6 +162,11 @@ export default function EventDetail() {
               {formatDate(event.played_on ?? event.created_at, locale)}
             </span>
             {!isOpen && <VerifiedMark event={event} tier={event.lounge_tier} />}
+            {canVouch && (
+              <button type="button" onClick={() => vouch(!event.vouched_by)} className="font-mono text-xs font-bold text-kart-yellow hover:underline" title={t('ver.vouchHint')}>
+                {event.vouched_by ? t('ver.unvouch') : t('ver.vouch')}
+              </button>
+            )}
             {!isOpen && !isVerified(event) && profile?.id === event.created_by && (
               <button type="button" onClick={recheck} disabled={checking} className="font-mono text-xs font-bold text-kart-yellow hover:underline disabled:opacity-60">
                 {checking ? t('ver.checking') : t('ver.recheck')}

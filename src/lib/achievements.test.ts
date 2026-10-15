@@ -140,3 +140,22 @@ describe('Ganador universal', () => {
     expect(podium.thresholds).toEqual([10, 20, 30, 40])
   })
 })
+
+describe('un evento de 180 puntos cuenta para los tres', () => {
+  it('evento perfecto, legendario (150) y gran evento (120)', () => {
+    const rows = event('a', Array(12).fill(1)) // 12 × 15 = 180
+    expect(get(rows, 'perfectEvent').count).toBe(1)
+    expect(get(rows, 'legendEvent').count).toBe(1)
+    expect(get(rows, 'bigEvent').count).toBe(1)
+  })
+
+  it('uno de 150 cuenta para el legendario y el gran evento, pero no para el perfecto', () => {
+    const rows = event('a', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4]) // 10 × 15 + 2 × 9 = 168
+    expect(get(rows, 'legendEvent').count).toBe(1)
+    expect(get(rows, 'bigEvent').count).toBe(1)
+    expect(get(rows, 'perfectEvent').count).toBe(0)
+    const e120 = event('b', [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) // 144: gran evento sí, legendario no
+    expect(get(e120, 'bigEvent').count).toBe(1)
+    expect(get(e120, 'legendEvent').count).toBe(0)
+  })
+})

@@ -5,7 +5,8 @@ export type Verifiable = {
   kind: EventKind
   lounge_change_id?: number | null
   lounge_table_id?: number | null
-  opponent_confirmed?: boolean | null
+  /** Un perfil de confianza que jugó en el evento (o un admin) lo avaló; también cuenta la validación de una war por un rival de confianza */
+  vouched_by?: string | null
   /** Lo subió un perfil de confianza (lo marca un admin) */
   trusted?: boolean | null
 }
@@ -13,21 +14,22 @@ export type Verifiable = {
 /**
  * Un evento está verificado cuando algo ajeno al propio jugador lo respalda:
  *  - Lounge: una mesa suya del Lounge de MKCentral con la misma puntuación a la hora jugada.
- *  - War: la valida el equipo rival, o coincide con una mesa SQ 6v6 del Lounge.
- *  - Lo subió un perfil de confianza.
+ *  - War: coincide con una mesa SQ 6v6 del Lounge. La validación del equipo rival, por sí sola, NO basta: dos equipos podrían
+ *    ponerse de acuerdo para inventar una war.
+ *  - Lo subió un perfil de confianza, o uno que jugó en él (o un admin) lo avaló.
  * Solo los eventos verificados cuentan para los logros. (Misma regla que la columna `verified` de player_results.)
  */
 export function isVerified(e: Verifiable): boolean {
-  if (e.trusted) return true
-  return e.kind === 'lounge' ? !!e.lounge_change_id : e.opponent_confirmed === true || !!e.lounge_table_id
+  if (e.trusted || e.vouched_by) return true
+  return e.kind === 'lounge' ? !!e.lounge_change_id : !!e.lounge_table_id
 }
 
 export type VerifyState = 'verified' | 'unverified'
 
 /** Cómo se ha verificado, para mostrarlo */
-export function verifiedBy(e: Verifiable): 'lounge' | 'sq' | 'rival' | 'trusted' | null {
+export function verifiedBy(e: Verifiable): 'lounge' | 'sq' | 'vouched' | 'trusted' | null {
   if (e.kind === 'lounge' && e.lounge_change_id) return 'lounge'
   if (e.kind === 'war' && e.lounge_table_id) return 'sq'
-  if (e.kind === 'war' && e.opponent_confirmed === true) return 'rival'
+  if (e.vouched_by) return 'vouched'
   return e.trusted ? 'trusted' : null
 }

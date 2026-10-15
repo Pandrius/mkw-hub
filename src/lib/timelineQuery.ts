@@ -12,7 +12,7 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
   const { data, error } = await client
     .from('race_results')
     .select(
-      'position, event_players!inner(profile_id), event_races!inner(race_no, track_id, missing_home, missing_away, events!inner(id, kind, status, created_at, played_on, lounge_change_id, lounge_table_id, lounge_tier, trusted, opponent_confirmed))',
+      'position, event_players!inner(profile_id), event_races!inner(race_no, track_id, missing_home, missing_away, events!inner(id, kind, status, created_at, played_on, lounge_change_id, lounge_table_id, lounge_tier, trusted, vouched_by))',
     )
     .eq('event_players.profile_id', profileId)
     .eq('event_races.events.status', 'finished')

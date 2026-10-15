@@ -183,7 +183,7 @@ type EventRow = {
   played_on: string | null
   lounge_change_id: number | null
   lounge_table_id: number | null
-  opponent_confirmed: boolean | null
+  vouched_by: string | null
 }
 
 type RaceRow = { race_no: number; missing_home: number; missing_away: number; race_results: { player_id: number; position: number }[] }
@@ -213,13 +213,13 @@ export async function verifyEvents(
   for (const part of chunks(ids, 100)) {
     const { data, error } = await admin
       .from('events')
-      .select('id, kind, created_at, played_on, lounge_change_id, lounge_table_id, opponent_confirmed')
+      .select('id, kind, created_at, played_on, lounge_change_id, lounge_table_id, vouched_by')
       .in('id', part)
       .eq('status', 'finished')
     if (error) throw new Error(error.message)
     events.push(...((data ?? []) as EventRow[]))
   }
-  const pending = events.filter((e) => (e.kind === 'lounge' ? hasLounge && !e.lounge_change_id : !e.lounge_table_id && !e.opponent_confirmed))
+  const pending = events.filter((e) => (e.kind === 'lounge' ? hasLounge && !e.lounge_change_id : !e.lounge_table_id && !e.vouched_by))
   if (pending.length === 0) return result
 
   const pendingIds = pending.map((e) => e.id)
@@ -372,7 +372,7 @@ export async function reverifyPending(
     .select('created_by')
     .eq('status', 'finished')
     .gte('created_at', since)
-    .or('and(kind.eq.lounge,lounge_change_id.is.null),and(kind.eq.lounge,lounge_table_id.is.null),and(kind.eq.war,lounge_table_id.is.null,opponent_confirmed.is.null)')
+    .or('and(kind.eq.lounge,lounge_change_id.is.null),and(kind.eq.lounge,lounge_table_id.is.null),and(kind.eq.war,lounge_table_id.is.null,vouched_by.is.null)')
     .limit(2000)
   if (error) throw new Error(error.message)
   const creators = [...new Set((data ?? []).map((e) => e.created_by as string))].slice(0, maxUsers)

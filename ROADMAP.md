@@ -70,7 +70,8 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Historial de MMR de todas las temporadas, gráfica y estadísticas (formato, tier, SQ, compañeros, semanas, mejor día y hora)
 - [x] Verificación de eventos: Lounge = misma puntuación total a la hora jugada; war = validada por el rival o igual que una mesa SQ 6v6
 - [x] Los logros, insignias y títulos solo cuentan eventos verificados; las estadísticas se pueden ver con todos o solo con los verificados
-- [x] Perfiles de confianza (los marca un admin): todo lo que suben cuenta como verificado
+- [x] Perfiles de confianza (los marca un admin): todo lo que suben cuenta como verificado, y pueden avalar eventos en los que jugaron (botón «Avalar este evento»)
+- [x] La validación del rival por sí sola ya no verifica una war (dos equipos podían inventarla): hace falta una mesa SQ del Lounge, subirla un perfil de confianza o que lo avale uno (también si valida la war un perfil de confianza rival)
 - [x] Filtros War / Lounge / SQ (la SQ se reconoce sola al verificar la mesa) y puesto en el ranking de su país
 - [ ] Modo de 24 jugadores (`mkworld24p`)
 - [ ] Reintentar la verificación de eventos pendientes en el cron diario
