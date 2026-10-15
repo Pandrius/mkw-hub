@@ -1,4 +1,4 @@
-import { getTrack } from '../data/tracks'
+﻿import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
@@ -25,9 +25,63 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
   }
 
   return (
-    <div className="space-y-8">
-      <section>
-        <SectionTitle title={t('badge.title')} hint={t('badge.hint')} />
+    <section id="logros" className="scroll-mt-24">
+      <SectionTitle title={t('ach.title')} hint={t('ach.hint')}>
+        <p className="font-mono text-xs text-muted">{t('ach.progress', { done: earned, total: possible })}</p>
+      </SectionTitle>
+      {grand && (
+        <div className="mb-3">
+          <GrandCard
+            glyph={grand.glyph}
+            kicker={t('ach.supremeKicker')}
+            name={t('ach.allAchievements.name')}
+            description={t('ach.allAchievements.desc')}
+            countLabel={t('ach.allAchievements.count')}
+            progress={{ ...grand, count: maxed }}
+            total={regular.length}
+            doneLabel={t('ach.done')}
+            topPercent={topPercentIn(stats, grand.id, grand.count)}
+          />
+        </div>
+      )}
+      <div className="mb-3 space-y-3">
+        {regular
+          .filter((a) => a.epic)
+          .map((a) => (
+            <EpicCard
+              key={a.id}
+              glyph={a.glyph}
+              kicker={t('ach.epicKicker')}
+              name={t(`ach.${a.id}.name` as MessageKey)}
+              description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
+              ghost={String(PERFECT_EVENT_POINTS)}
+              countLabel={t(`ach.${a.id}.count` as MessageKey)}
+              progress={a}
+              thresholds={a.thresholds}
+              single={a.single}
+              kind={medalKindOf(a.id)}
+              topPercent={topPercentIn(stats, a.id, a.count)}
+            />
+          ))}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {regular.filter((a) => !a.epic).map((a) => (
+          <MedalCard
+            key={a.id}
+            glyph={a.glyph}
+            name={t(`ach.${a.id}.name` as MessageKey)}
+            description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
+            progress={a}
+            thresholds={a.thresholds}
+            single={a.single}
+            topPercent={topPercentIn(stats, a.id, a.count)}
+          />
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <h4 className="font-display text-lg font-bold">{t('badge.title')}</h4>
+        <p className="mb-3 mt-1 max-w-3xl text-sm text-muted">{t('badge.hint')}</p>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <MedalCard glyph="bars" name={t('badge.races')} description={t('badge.racesDesc')} progress={badges.races} thresholds={RACE_TIERS} />
           <MedalCard glyph="flag" name={t('badge.events')} description={t('badge.eventsDesc')} progress={badges.events} thresholds={EVENT_TIERS} />
@@ -74,62 +128,7 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
             </p>
           )}
         </div>
-      </section>
-
-      <section id="logros" className="scroll-mt-24">
-        <SectionTitle title={t('ach.title')} hint={t('ach.hint')}>
-          <p className="font-mono text-xs text-muted">{t('ach.progress', { done: earned, total: possible })}</p>
-        </SectionTitle>
-        {grand && (
-          <div className="mb-3">
-            <GrandCard
-              glyph={grand.glyph}
-              kicker={t('ach.supremeKicker')}
-              name={t('ach.allAchievements.name')}
-              description={t('ach.allAchievements.desc')}
-              countLabel={t('ach.allAchievements.count')}
-              progress={{ ...grand, count: maxed }}
-              total={regular.length}
-              doneLabel={t('ach.done')}
-              topPercent={topPercentIn(stats, grand.id, grand.count)}
-            />
-          </div>
-        )}
-        <div className="mb-3 space-y-3">
-          {regular
-            .filter((a) => a.epic)
-            .map((a) => (
-              <EpicCard
-                key={a.id}
-                glyph={a.glyph}
-                kicker={t('ach.epicKicker')}
-                name={t(`ach.${a.id}.name` as MessageKey)}
-                description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
-                ghost={String(PERFECT_EVENT_POINTS)}
-                countLabel={t(`ach.${a.id}.count` as MessageKey)}
-                progress={a}
-                thresholds={a.thresholds}
-                single={a.single}
-                kind={medalKindOf(a.id)}
-                topPercent={topPercentIn(stats, a.id, a.count)}
-              />
-            ))}
-        </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {regular.filter((a) => !a.epic).map((a) => (
-            <MedalCard
-              key={a.id}
-              glyph={a.glyph}
-              name={t(`ach.${a.id}.name` as MessageKey)}
-              description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
-              progress={a}
-              thresholds={a.thresholds}
-              single={a.single}
-              topPercent={topPercentIn(stats, a.id, a.count)}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }

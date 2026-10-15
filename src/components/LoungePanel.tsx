@@ -404,6 +404,7 @@ function TeammatesPanel({ stats }: { stats: LoungeStats }) {
               <Th>{t('lg.mateNet')}</Th>
               <Th>{t('lg.mateAvg')}</Th>
               <Th>{t('lg.col.win')}</Th>
+              <Th>{t('lg.mateMyScore')}</Th>
               <Th>{t('lg.mateTheirScore')}</Th>
               <Th>{t('lg.mateTheirMmr')}</Th>
             </tr>
@@ -420,6 +421,7 @@ function TeammatesPanel({ stats }: { stats: LoungeStats }) {
                   <Signed value={m.avgDelta} digits={1} />
                 </td>
                 <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{m.winRate} %</td>
+                <td className="px-3 py-2 text-right font-mono">{num(m.myAvgScore, 1)}</td>
                 <td className="px-3 py-2 text-right font-mono">{num(m.theirAvgScore, 1)}</td>
                 <td className="px-3 py-2 text-right font-mono">{m.avgMmr !== null ? num(m.avgMmr, 0) : '—'}</td>
               </tr>
