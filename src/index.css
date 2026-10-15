@@ -301,3 +301,55 @@ input[data-position]::-webkit-inner-spin-button {
     animation: none;
   }
 }
+
+/* Títulos de rango del Lounge: cada uno con el material y el color de su rango (los colores base son los del Lounge) */
+.rank-chip {
+  background: var(--rank-bg);
+  color: var(--rank-ink);
+  box-shadow: inset 0 0 0 1px var(--rank-edge);
+}
+.rank-chip[data-rank='bronze'] {
+  --rank-bg: linear-gradient(135deg, #7a3f04 0%, #d98a3d 35%, #b45f06 55%, #e3a064 78%, #8c4a07 100%);
+  --rank-ink: #1d0e00;
+  --rank-edge: #5c2f03;
+}
+.rank-chip[data-rank='silver'] {
+  --rank-bg: linear-gradient(135deg, #9a9fa6 0%, #f4f6f8 32%, #c4c8cd 52%, #ffffff 74%, #a3a8ae 100%);
+  --rank-ink: #1b1d20;
+  --rank-edge: #7d838a;
+}
+.rank-chip[data-rank='gold'] {
+  --rank-bg: linear-gradient(135deg, #a67c00 0%, #ffe27a 30%, #f1c232 52%, #fff0a8 74%, #b8860b 100%);
+  --rank-ink: #2a1d00;
+  --rank-edge: #8a6500;
+}
+.rank-chip[data-rank='platinum'] {
+  --rank-bg: linear-gradient(135deg, #2c7f8a 0%, #8fdde6 32%, #3fabb8 54%, #b7eef4 76%, #2f8f9b 100%);
+  --rank-ink: #04262b;
+  --rank-edge: #1f6872;
+}
+.rank-chip[data-rank='sapphire'] {
+  --rank-bg: linear-gradient(135deg, #123f8c 0%, #4f8df0 40%, #286cd3 60%, #1a4fa8 100%);
+  --rank-ink: #ffffff;
+  --rank-edge: #0d2d66;
+}
+.rank-chip[data-rank='ruby'] {
+  --rank-bg: linear-gradient(135deg, #8f0a3a 0%, #f2477f 40%, #d51c5e 60%, #a1124a 100%);
+  --rank-ink: #ffffff;
+  --rank-edge: #5e0524;
+}
+.rank-chip[data-rank='diamond'] {
+  --rank-bg: linear-gradient(135deg, #8fd8ee 0%, #ffffff 30%, #b9f2ff 50%, #e6fbff 70%, #9ee3f5 100%);
+  --rank-ink: #062a36;
+  --rank-edge: #62bfd8;
+}
+.rank-chip[data-rank='master'] {
+  --rank-bg: linear-gradient(135deg, #4b2b9a 0%, #9370db 45%, #6f4fc2 65%, #3f2486 100%);
+  --rank-ink: #ffffff;
+  --rank-edge: #2a1563;
+}
+.rank-chip[data-rank='grandmaster'] {
+  --rank-bg: linear-gradient(135deg, #5c0118 0%, #d1103f 40%, #a3022c 62%, #6e011d 100%);
+  --rank-ink: #ffe27a;
+  --rank-edge: #f1c232;
+}

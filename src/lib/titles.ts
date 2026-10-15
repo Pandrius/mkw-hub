@@ -85,8 +85,19 @@ export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier:
   { id: 'trackMaster', achievement: 'winEverywhere', tier: 5 },
 ]
 
-/** MMR máximo necesario para cada título de club */
-export const MMR_CLUBS = [5000, 7000, 9000, 11000, 13000]
+/** Rangos del Lounge de 12 jugadores y el MMR mínimo de cada uno (Iron, por debajo de 2000, no da título) */
+export const LOUNGE_RANKS = [
+  { key: 'bronze', min: 2000 },
+  { key: 'silver', min: 4000 },
+  { key: 'gold', min: 6000 },
+  { key: 'platinum', min: 8000 },
+  { key: 'sapphire', min: 9500 },
+  { key: 'ruby', min: 11000 },
+  { key: 'diamond', min: 12500 },
+  { key: 'master', min: 14000 },
+  { key: 'grandmaster', min: 15000 },
+] as const
+export type LoungeRankKey = (typeof LOUNGE_RANKS)[number]['key']
 /** Percentil superior necesario para los títulos de ranking */
 export const TOP_PERCENTS = [10, 5, 1]
 /** Mesas SQ necesarias para ser «Jugador de SQ» */
@@ -103,7 +114,7 @@ export function titleCatalog(ctx: TitleContext): TitleDef[] {
 
   const lounge = ctx.lounge
   for (const p of TOP_PERCENTS) list.push({ id: `top:${p}`, param: String(p), group: 'lounge', earned: !!lounge && lounge.topPercent !== null && lounge.topPercent <= p })
-  for (const n of MMR_CLUBS) list.push({ id: `mmr:${n}`, param: String(n), group: 'lounge', earned: !!lounge && lounge.peakMmr !== null && lounge.peakMmr >= n })
+  for (const r of LOUNGE_RANKS) list.push({ id: `rank:${r.key}`, param: r.key, group: 'lounge', earned: !!lounge && lounge.peakMmr !== null && lounge.peakMmr >= r.min })
   list.push({ id: 'sqPlayer', group: 'lounge', earned: !!lounge && lounge.sqTables >= SQ_TABLES })
   return list
 }

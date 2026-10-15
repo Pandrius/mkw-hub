@@ -12,7 +12,7 @@ import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
 /**
  * Un título como se ve en el perfil. «Dueño de …» lleva la placa de la pista (mismo color y letras que su abreviatura; Rainbow Road,
- * con el multicolor animado), «Leyenda absoluta» tiene las letras multicolor que cambian y el resto, el amarillo de la web.
+ * con el multicolor animado), los de rango del Lounge, el material y color de su rango (bronce, plata, oro…), «Leyenda absoluta» tiene las letras multicolor que cambian y el resto, el amarillo de la web.
  */
 export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'param'>; size?: 'sm' | 'md' }) {
   const { t } = useI18n()
@@ -30,6 +30,13 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
       >
         {name}
       </Plate>
+    )
+  }
+  if (def.id.startsWith('rank:')) {
+    return (
+      <span data-rank={def.param} className="rank-chip inline-block font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={pad}>
+        {name}
+      </span>
     )
   }
   if (def.id === 'grandMaster') {

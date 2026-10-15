@@ -42,7 +42,7 @@ describe('titleCatalog', () => {
   it('títulos del Lounge según el MMR máximo, el puesto y las mesas SQ', () => {
     const lounge = { peakMmr: 7360, topPercent: 2.3, sqTables: 30 }
     const earned = new Set(titleCatalog(ctxFor([], lounge)).filter((t) => t.earned).map((t) => t.id))
-    expect([...earned].sort()).toEqual(['mmr:5000', 'mmr:7000', 'sqPlayer', 'top:10', 'top:5'])
+    expect([...earned].sort()).toEqual(['rank:bronze', 'rank:gold', 'rank:silver', 'sqPlayer', 'top:10', 'top:5'])
   })
 })
 
