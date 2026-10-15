@@ -179,9 +179,11 @@ export function EpicCard({
   thresholds,
   single = false,
   kind = 'metal',
+  topPercent = null,
 }: {
   single?: boolean
   kind?: MedalKind
+  topPercent?: number | null
   glyph: Glyph
   kicker: string
   name: string
@@ -221,6 +223,7 @@ export function EpicCard({
             <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
               <span>
                 <span className="font-bold text-ink">{count}</span> {countLabel}
+                {topPercent !== null && <span className="ml-2 font-bold text-kart-yellow">· {t('ach.top', { pct: topPercent })}</span>}
                 {earned && (
                   <span className="ml-2 font-bold uppercase" style={{ color: accent }}>
                     · {single ? t('ach.done') : t(tierLabel(tier))}
@@ -246,8 +249,10 @@ export function MedalCard({
   thresholds,
   suffix,
   single = false,
+  topPercent = null,
 }: {
   single?: boolean
+  topPercent?: number | null
   glyph: Glyph
   name: string
   description: string
@@ -288,6 +293,7 @@ export function MedalCard({
           <span>
             <span className="font-bold text-ink">{count}</span>
             {suffix ? ` ${suffix}` : ''}
+            {topPercent !== null && <span className="ml-2 font-bold text-kart-yellow">· {t('ach.top', { pct: topPercent })}</span>}
           </span>
           <span>{single ? (tier ? t('ach.done') : '') : next ? t('badge.nextAt', { n: next }) : t('badge.maxed')}</span>
         </p>
@@ -321,7 +327,9 @@ export function GrandCard({
   progress,
   total,
   doneLabel,
+  topPercent = null,
 }: {
+  topPercent?: number | null
   glyph: Glyph
   kicker: string
   name: string
@@ -331,6 +339,7 @@ export function GrandCard({
   total: number
   doneLabel: string
 }) {
+  const { t } = useI18n()
   const earned = progress.tier > 0
   const pct = Math.round((Math.min(progress.count, total) / total) * 100)
   return (
@@ -358,6 +367,7 @@ export function GrandCard({
               <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
                 <span>
                   <span className="font-bold text-ink">{Math.min(progress.count, total)}</span> / {total} {countLabel}
+                  {topPercent !== null && <span className="ml-2 font-bold text-kart-yellow">· {t('ach.top', { pct: topPercent })}</span>}
                 </span>
                 {earned && <span className="font-bold uppercase text-kart-yellow">{doneLabel}</span>}
               </p>

@@ -13,7 +13,9 @@ import { TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
-import { achievementTotals, computeAchievements, demoAchievements, ownedTracks } from '../lib/achievements'
+import { achievementTotals, computeAchievements, demoAchievements } from '../lib/achievements'
+import { getAchievementStats, type AchievementStats } from '../lib/achievementStats'
+import { getOwnedTracks } from '../lib/trackOwners'
 import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import type { TimedResult } from '../lib/form'
@@ -153,6 +155,8 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
   const [filter, setFilter] = useState<StatsFilter>('all')
   const [verifyFilter, setVerifyFilter] = useState<VerifyFilter>('all')
   const [lounge, setLounge] = useState<LoungeData | null>(null)
+  const [ownedTrackIds, setOwnedTrackIds] = useState<string[]>([])
+  const [achStats, setAchStats] = useState<AchievementStats | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [checking, setChecking] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -172,16 +176,20 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
     Promise.all([
       supabase!.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id').eq('id', profileId).maybeSingle(),
       getLoungeData(profileId),
+      getOwnedTracks(profileId).catch(() => [] as string[]),
+      getAchievementStats(),
       teamsOf(profileId),
       getPlayerTimeline(profileId),
       isMe ? listEventsFor(profileId) : Promise.resolve(null),
       vsId ? supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', vsId).maybeSingle() : Promise.resolve(null),
       vsId ? getPlayerTimeline(vsId) : Promise.resolve(null),
     ]).then(
-      ([prof, loungeData, tms, tl, events, vsProf, vsTl]) => {
+      ([prof, loungeData, owned, aStats, tms, tl, events, vsProf, vsTl]) => {
         if (cancelled) return
         setOwner(prof.data)
         setLounge(loungeData)
+        setOwnedTrackIds(owned)
+        setAchStats(aStats)
         setShowcase({ badges: prof.data?.featured_badges ?? [], title: prof.data?.title_id ?? null })
         setTeams(tms)
         setTimeline(tl)
@@ -244,8 +252,8 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
     return { total: all.size, verified: new Set(verifiedTimeline.map((r) => r.eventId)).size }
   }, [timeline, verifiedTimeline])
   const titleCtx = useMemo(
-    () => ({ achievements, badges, ownedTracks: ownedTracks(verifiedTimeline), lounge: loungeFactsOf(lounge?.account ?? null, lounge?.changes ?? []) }),
-    [achievements, badges, verifiedTimeline, lounge],
+    () => ({ achievements, badges, ownedTracks: ownedTrackIds, lounge: loungeFactsOf(lounge?.account ?? null, lounge?.changes ?? []) }),
+    [achievements, badges, ownedTrackIds, lounge],
   )
   const totals = useMemo(() => achievementTotals(achievements), [achievements])
   const ownedFeatures = useMemo(() => featurable(achievements, badges), [achievements, badges])
@@ -403,7 +411,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo }: { profileId: string;
             )}
           </div>
 
-          <BadgesPanel badges={badges} achievements={achievements} totalTracks={TRACKS.length} />
+          <BadgesPanel badges={badges} achievements={achievements} totalTracks={TRACKS.length} stats={achStats} />
 
           <section>
             <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>

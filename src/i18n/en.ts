@@ -845,7 +845,7 @@ export const en: Record<MessageKey, string> = {
   'title.group.track': 'Track owner',
   'title.group.lounge': 'Lounge',
   'title.owner.name': '{track} Owner',
-  'title.owner.how': 'Reach 10 races on {track} with an average position of 3 or better. Once earned, it’s never lost.',
+  'title.owner.how': 'Be in the top 1% on {track} among all players (adjusted points per race, verified events only, at least 20 races). If another player overtakes you, you lose it.',
   'title.mmr.name': '{n} Club',
   'title.mmr.how': 'Reach {n} MMR in the Lounge.',
   'title.top.name': 'Top {pct}%',
@@ -925,4 +925,5 @@ export const en: Record<MessageKey, string> = {
   'event.loungeTableHint': 'The official table of this match in the MKCentral Lounge, with every player’s score.',
   'stats.demo': 'Achievements preview: everything shows at the maximum on this screen only. Nothing is saved and your real achievements don’t change. Remove ?demo=logros from the address to go back.',
   'badge.tier.5': 'Emerald',
+  'ach.top': 'Top {pct}%',
 }

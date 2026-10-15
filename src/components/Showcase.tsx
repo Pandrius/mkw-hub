@@ -1,12 +1,50 @@
 import { useState } from 'react'
+import { getTrack, getTrackPlateBackground, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import type { Tier } from '../lib/badges'
 import { supabase } from '../lib/supabase'
 import { MAX_FEATURED, titleCatalog, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
 import { MedalIcon } from './Medal'
+import { Plate } from './ui'
 import { featuredName, titleHow, titleName } from './showcaseNames'
 import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
+
+/**
+ * Un título como se ve en el perfil. «Dueño de …» lleva la placa de la pista (mismo color y letras que su abreviatura; Rainbow Road,
+ * con el multicolor animado), «Leyenda absoluta» tiene las letras multicolor que cambian y el resto, el amarillo de la web.
+ */
+export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'param'>; size?: 'sm' | 'md' }) {
+  const { t } = useI18n()
+  const name = titleName(def, t)
+  const pad = size === 'md' ? { padding: '6px 12px', fontSize: '1rem' } : { padding: '3px 8px', fontSize: '0.8rem' }
+  if (def.id.startsWith('owner:')) {
+    const track = getTrack(def.param ?? '')
+    const rainbow = track?.abbr === 'RR'
+    return (
+      <Plate
+        color={rainbow ? undefined : getTrackPlateBackground(track)}
+        textColor={rainbow ? '#16121f' : getTrackTextColor(track)}
+        className={rainbow ? 'plate-multi' : ''}
+        style={{ ...pad, textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+      >
+        {name}
+      </Plate>
+    )
+  }
+  if (def.id === 'grandMaster') {
+    return (
+      <span className="inline-block border-2 border-line bg-bg font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={pad}>
+        <span className="title-multi">{name}</span>
+      </span>
+    )
+  }
+  return (
+    <span className="inline-block bg-kart-yellow font-display font-extrabold tracking-wide whitespace-nowrap text-bg uppercase" style={pad}>
+      {name}
+    </span>
+  )
+}
 
 /** Título y hasta 3 insignias destacadas junto al nombre. Solo se muestran las que el jugador tiene ganadas */
 export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featuredIds: string[]; titleId: string | null; owned: Featurable[]; ctx: TitleContext }) {
@@ -20,8 +58,8 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
   return (
     <div className="flex flex-wrap items-center gap-3">
       {title && (
-        <span className="bg-kart-yellow px-2.5 py-1 font-display text-sm font-extrabold tracking-wide text-bg uppercase" title={titleHow(title, t)}>
-          {titleName(title, t)}
+        <span title={titleHow(title, t)}>
+          <TitleChip def={title} />
         </span>
       )}
       {medals.map((m) => (
@@ -158,8 +196,10 @@ export function ShowcaseEditor({
                           on ? 'border-kart-yellow bg-surface-2' : d.earned ? 'border-line hover:border-muted' : 'border-line/60 border-dashed opacity-60'
                         }`}
                       >
-                        <span className="block text-sm font-bold">{titleName(d, t)}</span>
-                        <span className="block text-xs text-muted">{d.earned ? titleHow(d, t) : `${t('showcase.locked')}: ${titleHow(d, t)}`}</span>
+                        <span className="block">
+                          <TitleChip def={d} size="sm" />
+                        </span>
+                        <span className="mt-1 block text-xs text-muted">{d.earned ? titleHow(d, t) : `${t('showcase.locked')}: ${titleHow(d, t)}`}</span>
                       </button>
                     </li>
                   )

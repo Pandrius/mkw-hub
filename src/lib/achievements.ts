@@ -38,9 +38,6 @@ export const BIG_EVENT_POINTS = 120
 export const LEGEND_EVENT_POINTS = 150
 /** Puntuación máxima de un evento de 12 carreras: ganarlas todas (12 × 15) */
 export const PERFECT_EVENT_POINTS = 180
-/** Carreras en una pista para considerarla "dominada" y posición media máxima que se exige */
-export const DOMINATION_RACES = 10
-export const DOMINATION_AVG_POS = 3
 /** Una remontada es ganar justo después de acabar en esta posición o peor */
 export const REDEMPTION_FROM = 10
 
@@ -53,23 +50,6 @@ function fullEvents(rows: TimedResult[]): number[][] {
   const byEvent = new Map<string, TimedResult[]>()
   for (const r of rows) byEvent.set(r.eventId, [...(byEvent.get(r.eventId) ?? []), r])
   return [...byEvent.values()].filter((rs) => rs.length >= RACES_PER_WAR).map((rs) => rs.map((r) => r.position))
-}
-
-/**
- * Pistas "dominadas" (dan derecho al título «Dueño de …»): alguna vez, con al menos DOMINATION_RACES carreras en ella, la posición
- * media llegó a DOMINATION_AVG_POS o mejor. Es una marca que se alcanza una vez: bajar la media después no la quita.
- */
-export function ownedTracks(rows: TimedResult[]): string[] {
-  const state = new Map<string, { n: number; sum: number }>()
-  const owned = new Set<string>()
-  for (const r of sortTimeline(rows)) {
-    const s = state.get(r.trackId) ?? { n: 0, sum: 0 }
-    s.n++
-    s.sum += r.position
-    state.set(r.trackId, s)
-    if (s.n >= DOMINATION_RACES && s.sum / s.n <= DOMINATION_AVG_POS) owned.add(r.trackId)
-  }
-  return [...owned]
 }
 
 const countWhere = (rows: TimedResult[], test: (r: TimedResult) => boolean) => rows.filter(test).length

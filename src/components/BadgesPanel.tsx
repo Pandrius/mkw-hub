@@ -3,12 +3,13 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
+import { topPercentIn, type AchievementStats } from '../lib/achievementStats'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
 import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
 /** Insignias por volumen de juego y logros de desempeño */
-export function BadgesPanel({ badges, achievements, totalTracks }: { badges: BadgeSet; achievements: Achievement[]; totalTracks: number }) {
+export function BadgesPanel({ badges, achievements, totalTracks, stats = null }: { badges: BadgeSet; achievements: Achievement[]; totalTracks: number; stats?: AchievementStats | null }) {
   const { t } = useI18n()
   const { mostPlayed } = badges
   // Niveles conseguidos: los de varios niveles suman hasta 4 y los de una sola vez, 1. El supremo no cuenta aquí
@@ -90,6 +91,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
               progress={{ ...grand, count: maxed }}
               total={regular.length}
               doneLabel={t('ach.done')}
+              topPercent={topPercentIn(stats, grand.id, grand.count)}
             />
           </div>
         )}
@@ -109,6 +111,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
                 thresholds={a.thresholds}
                 single={a.single}
                 kind={medalKindOf(a.id)}
+                topPercent={topPercentIn(stats, a.id, a.count)}
               />
             ))}
         </div>
@@ -122,6 +125,7 @@ export function BadgesPanel({ badges, achievements, totalTracks }: { badges: Bad
               progress={a}
               thresholds={a.thresholds}
               single={a.single}
+              topPercent={topPercentIn(stats, a.id, a.count)}
             />
           ))}
         </div>

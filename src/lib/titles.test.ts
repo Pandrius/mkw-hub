@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeAchievements, ownedTracks } from './achievements'
+import { computeAchievements } from './achievements'
 import { computeBadges } from './badges'
 import type { TimedResult } from './form'
 import { countSqTables, featurable, titleCatalog, validateFeatured, validateTitle, type TitleContext } from './titles'
@@ -16,8 +16,8 @@ const race = (eventId: string, i: number, position: number, trackId = `t${i}`, v
 })
 const event = (id: string, positions: number[], trackOf = (i: number) => `t${i}`) => positions.map((p, i) => race(id, i, p, trackOf(i)))
 
-function ctxFor(rows: TimedResult[], lounge: TitleContext['lounge'] = null): TitleContext {
-  return { achievements: computeAchievements(rows, 40), badges: computeBadges(rows, 40), ownedTracks: ownedTracks(rows), lounge }
+function ctxFor(rows: TimedResult[], lounge: TitleContext['lounge'] = null, ownedTracks: string[] = []): TitleContext {
+  return { achievements: computeAchievements(rows, 40), badges: computeBadges(rows, 40), ownedTracks, lounge }
 }
 
 describe('titleCatalog', () => {
@@ -33,10 +33,10 @@ describe('titleCatalog', () => {
     expect(titleCatalog(ctxFor(three)).find((t) => t.id === 'untouchable')?.earned).toBe(true)
   })
 
-  it('«Dueño de pista» se genera por cada pista dominada', () => {
-    const rows = Array.from({ length: 10 }, (_, k) => race(`e${k}`, 0, 1, 'lc'))
-    const owner = titleCatalog(ctxFor(rows)).find((t) => t.id === 'owner:lc')
+  it('«Dueño de pista» sale de la lista de pistas que da el ranking (1 % mejor)', () => {
+    const owner = titleCatalog(ctxFor([], null, ['lc'])).find((t) => t.id === 'owner:lc')
     expect(owner).toMatchObject({ earned: true, param: 'lc', group: 'track' })
+    expect(titleCatalog(ctxFor([])).some((t) => t.id.startsWith('owner:'))).toBe(false)
   })
 
   it('títulos del Lounge según el MMR máximo, el puesto y las mesas SQ', () => {

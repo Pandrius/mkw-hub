@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { achievementTotals, computeAchievements, isMaxed, ownedTracks, type AchievementId } from './achievements'
+import { achievementTotals, computeAchievements, isMaxed, type AchievementId } from './achievements'
 import type { TimedResult } from './form'
 
 /** Un evento de 12 carreras (o las que se indiquen) con las posiciones dadas */
@@ -61,15 +61,6 @@ describe('computeAchievements', () => {
   it('carrera final: ganar la 12.ª de un evento', () => {
     const rows = [...event('a', [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1]), ...event('b', [1, 1])]
     expect(get(rows, 'finalRace').count).toBe(1)
-  })
-
-  it('pistas dominadas (títulos): se alcanza una vez y no se pierde al empeorar', () => {
-    const rows = event('a', [1, 2, 3, 4, 5, 3, 3, 3, 3, 3], () => 'LC') // media 3,0 en 10 carreras
-    expect(ownedTracks(rows)).toEqual(['LC'])
-    // Después juega mal: la media sube por encima de 3, pero el título ya se había ganado
-    const worse = [...rows, ...event('b', [12, 12, 12, 12, 12, 12], () => 'LC').map((r) => ({ ...r, date: '2026-10-02T10:00:00Z' }))]
-    expect(ownedTracks(worse)).toEqual(['LC'])
-    expect(ownedTracks(event('c', [1, 1, 1], () => 'RR'))).toEqual([])
   })
 
   it('ya no existe el logro «Dueño de la pista»', () => {

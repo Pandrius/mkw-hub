@@ -57,8 +57,9 @@ Fan site no oficial para la comunidad competitiva de Mario Kart World.
 - [x] Puntos por carrera ajustados por número de carreras (pocas carreras → se acerca al nivel general) con indicador de fiabilidad
 - [x] Insignias por volumen de juego: carreras totales, eventos, explorador y carreras por pista (bronce 25 · plata 100 · oro 250 · platino 500)
 - [x] Medallas de metal (bronce, plata, oro y platino) con relieve, botones de acceso directo a Logros y a MMR/Lounge, evento perfecto y evento legendario de una sola vez, nivel esmeralda sobre el platino en los logros más exigentes y logro supremo «Leyenda absoluta» (todos los demás al máximo), con escudos propios (rojo y negro) y marco animado de colores en el supremo
+- [x] En cada logro, el % de jugadores en el que estás (top X %)
 - [x] Imagen de la tabla oficial del Lounge en los eventos verificados (Lounge y SQ)
-- [x] Logros de desempeño con 4 niveles (bronce, plata, oro, platino): podios, victorias, top 6, rachas, eventos limpios / grandes / legendarios, redención, final de foto, podio y victoria en todas las pistas (el título «Dueño de …» se gana una vez y no se pierde)
+- [x] Logros de desempeño con 4 niveles (bronce, plata, oro, platino): podios, victorias, top 6, rachas, eventos limpios / grandes / legendarios, redención, final de foto, podio y victoria en todas las pistas ; el título «Dueño de …» sale de un ranking por pista (1 % mejor en puntos ajustados, solo eventos verificados, mínimo 20 carreras), con el color de la placa de la pista y multicolor animado en Rainbow Road
 - [x] Recompensas: hasta 3 insignias destacadas y un título junto al nombre (logros, dueño de pista, ranking y clubes de MMR del Lounge); se validan en el servidor (`api/showcase.ts`)
 - [x] Día de juego declarado al subir un evento (sin fechas futuras ni de más de 7 días; solo el día para no depender de la zona horaria) y máximo de 6 eventos abiertos a la vez
 - [x] Rankings (`/ranking`): estadísticas de la web contando solo eventos verificados (mín. 50 carreras, por país y tipo) y ranking del Lounge por país o mundial

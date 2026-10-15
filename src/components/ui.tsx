@@ -79,10 +79,10 @@ export function Badge({ children, color }: { children: ReactNode; color?: string
 }
 
 /** Abreviatura de pista como placa de kart, del color de su copa */
-export function Plate({ children, color, textColor }: { children: ReactNode; color?: string; textColor?: string }) {
-  const style = { ...(color ? { '--plate': color } : {}), ...(textColor ? { '--plate-fg': textColor } : {}) } as React.CSSProperties
+export function Plate({ children, color, textColor, className = '', style: extra }: { children: ReactNode; color?: string; textColor?: string; className?: string; style?: React.CSSProperties }) {
+  const style = { ...(color ? { '--plate': color } : {}), ...(textColor ? { '--plate-fg': textColor } : {}), ...extra } as React.CSSProperties
   return (
-    <span className="plate" style={color || textColor ? style : undefined}>
+    <span className={`plate ${className}`} style={color || textColor || extra ? style : undefined}>
       {children}
     </span>
   )

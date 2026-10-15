@@ -240,14 +240,7 @@ input[data-position]::-webkit-inner-spin-button {
   background: conic-gradient(from var(--glam-a), #ffd500, #fff6b0, #28d7f5, #ffffff, #ff7ad9, #ffd500);
   animation: glam-spin 5s linear infinite;
 }
-.glam-text {
-  background: linear-gradient(100deg, #ffb800 15%, #ffd500 30%, #ffffff 45%, #fff6b0 50%, #ffd500 62%, #ffb800 80%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: glam-shine 3.5s linear infinite;
-}
+
 .glam-bar {
   background: linear-gradient(90deg, #ffb800, #fff6b0, #28d7f5, #ffb800);
   background-size: 200% auto;
@@ -278,3 +271,33 @@ input[data-position]::-webkit-inner-spin-button {
   }
 }
 
+
+/* Multicolor que cambia: el mismo del escudo de la Leyenda absoluta (muchos tonos mezclados, no el arcoíris literal) */
+@keyframes multi-shift {
+  to {
+    background-position: 200% 0;
+  }
+}
+.glam-text,
+.title-multi {
+  background-image: linear-gradient(100deg, #7df9ff, #a78bfa, #ff7ad9, #ffc46b, #7dffb2, #6ea8ff, #e879f9, #fff1a8, #7df9ff);
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: multi-shift 5s linear infinite;
+}
+.plate-multi {
+  background-image: linear-gradient(100deg, #7df9ff, #a78bfa, #ff7ad9, #ffc46b, #7dffb2, #6ea8ff, #e879f9, #fff1a8, #7df9ff);
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  animation: multi-shift 5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glam-text,
+  .title-multi,
+  .plate-multi {
+    animation: none;
+  }
+}

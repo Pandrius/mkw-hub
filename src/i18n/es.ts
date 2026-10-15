@@ -844,7 +844,7 @@ export const es = {
   'title.group.track': 'Dueño de pista',
   'title.group.lounge': 'Lounge',
   'title.owner.name': 'Dueño de {track}',
-  'title.owner.how': 'Llega a 10 carreras en {track} con posición media de 3 o mejor. Una vez conseguido, no se pierde.',
+  'title.owner.how': 'Estar en el 1 % mejor de {track} entre todos los jugadores (puntos ajustados por carrera, solo eventos verificados, mínimo 20 carreras). Si otro jugador te supera, lo pierdes.',
   'title.mmr.name': 'Club de los {n}',
   'title.mmr.how': 'Alcanza {n} de MMR en el Lounge.',
   'title.top.name': 'Top {pct} %',
@@ -924,6 +924,7 @@ export const es = {
   'event.loungeTableHint': 'La tabla oficial de esta mesa en el Lounge de MKCentral, con las puntuaciones de todos los jugadores.',
   'stats.demo': 'Vista previa de logros: todos aparecen al máximo solo en esta pantalla. No se guarda nada y tus logros reales no cambian. Quita ?demo=logros de la dirección para volver.',
   'badge.tier.5': 'Esmeralda',
+  'ach.top': 'Top {pct} %',
 } as const
 
 export type MessageKey = keyof typeof es
