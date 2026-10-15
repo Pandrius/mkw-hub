@@ -74,6 +74,8 @@ const SPECIAL_METALS: Record<'ruby' | 'legend', { stops: string[]; rim: string; 
   // Multicolor iridiscente: muchos tonos mezclados (no los del arcoíris literal); los colores cambian y el reflejo se mueve
   legend: { stops: ['#7df9ff', '#a78bfa', '#ff7ad9', '#ffc46b', '#7dffb2', '#6ea8ff', '#e879f9', '#fff1a8', '#7df9ff'], rim: '#3b2a6b', ink: '#16121f', light: false, animated: true },
 }
+/** Segundos de adelanto del reflejo de cada medalla (0 a 3,5), sacado de su id para que no brillen todas a la vez */
+const shineOffset = (id: string) => (Array.from(id).reduce((a, ch) => a + ch.charCodeAt(0), 0) % 36) / 10
 const STOP_AT = [0, 0.3, 0.5, 0.72, 1]
 const stopAt = (i: number, n: number) => (n === STOP_AT.length ? STOP_AT[i] : i / (n - 1))
 
@@ -99,6 +101,7 @@ export function MedalIcon({
   kind?: MedalKind
 }) {
   const id = useId().replace(/:/g, '')
+  const reduceMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   const earned = tier > 0
   const metal: { stops: string[]; rim: string; ink: string; light?: boolean; animated?: boolean } | null = !earned ? null : kind === 'metal' ? METALS[tier as 1 | 2 | 3 | 4 | 5] : SPECIAL_METALS[kind]
   return (
@@ -119,6 +122,11 @@ export function MedalIcon({
                 ))}
                 {metal.animated && <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="-56 -62" dur="7s" repeatCount="indefinite" />}
               </linearGradient>
+              <linearGradient id={`${id}s`} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#fff" stopOpacity="0" />
+                <stop offset="0.5" stopColor="#fff" stopOpacity="0.7" />
+                <stop offset="1" stopColor="#fff" stopOpacity="0" />
+              </linearGradient>
               <clipPath id={`${id}c`}>
                 <polygon points="9,3 47,3 53,10 53,39 28,58 3,39 3,10" />
               </clipPath>
@@ -133,7 +141,15 @@ export function MedalIcon({
                   <animateTransform attributeName="transform" type="translate" from="-30 0" to="95 0" dur="3.2s" repeatCount="indefinite" />
                 </polygon>
               ) : (
-                <polygon points="0,0 34,0 0,36" fill="#fff" opacity="0.28" />
+                <>
+                  <polygon points="0,0 34,0 0,36" fill="#fff" opacity="0.18" />
+                  {/* Reflejo que cruza el escudo de vez en cuando; cada medalla empieza en un momento distinto */}
+                  {!reduceMotion && (
+                    <polygon points="-16,0 2,0 28,62 10,62" fill={`url(#${id}s)`}>
+                      <animateTransform attributeName="transform" type="translate" values="-30 0;92 0;92 0" keyTimes="0;0.5;1" dur="4s" begin={`-${shineOffset(id)}s`} repeatCount="indefinite" />
+                    </polygon>
+                  )}
+                </>
               )}
               <polygon points="56,62 56,28 24,62" fill="#000" opacity="0.14" />
             </g>
