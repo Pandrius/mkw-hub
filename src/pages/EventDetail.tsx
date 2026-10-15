@@ -10,7 +10,7 @@ import WarAnalysisPanel from '../components/WarAnalysisPanel'
 import WarImagePreview from '../components/WarImagePreview'
 import WarProofPanel from '../components/WarProofPanel'
 import { EmptyState } from '../components/ui'
-import { getTrack, getTrackColor } from '../data/tracks'
+import { getTrack, getTrackColor, RAINBOW } from '../data/tracks'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import {
@@ -452,7 +452,7 @@ function RacesTable({
         return (
           <div key={race.id} className="flex flex-wrap items-center gap-3 panel px-4 py-3">
             <span className="w-8 font-display text-xl font-black text-muted">{race.race_no}</span>
-            <span className="w-14 font-display font-black normal-case" style={{ color: getTrackColor(track) }}>
+            <span className="w-14 font-display font-black normal-case" style={track?.abbr === 'RR' ? { backgroundImage: RAINBOW, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' } : { color: getTrackColor(track) }}>
               {track?.abbr}
             </span>
             <span className="min-w-32 flex-1 truncate text-sm">{track?.name ?? race.track_id}</span>

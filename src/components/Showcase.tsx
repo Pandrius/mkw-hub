@@ -7,8 +7,8 @@ import { supabase } from '../lib/supabase'
 import { ACHIEVEMENT_TITLES, BOLT_STYLES, canPickBolts, MAX_FEATURED, titleCatalog, type BoltStyle, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
 import { MedalIcon } from './Medal'
 import { Plate } from './ui'
-import { featuredName, titleHow, titleName } from './showcaseNames'
-import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
+import { featuredName, featuredTier, titleHow, titleName } from './showcaseNames'
+import { medalKindOf, TIER_COLOR } from './tiers'
 
 /** Títulos con aspecto propio (ver .title-chip en index.css); «Leyenda absoluta» tiene el suyo aparte */
 const UNIQUE_TITLES = new Set([
@@ -106,7 +106,7 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
         </span>
       )}
       {medals.map((m) => (
-        <span key={m.id} title={`${featuredName(m.id, t, m.tier)} · ${t(tierLabel(m.tier))}`}>
+        <span key={m.id} title={`${featuredName(m.id, t, m.tier)} · ${featuredTier(m.id, m.tier, t).label}`}>
           <MedalIcon glyph={m.glyph} tier={m.tier} size={30} kind={medalKindOf(m.id)} levels={Math.max(4, m.tier)} />
         </span>
       ))}
@@ -202,9 +202,14 @@ export function ShowcaseEditor({
                     <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} kind={medalKindOf(f.id)} levels={Math.max(4, f.tier)} />
                     <span className="min-w-0">
                       <span className="block text-sm leading-tight font-semibold break-words">{featuredName(f.id, t, f.tier)}</span>
-                      <span className="font-mono text-[11px]" style={{ color: TIER_COLOR[f.tier] }}>
-                        {t(tierLabel(f.tier))}
-                      </span>
+                      {(() => {
+                        const lv = featuredTier(f.id, f.tier, t)
+                        return (
+                          <span className={`font-mono text-[11px] ${lv.multi ? 'title-multi font-bold' : ''}`} style={lv.multi ? undefined : { color: lv.color }}>
+                            {lv.label}
+                          </span>
+                        )
+                      })()}
                     </span>
                   </button>
                 </li>

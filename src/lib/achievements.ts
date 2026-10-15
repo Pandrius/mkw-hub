@@ -4,7 +4,6 @@ import { POINTS } from './scoring.js'
 import { RACES_PER_WAR } from './statMath.js'
 
 export type AchievementId =
-  | 'perfectEvent'
   | 'podiums'
   | 'wins'
   | 'top6'
@@ -34,11 +33,9 @@ export type Achievement = Progress & {
   single: boolean
 }
 
-/** Puntos de un evento completo a partir de los cuales cuenta como "gran evento" y como "evento legendario" */
+/** Puntos de un evento completo a partir de los cuales cuenta como "gran evento" y como "evento legendario" (el logro estrella) */
 export const BIG_EVENT_POINTS = 120
 export const LEGEND_EVENT_POINTS = 150
-/** Puntuación máxima de un evento de 12 carreras: ganarlas todas (12 × 15) */
-export const PERFECT_EVENT_POINTS = 180
 /** Una remontada es ganar justo después de acabar en esta posición o peor */
 export const REDEMPTION_FROM = 10
 
@@ -56,14 +53,6 @@ function fullEvents(rows: TimedResult[]): number[][] {
 const countWhere = (rows: TimedResult[], test: (r: TimedResult) => boolean) => rows.filter(test).length
 
 const DEFS: Def[] = [
-  {
-    id: 'perfectEvent',
-    glyph: 'crown',
-    epic: true,
-    single: true,
-    thresholds: () => [1],
-    count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= PERFECT_EVENT_POINTS).length,
-  },
   { id: 'podiums', glyph: 'podium', thresholds: () => [50, 300, 750, 1250, 2000], count: (rows) => countWhere(rows, (r) => r.position <= 3) },
   { id: 'wins', glyph: 'star', thresholds: () => [10, 50, 150, 500], count: (rows) => countWhere(rows, (r) => r.position === 1) },
   { id: 'top6', glyph: 'chevrons', thresholds: () => [50, 250, 750, 1500, 2500], count: (rows) => countWhere(rows, (r) => r.position <= 6) },
@@ -78,7 +67,8 @@ const DEFS: Def[] = [
   },
   {
     id: 'legendEvent',
-    glyph: 'star',
+    glyph: 'crown',
+    epic: true,
     single: true,
     thresholds: () => [1],
     count: (rows) => fullEvents(rows).filter((ps) => ps.reduce((a, p) => a + pointsOf(p), 0) >= LEGEND_EVENT_POINTS).length,
@@ -129,7 +119,7 @@ export function computeAchievements(timeline: TimedResult[], totalTracks: number
       epic: !!d.epic,
       single: !!d.single,
       thresholds,
-      ...(d.single ? singleProgress(count, thresholds[0], singleTierOf(d.id)) : progressOf(count, thresholds)),
+      ...(d.single ? singleProgress(count, thresholds[0]) : progressOf(count, thresholds)),
     }
   })
   // El logro supremo: tener todos los demás al máximo (los de varios niveles en platino)
@@ -138,12 +128,12 @@ export function computeAchievements(timeline: TimedResult[], totalTracks: number
 }
 
 /** Un logro de una sola vez: sin conseguir es 0 y al lograrlo cuenta como platino. El contador sigue subiendo */
-function singleProgress(count: number, threshold: number, tier: Tier = 4): Progress {
+function singleProgress(count: number, threshold: number, tier: Tier = SINGLE_TIER): Progress {
   return count >= threshold ? { count, tier, next: null } : { count, tier: 0, next: threshold }
 }
 
-/** Nivel con el que se enseña un logro de una sola vez: el evento legendario sale directamente en esmeralda; los demás, en platino */
-export const singleTierOf = (id: AchievementId): Tier => (id === 'legendEvent' ? 5 : 4)
+/** Nivel con el que se cuenta un logro de una sola vez al lograrlo (el último de los cuatro de siempre) */
+export const SINGLE_TIER: Tier = 4
 
 /** Conseguido del todo: el logro único logrado, o un logro de niveles en platino */
 export const isMaxed = (a: Pick<Achievement, 'single' | 'tier' | 'thresholds'>) => (a.single ? a.tier > 0 : a.tier === a.thresholds.length)
@@ -164,14 +154,14 @@ export function achievementTotals(achievements: Achievement[]): { earned: number
 
 /**
  * Vista previa para ver cómo quedan los logros al máximo (solo se enseña en pantalla, no se guarda nada): todos en platino,
- * el evento perfecto conseguido y el supremo desbloqueado, con contadores por encima del último nivel.
+ * el evento legendario conseguido y el supremo desbloqueado, con contadores por encima del último nivel.
  */
 export function demoAchievements(real: Achievement[]): Achievement[] {
   const regular = real
     .filter((a) => a.id !== 'allAchievements')
     .map((a): Achievement => {
       const last = a.thresholds[a.thresholds.length - 1]
-      return { ...a, tier: (a.single ? singleTierOf(a.id) : a.thresholds.length) as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
+      return { ...a, tier: (a.single ? SINGLE_TIER : a.thresholds.length) as Tier, next: null, count: Math.max(a.count, a.single ? 2 : Math.round(last * 1.2)) }
     })
   const grand = real.find((a) => a.id === 'allAchievements')
   return grand ? [...regular, { ...grand, tier: 4 as Tier, next: null, count: regular.length }] : regular

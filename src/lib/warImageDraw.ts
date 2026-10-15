@@ -1,3 +1,4 @@
+import { RAINBOW_STOPS } from '../data/tracks'
 import { proxiedLogoUrl } from './logoProxy'
 import { supabase } from './supabase'
 import { coverRect, DEFAULT_DESIGN, luminance, medalColor, mixColors, PRESET_STYLE, PRESETS, readable, resolvePalette, type Palette, type WarDesign } from './warDesign'
@@ -169,7 +170,7 @@ function fittedText(
 }
 
 /** Bloque inclinado tipo placa de kart (clip-path de .plate / .slant) */
-function slant(ctx: Ctx, x: number, y: number, w: number, h: number, cut: number, color: string) {
+function slant(ctx: Ctx, x: number, y: number, w: number, h: number, cut: number, color: Paint) {
   const c = ELEGANT ? 0 : cut
   ctx.fillStyle = color
   ctx.beginPath()
@@ -595,7 +596,20 @@ const BOARD_H = 262
 /** Placa con la abreviatura de una pista: fondo y letras de los colores de la pista (esmaltada y con filete en el estilo elegante) */
 function trackPlate(ctx: Ctx, abbr: string, cx: number, y: number, w: number, bg: string, fg: string) {
   const h = 24
-  if (ELEGANT) {
+  if (abbr === 'RR') {
+    // Rainbow Road lleva siempre su arcoíris, no un color liso
+    const rainbow = ctx.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0)
+    RAINBOW_STOPS.forEach((c, i) => rainbow.addColorStop(i / (RAINBOW_STOPS.length - 1), c))
+    if (ELEGANT) {
+      ctx.fillStyle = rainbow
+      ctx.fillRect(cx - w / 2, y, w, h)
+      ctx.strokeStyle = mixColors(bg, '#000000', 0.5)
+      ctx.lineWidth = 1
+      ctx.strokeRect(cx - w / 2 + 0.5, y + 0.5, w - 1, h - 1)
+    } else {
+      slant(ctx, cx - w / 2, y, w, h, 5, rainbow)
+    }
+  } else if (ELEGANT) {
     const g = ctx.createLinearGradient(0, y, 0, y + h)
     g.addColorStop(0, mixColors(bg, '#ffffff', 0.24))
     g.addColorStop(0.55, bg)

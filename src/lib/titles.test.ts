@@ -25,12 +25,12 @@ describe('titleCatalog', () => {
     expect(titleCatalog(ctxFor([])).filter((t) => t.earned)).toEqual([])
   })
 
-  it('un evento perfecto da «Perfeccionista» y tres, «Intocable»', () => {
-    const earned = titleCatalog(ctxFor(event('a', Array(12).fill(1)))).filter((t) => t.earned).map((t) => t.id)
-    expect(earned).toContain('perfectionist')
-    expect(earned).not.toContain('untouchable')
-    const three = [...event('a', Array(12).fill(1)), ...event('b', Array(12).fill(1)), ...event('c', Array(12).fill(1))]
-    expect(titleCatalog(ctxFor(three)).find((t) => t.id === 'untouchable')?.earned).toBe(true)
+  it('ocho eventos legendarios dan «Leyenda» y ya no hay títulos del evento perfecto', () => {
+    const one = titleCatalog(ctxFor(event('a', Array(12).fill(1))))
+    expect(one.find((t) => t.id === 'legend')?.earned).toBe(false)
+    expect(one.some((t) => t.id === 'perfectionist' || t.id === 'untouchable')).toBe(false)
+    const eight = Array.from({ length: 8 }, (_, i) => event(`e${i}`, Array(12).fill(1))).flat()
+    expect(titleCatalog(ctxFor(eight)).find((t) => t.id === 'legend')?.earned).toBe(true)
   })
 
   it('«Dueño de pista» sale de la lista de pistas que da el ranking (1 % mejor)', () => {
@@ -49,10 +49,10 @@ describe('titleCatalog', () => {
 describe('validateTitle', () => {
   const ctx = ctxFor(event('a', Array(12).fill(1)))
   it('acepta un título ganado, el vacío para quitarlo, y rechaza el resto', () => {
-    expect(validateTitle('perfectionist', ctx)).toBe('perfectionist')
+    expect(validateTitle('unstoppable', ctx)).toBe('unstoppable')
     expect(validateTitle(null, ctx)).toBeNull()
     expect(validateTitle('', ctx)).toBeNull()
-    expect(validateTitle('untouchable', ctx)).toBeUndefined()
+    expect(validateTitle('legend', ctx)).toBeUndefined()
     expect(validateTitle('inventado', ctx)).toBeUndefined()
     expect(validateTitle(5, ctx)).toBeUndefined()
   })
@@ -63,14 +63,14 @@ describe('insignias destacadas', () => {
   const owned = featurable(computeAchievements(rows, 40), computeBadges(rows, 40))
 
   it('solo se pueden destacar las que tienen algún nivel', () => {
-    expect(owned.map((f) => f.id)).toContain('ach:perfectEvent')
+    expect(owned.map((f) => f.id)).toContain('ach:legendEvent')
     expect(owned.map((f) => f.id)).not.toContain('badge:races')
   })
 
   it('valida: máximo 3, sin repetidas y ganadas', () => {
-    expect(validateFeatured(['ach:perfectEvent'], owned)).toEqual(['ach:perfectEvent'])
+    expect(validateFeatured(['ach:legendEvent'], owned)).toEqual(['ach:legendEvent'])
     expect(validateFeatured([], owned)).toEqual([])
-    expect(validateFeatured(['ach:perfectEvent', 'ach:perfectEvent'], owned)).toBeNull()
+    expect(validateFeatured(['ach:legendEvent', 'ach:legendEvent'], owned)).toBeNull()
     expect(validateFeatured(['badge:races'], owned)).toBeNull()
     expect(validateFeatured(['ach:wins', 'ach:podiums', 'ach:top6', 'ach:winStreak'], owned)).toBeNull()
     expect(validateFeatured('ach:wins', owned)).toBeNull()
@@ -85,9 +85,9 @@ describe('countSqTables', () => {
 
 describe('rayos de los escudos especiales', () => {
   const f = (id: string) => ({ id, glyph: 'crown' as const, tier: 1 as const })
-  it('solo los eligen quienes tienen el evento perfecto o la leyenda absoluta', () => {
+  it('solo los eligen quienes tienen el evento legendario o la leyenda absoluta', () => {
     expect(canPickBolts([f('ach:wins'), f('badge:races')])).toBe(false)
-    expect(canPickBolts([f('ach:wins'), f('ach:perfectEvent')])).toBe(true)
+    expect(canPickBolts([f('ach:wins'), f('ach:legendEvent')])).toBe(true)
     expect(canPickBolts([f('ach:allAchievements')])).toBe(true)
   })
   it('acepta los tres estilos y rechaza el resto', () => {

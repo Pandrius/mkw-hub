@@ -43,13 +43,13 @@ export function featurable(achievements: Achievement[], badges: BadgeSet): Featu
   ].filter((f) => f.tier > 0)
 }
 
-/** Rayos de los escudos del evento perfecto y de la leyenda absoluta: simples, ramificados o sin rayos */
+/** Rayos de los escudos del evento legendario y de la leyenda absoluta: simples, ramificados o sin rayos */
 export type BoltStyle = 'simple' | 'forked' | 'none'
 export const BOLT_STYLES: BoltStyle[] = ['simple', 'forked', 'none']
 export const DEFAULT_BOLT_STYLE: BoltStyle = 'simple'
 export const isBoltStyle = (v: unknown): v is BoltStyle => typeof v === 'string' && (BOLT_STYLES as string[]).includes(v)
-/** Premio: solo quien ha conseguido el evento perfecto o la leyenda absoluta puede elegir cómo se ven sus rayos */
-export const canPickBolts = (owned: Featurable[]) => owned.some((f) => f.id === 'ach:perfectEvent' || f.id === 'ach:allAchievements')
+/** Premio: solo quien ha conseguido el evento legendario o la leyenda absoluta puede elegir cómo se ven sus rayos */
+export const canPickBolts = (owned: Featurable[]) => owned.some((f) => f.id === 'ach:legendEvent' || f.id === 'ach:allAchievements')
 
 /** Comprueba una selección de insignias destacadas: sin repetidas, hasta 3 y todas ganadas. Devuelve la lista limpia o null */
 export function validateFeatured(ids: unknown, owned: Featurable[]): FeaturedId[] | null {
@@ -78,8 +78,6 @@ const countOf = (ctx: TitleContext, id: AchievementId) => ctx.achievements.find(
 
 /** Título estático ← logro y nivel mínimo para conseguirlo */
 export const ACHIEVEMENT_TITLES: { id: string; achievement: AchievementId; tier: Tier; /** Cantidad mínima, para logros de un solo nivel */ count?: number }[] = [
-  { id: 'perfectionist', achievement: 'perfectEvent', tier: 1 },
-  { id: 'untouchable', achievement: 'perfectEvent', tier: 1, count: 3 },
   { id: 'grandMaster', achievement: 'allAchievements', tier: 1 },
   { id: 'natureWinner', achievement: 'wins', tier: 3 },
   { id: 'podiumKing', achievement: 'podiums', tier: 3 },

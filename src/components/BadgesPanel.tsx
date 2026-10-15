@@ -1,7 +1,7 @@
 ﻿import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, PERFECT_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
 import { topPercentIn, type AchievementStats } from '../lib/achievementStats'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
@@ -19,7 +19,6 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
   const descVars = {
     big: BIG_EVENT_POINTS,
     legend: LEGEND_EVENT_POINTS,
-    perfect: PERFECT_EVENT_POINTS,
     from: REDEMPTION_FROM,
     total: totalTracks,
   }
@@ -54,7 +53,7 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
               kicker={t('ach.epicKicker')}
               name={t(`ach.${a.id}.name` as MessageKey)}
               description={t(`ach.${a.id}.desc` as MessageKey, descVars)}
-              ghost={String(PERFECT_EVENT_POINTS)}
+              ghost={String(LEGEND_EVENT_POINTS)}
               countLabel={t(`ach.${a.id}.count` as MessageKey)}
               progress={a}
               thresholds={a.thresholds}

@@ -38,13 +38,14 @@ describe('computeAchievements', () => {
     expect(get(rows, 'legendEvent').count).toBe(2) // legend y loose (11 × 15 + 6 = 171)
   })
 
-  it('evento perfecto: 12 victorias seguidas, 180 puntos', () => {
+  it('evento legendario: 150 puntos o más, es el logro estrella y ya no existe el evento perfecto', () => {
     const perfect = event('p', Array(12).fill(1))
     const almost = event('q', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]) // 177 puntos
     const rows = [...perfect, ...almost]
-    expect(get(rows, 'perfectEvent').count).toBe(1)
-    expect(get(rows, 'perfectEvent').epic).toBe(true)
     expect(get(rows, 'legendEvent').count).toBe(2)
+    expect(get(rows, 'legendEvent').epic).toBe(true)
+    expect(get(rows, 'legendEvent').glyph).toBe('crown')
+    expect(computeAchievements([], 40).some((a) => (a.id as string) === 'perfectEvent')).toBe(false)
   })
 
   it('un evento incompleto no cuenta para los logros de evento', () => {
@@ -77,20 +78,20 @@ describe('computeAchievements', () => {
 })
 
 describe('logros de una sola vez y logro supremo', () => {
-  it('el evento perfecto no tiene niveles: al lograrlo es platino y el contador sigue subiendo', () => {
-    const one = get(event('a', Array(12).fill(1)), 'perfectEvent')
+  it('el evento legendario no tiene niveles: al lograrlo es platino y el contador sigue subiendo', () => {
+    const one = get(event('a', Array(12).fill(1)), 'legendEvent')
     expect(one).toMatchObject({ single: true, count: 1, tier: 4, next: null })
-    const three = get([...event('a', Array(12).fill(1)), ...event('b', Array(12).fill(1)), ...event('c', Array(12).fill(1))], 'perfectEvent')
+    const three = get([...event('a', Array(12).fill(1)), ...event('b', Array(12).fill(1)), ...event('c', Array(12).fill(1))], 'legendEvent')
     expect(three).toMatchObject({ count: 3, tier: 4 })
-    expect(get(event('a', Array(12).fill(2)), 'perfectEvent')).toMatchObject({ count: 0, tier: 0, next: 1 })
+    expect(get(event('a', Array(12).fill(2)), 'legendEvent')).toMatchObject({ count: 0, tier: 0, next: 1 }) // 144 puntos
   })
 
-  it('el logro supremo cuenta los logros al máximo (aquí: evento perfecto, evento legendario y racha de 8 victorias) y no se consigue hasta tenerlos todos', () => {
+  it('el logro supremo cuenta los logros al máximo (aquí: evento legendario y racha de 8 victorias) y no se consigue hasta tenerlos todos', () => {
     const rows = event('a', Array(12).fill(1))
     const grand = get(rows, 'allAchievements')
-    expect(grand).toMatchObject({ single: true, epic: true, tier: 0, count: 3 })
+    expect(grand).toMatchObject({ single: true, epic: true, tier: 0, count: 2 })
     expect(grand.thresholds).toEqual([computeAchievements(rows, 40).length - 1])
-    expect(achievementTotals(computeAchievements(rows, 40))).toMatchObject({ maxed: 3 })
+    expect(achievementTotals(computeAchievements(rows, 40))).toMatchObject({ maxed: 2 })
   })
 
   it('el supremo se logra cuando todos los demás están al máximo', () => {
@@ -118,11 +119,11 @@ describe('niveles ajustados y esmeralda', () => {
     expect(thresholds('redemption')).toEqual([3, 10, 30, 60, 100])
   })
 
-  it('el evento legendario es de una sola vez y sale directamente en esmeralda', () => {
+  it('el evento legendario es de una sola vez y cuenta como platino (se enseña en rubí)', () => {
     const a = get(event('a', Array(12).fill(2)), 'legendEvent') // 12 × 12 = 144 < 150
     expect(a).toMatchObject({ single: true, tier: 0 })
     const b = get(event('a', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5]), 'legendEvent') // 165 puntos
-    expect(b).toMatchObject({ single: true, tier: 5, count: 1 })
+    expect(b).toMatchObject({ single: true, tier: 4, count: 1 })
   })
 
   it('con cinco niveles el último es esmeralda', () => {
@@ -141,19 +142,17 @@ describe('Ganador universal', () => {
   })
 })
 
-describe('un evento de 180 puntos cuenta para los tres', () => {
-  it('evento perfecto, legendario (150) y gran evento (120)', () => {
+describe('un evento de 180 puntos cuenta para los dos', () => {
+  it('evento legendario (150) y gran evento (120)', () => {
     const rows = event('a', Array(12).fill(1)) // 12 × 15 = 180
-    expect(get(rows, 'perfectEvent').count).toBe(1)
     expect(get(rows, 'legendEvent').count).toBe(1)
     expect(get(rows, 'bigEvent').count).toBe(1)
   })
 
-  it('uno de 150 cuenta para el legendario y el gran evento, pero no para el perfecto', () => {
+  it('uno de 168 puntos cuenta para el legendario y el gran evento', () => {
     const rows = event('a', [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4]) // 10 × 15 + 2 × 9 = 168
     expect(get(rows, 'legendEvent').count).toBe(1)
     expect(get(rows, 'bigEvent').count).toBe(1)
-    expect(get(rows, 'perfectEvent').count).toBe(0)
     const e120 = event('b', [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) // 144: gran evento sí, legendario no
     expect(get(e120, 'bigEvent').count).toBe(1)
     expect(get(e120, 'legendEvent').count).toBe(0)

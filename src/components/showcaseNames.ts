@@ -1,6 +1,8 @@
 import { getTrack } from '../data/tracks'
 import type { MessageKey } from '../i18n/es'
+import type { Tier } from '../lib/badges'
 import { LOUNGE_RANKS, type TitleDef } from '../lib/titles'
+import { RUBY, TIER_COLOR, tierLabel } from './tiers'
 
 type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string
 
@@ -14,6 +16,13 @@ export function featuredName(id: string, t: Translate, tier = 0): string {
   if (kind === 'ach') return t(`ach.${key}.name` as MessageKey)
   if (kind === 'badge') return t(`badge.${key}` as MessageKey)
   return t('showcase.trackBadge', { track: trackName(key) })
+}
+
+/** Nombre y color del nivel de una insignia destacada: el evento legendario es «Rubí» (rojo) y la leyenda absoluta «Legendario» (multicolor) */
+export function featuredTier(id: string, tier: Tier, t: Translate): { label: string; color: string; multi: boolean } {
+  if (id === 'ach:legendEvent') return { label: t('badge.tier.ruby' as MessageKey), color: RUBY, multi: false }
+  if (id === 'ach:allAchievements') return { label: t('badge.tier.legendary' as MessageKey), color: TIER_COLOR[tier], multi: true }
+  return { label: t(tierLabel(tier)), color: TIER_COLOR[tier], multi: false }
 }
 
 /** Nombre de un título (los de pista, MMR y ranking se completan con su parámetro) */

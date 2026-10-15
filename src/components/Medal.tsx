@@ -317,7 +317,11 @@ export function MedalIcon({
       {!single && (
         <span className="flex gap-0.5">
           {Array.from({ length: levels }, (_, k) => k + 1).map((i) => (
-            <span key={i} className="size-1.5" style={{ background: i <= tier ? TIER_COLOR[tier] : 'var(--color-line)' }} />
+            <span
+              key={i}
+              className={`size-1.5 ${kind === 'legend' && i <= tier ? 'plate-multi' : ''}`}
+              style={kind === 'legend' && i <= tier ? undefined : { background: i <= tier ? (kind === 'ruby' ? RUBY : TIER_COLOR[tier]) : 'var(--color-line)' }}
+            />
           ))}
         </span>
       )}
