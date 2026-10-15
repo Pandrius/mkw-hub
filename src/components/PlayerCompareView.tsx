@@ -5,7 +5,8 @@ import { MIN_TRACK_RACES, TRACK_PRIOR, type PlayerAnalytics } from '../lib/playe
 import { comparePlayers, DUEL_TIE, type TrackDuel } from '../lib/playerCompare'
 import { PHASES } from '../lib/statMath'
 import { SectionTitle, Signed, Th, TrackName } from './StatBlocks'
-import { useNum } from './statFormat'
+import { perEventKey, useNum } from './statFormat'
+import type { StatsFilter } from '../lib/stats'
 
 type Metric = {
   key: MessageKey
@@ -27,7 +28,7 @@ const METRICS: Metric[] = [
 ]
 
 /** Estadísticas de dos jugadores frente a frente: resumen, fases y pistas donde cada uno es mejor */
-export function PlayerCompareView({ a, b, nameA, nameB }: { a: PlayerAnalytics; b: PlayerAnalytics; nameA: string; nameB: string }) {
+export function PlayerCompareView({ a, b, nameA, nameB, filter }: { a: PlayerAnalytics; b: PlayerAnalytics; nameA: string; nameB: string; filter: StatsFilter }) {
   const { t } = useI18n()
   const num = useNum()
   const cmp = comparePlayers(a, b)
@@ -47,7 +48,7 @@ export function PlayerCompareView({ a, b, nameA, nameB }: { a: PlayerAnalytics; 
             </thead>
             <tbody>
               {METRICS.map((m) => (
-                <MetricRow key={m.key} label={t(m.key)} m={m} a={a} b={b} num={num} />
+                <MetricRow key={m.key} label={t(m.key === 'an.perWar' ? perEventKey(filter) : m.key)} m={m} a={a} b={b} num={num} />
               ))}
               <tr className="border-t border-line/60 text-muted">
                 <td className="px-3 py-2">{t('cmp.races')}</td>

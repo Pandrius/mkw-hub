@@ -390,7 +390,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
         !analytics || !vsAnalytics ? (
           <EmptyState title={t('cmp.noData')}>{t('cmp.noDataOf', { user: !analytics ? ownerName : vsName })}</EmptyState>
         ) : (
-          <PlayerCompareView a={analytics} b={vsAnalytics} nameA={ownerName} nameB={vsName} />
+          <PlayerCompareView a={analytics} b={vsAnalytics} nameA={ownerName} nameB={vsName} filter={filter} />
         )
       ) : (
         <>
@@ -403,7 +403,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
               )}
             </EmptyState>
           ) : (
-            <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} />
+            <PlayerAnalyticsView a={analytics} showSplit={filter === 'all'} filter={filter} />
           )}
 
           <LoungePanel data={lounge} isMe={isMe} />

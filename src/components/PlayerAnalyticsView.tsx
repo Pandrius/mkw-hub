@@ -8,21 +8,22 @@ import { filterRowsByTrack } from '../lib/trackSearch'
 import { LineChart, PositionHistogram } from './Charts'
 import { SearchBox } from './SearchBox'
 import { Confidence, PositionChip, SectionTitle, Signed, StatTile, Th, TrackName } from './StatBlocks'
-import { useNum } from './statFormat'
+import { perEventKey, useNum } from './statFormat'
+import type { StatsFilter } from '../lib/stats'
 import { trackSuggestion } from './trackSuggestion'
 
 /** Carreras en una pista por debajo de las cuales el dato se marca como poco fiable */
 const LOW_SAMPLE = 3
 
 /** Estadísticas individuales de un jugador: resumen, distribución, forma, fases, rachas y pistas */
-export function PlayerAnalyticsView({ a, showSplit }: { a: PlayerAnalytics; showSplit: boolean }) {
+export function PlayerAnalyticsView({ a, showSplit, filter }: { a: PlayerAnalytics; showSplit: boolean; filter: StatsFilter }) {
   const { t } = useI18n()
   const num = useNum()
 
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label={t('an.perWar')} hint={t('an.perWarHint')} value={a.perWar} sub={t('an.ptsPerRaceValue', { n: num(a.avgPoints, 2) })} accent />
+        <StatTile label={t(perEventKey(filter))} hint={t(`${perEventKey(filter)}Hint` as MessageKey)} value={a.perWar} sub={t('an.ptsPerRaceValue', { n: num(a.avgPoints, 2) })} accent />
         <StatTile label={t('an.avgPos')} value={num(a.avgPos, 2)} sub={t('an.median', { n: num(a.medianPos, 1) })} />
         <StatTile label={t('an.top6Rate')} value={`${a.top6Rate} %`} sub={t('an.winPodium', { win: a.winRate, podium: a.podiumRate })} />
         <StatTile label={t('an.consistency')} hint={t('an.consistencyHint')} value={`± ${num(a.sdPos, 1)}`} sub={t('an.racesEvents', { races: a.races, events: a.eventCount })} />

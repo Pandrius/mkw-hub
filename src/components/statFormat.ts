@@ -1,4 +1,10 @@
 import { useI18n } from '../i18n'
+import type { StatsFilter } from '../lib/stats'
+
+/** Etiqueta de «puntos por evento» según el filtro: por war, por mogi (Lounge y SQ) o por evento (todos) */
+export function perEventKey(filter: StatsFilter): 'an.perWar' | 'an.perMogi' | 'an.perEvent' {
+  return filter === 'war' ? 'an.perWar' : filter === 'lounge' || filter === 'sq' ? 'an.perMogi' : 'an.perEvent'
+}
 
 /** Número con los decimales justos y el separador del idioma */
 export function useNum() {
