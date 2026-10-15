@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth'
 import { getAllTeams, teamsOf, type Entity, type TeamWithMembers } from '../lib/compare'
 import { createEvent, type EventKind } from '../lib/events'
 import { localDate } from '../lib/playedAt'
+import { rankTeams } from '../lib/search'
 
 export default function NewEvent() {
   const { t } = useI18n()
@@ -77,11 +78,11 @@ export default function NewEvent() {
 
   // Filtrado de equipos rivales para autocompletado
   const filteredOpponents = useMemo(() => {
-    const q = opponentQuery.trim().toLowerCase()
-    if (q.length < 1) return []
-    return allTeams
-      .filter((tm) => tm.id !== selectedMyTeam && (tm.name.toLowerCase().includes(q) || tm.tag.toLowerCase().includes(q)))
-      .slice(0, 6)
+    if (!opponentQuery.trim()) return []
+    return rankTeams(
+      opponentQuery,
+      allTeams.filter((tm) => tm.id !== selectedMyTeam),
+    ).slice(0, 6)
   }, [opponentQuery, allTeams, selectedMyTeam])
 
   if (loading) return <p className="text-muted">{t('common.loading')}</p>

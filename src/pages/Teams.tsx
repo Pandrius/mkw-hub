@@ -6,6 +6,7 @@ import { TeamLogo } from '../components/TeamLogo'
 import { useI18n } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
+import { rankTeams } from '../lib/search'
 
 export default function Teams() {
   const { t, locale } = useI18n()
@@ -57,65 +58,25 @@ export default function Teams() {
     return teams.filter((tm) => tm.members.some((m) => m.id === profile.id))
   }, [teams, profile])
 
-  // Lista ordenada alfabéticamente
+  // Alfabéticamente; al buscar, primero los equipos cuyo tag es lo escrito y después los que lo llevan en el nombre
   const filteredTeams = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const list = teams.filter((tm) => {
-      const matchQuery =
-        !q ||
-        tm.name.toLowerCase().includes(q) ||
-        tm.tag.toLowerCase().includes(q) ||
-        (tm.parent_name && tm.parent_name.toLowerCase().includes(q))
-      const matchFilter = filter === 'all' || tm.members.length > 0
-      return matchQuery && matchFilter
-    })
+    const list = teams.filter((tm) => filter === 'all' || tm.members.length > 0)
+    if (search.trim()) return rankTeams(search, list)
     return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
   }, [teams, search, filter])
 
   // Resultados rápidos en el desplegable del buscador
   const quickSearchMatches = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return []
-    return teams
-      .filter(
-        (tm) =>
-          tm.name.toLowerCase().includes(q) ||
-          tm.tag.toLowerCase().includes(q) ||
-          (tm.parent_name && tm.parent_name.toLowerCase().includes(q)),
-      )
-      .slice(0, 6)
+    if (!search.trim()) return []
+    return rankTeams(search, teams).slice(0, 6)
   }, [teams, search])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const q = search.trim().toLowerCase()
-    if (!q) return
+    if (!search.trim()) return
 
-    // 1. Coincidencia exacta de nombre, tag o club
-    let match = teams.find(
-      (tm) =>
-        tm.name.toLowerCase() === q ||
-        tm.tag.toLowerCase() === q ||
-        (tm.parent_name && tm.parent_name.toLowerCase() === q),
-    )
-    // 2. Coincidencia que empiece por la búsqueda
-    if (!match) {
-      match = teams.find(
-        (tm) =>
-          tm.name.toLowerCase().startsWith(q) ||
-          tm.tag.toLowerCase().startsWith(q) ||
-          (tm.parent_name && tm.parent_name.toLowerCase().startsWith(q)),
-      )
-    }
-    // 3. Primer resultado que contenga la búsqueda
-    if (!match) {
-      match = teams.find(
-        (tm) =>
-          tm.name.toLowerCase().includes(q) ||
-          tm.tag.toLowerCase().includes(q) ||
-          (tm.parent_name && tm.parent_name.toLowerCase().includes(q)),
-      )
-    }
+    // El mejor resultado: primero el tag exacto, luego el nombre
+    const match = rankTeams(search, teams)[0]
 
     if (match) {
       navigate(`/equipos/${match.id}`)

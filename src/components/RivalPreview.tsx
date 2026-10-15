@@ -4,6 +4,7 @@ import { getTrack, getTrackPlateBackground, getTrackTextColor } from '../data/tr
 import { useI18n } from '../i18n'
 import type { TeamWithMembers } from '../lib/compare'
 import { buildPickPlan, type PickRow, type PickSource } from '../lib/picks'
+import { rankTeams } from '../lib/search'
 import { computeTeamStats, getTeamWars, rivalKeyOf, type TeamStats, type TeamWar } from '../lib/teamStats'
 import { SearchBox } from './SearchBox'
 import { EmptyState, Plate } from './ui'
@@ -59,11 +60,11 @@ export function RivalPreview({
   const record = stats.rivals.find((r) => r.opponentKey === rival?.key)
 
   const matches = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (q.length < 2) return []
-    return allTeams
-      .filter((tm) => tm.id !== teamId && (tm.tag.toLowerCase().includes(q) || tm.name.toLowerCase().includes(q)))
-      .slice(0, 8)
+    if (search.trim().length < 2) return []
+    return rankTeams(
+      search,
+      allTeams.filter((tm) => tm.id !== teamId),
+    ).slice(0, 8)
   }, [search, allTeams, teamId])
 
   const choose = (r: Rival) => {

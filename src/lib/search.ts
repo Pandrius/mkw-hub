@@ -76,6 +76,50 @@ export function scoreHit(query: string, hit: Pick<SearchHit, 'terms'>): number {
   return best
 }
 
+/** Lo que hace falta de un equipo para buscarlo */
+export type TeamLike = { name: string; tag: string; parent_name?: string | null }
+
+const words = (s: string) => s.split(/[\s\-.'·/]+/)
+
+/**
+ * Puntuación de un equipo frente a lo escrito (0 = no coincide). El tag manda: primero los equipos cuyo tag es justo lo
+ * escrito, luego los que empiezan por ello y los que lo contienen; después el nombre (igual, empieza por, alguna palabra
+ * empieza por, contiene) y, al final, el club al que pertenecen.
+ */
+export function teamMatchRank(query: string, team: TeamLike): number {
+  const q = normalize(query)
+  if (!q) return 0
+  const tag = normalize(team.tag)
+  const name = normalize(team.name)
+  const parent = team.parent_name ? normalize(team.parent_name) : ''
+  if (tag === q) return 1000
+  if (tag.startsWith(q)) return 800
+  if (tag.includes(q)) return 600
+  if (name === q) return 500
+  if (name.startsWith(q)) return 400
+  if (parent === q) return 350
+  if (words(name).some((w) => w.startsWith(q))) return 300
+  if (parent.startsWith(q)) return 250
+  if (name.includes(q)) return 200
+  if (parent.includes(q)) return 100
+  return 0
+}
+
+/** Equipos que coinciden con lo escrito, los mejores primero (a igualdad, por nombre) */
+export function rankTeams<T extends TeamLike>(query: string, teams: T[]): T[] {
+  return teams
+    .map((team) => ({ team, rank: teamMatchRank(query, team) }))
+    .filter((x) => x.rank > 0)
+    .sort((a, b) => b.rank - a.rank || a.team.name.localeCompare(b.team.name, undefined, { sensitivity: 'base' }))
+    .map((x) => x.team)
+}
+
+/** Puntuación de un resultado de equipo: sus campos van en orden [nombre, tag, club] y el tag manda (ver teamMatchRank) */
+function teamHitScore(query: string, hit: Pick<SearchHit, 'terms'>): number {
+  const [name, tag, parent] = hit.terms
+  return teamMatchRank(query, { name: name ?? '', tag: tag ?? '', parent_name: parent })
+}
+
 /** Pistas que coinciden por nombre, abreviatura o juego de origen (sin red) */
 export function searchTracks(query: string, tracks: Track[]): SearchHit[] {
   if (!normalize(query)) return []
@@ -104,7 +148,7 @@ export function rankHits(query: string, hits: SearchHit[], limit = 5): SearchGro
   for (const hit of hits) {
     const key = `${hit.kind}:${hit.id}`
     if (seen.has(key)) continue
-    const score = scoreHit(query, hit)
+    const score = hit.kind === 'team' ? teamHitScore(query, hit) : scoreHit(query, hit)
     if (score <= 0) continue
     seen.add(key)
     scored.push({ hit, score })
@@ -169,9 +213,15 @@ export async function searchRemote(query: string, signal?: AbortSignal): Promise
     .select('id, name, tag, parent_name, logo_url')
     .or(`name.ilike.${pattern},tag.ilike.${pattern},parent_name.ilike.${pattern}`)
     .limit(20)
-  const [p, t] = await Promise.all(signal ? [players.abortSignal(signal), teams.abortSignal(signal)] : [players, teams])
+  // Los equipos cuyo tag empieza por lo escrito van siempre, aunque haya muchos con eso en el nombre
+  const tagged = supabase.from('teams').select('id, name, tag, parent_name, logo_url').ilike('tag', `${q}%`).limit(20)
+  const [p, t0, t1] = await Promise.all(
+    signal ? [players.abortSignal(signal), teams.abortSignal(signal), tagged.abortSignal(signal)] : [players, teams, tagged],
+  )
+  if (t0.error) throw t0.error
+  if (t1.error) throw t1.error
+  const t = { error: null, data: [...(t1.data ?? []), ...(t0.data ?? [])].filter((row, i, all) => all.findIndex((x) => x.id === row.id) === i) }
   if (p.error) throw p.error
-  if (t.error) throw t.error
   return [
     ...(p.data ?? []).map(
       (row): SearchHit => ({
