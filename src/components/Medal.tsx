@@ -206,12 +206,17 @@ export function EpicCard({
       <div className="relative flex flex-wrap items-center gap-x-8 gap-y-4 px-6 py-6 sm:px-10">
         <span
           aria-hidden
-          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-display text-[9rem] leading-none font-black text-transparent select-none sm:text-[12rem]"
+          className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-display text-[6rem] leading-none font-black text-transparent select-none sm:text-[12rem]"
           style={{ WebkitTextStroke: `2px ${accent}`, opacity: earned ? 0.5 : 0.35 }}
         >
           {ghost}
         </span>
-        <MedalIcon glyph={glyph} tier={tier} size={112} single={single} kind={kind} />
+        <span className="sm:hidden">
+          <MedalIcon glyph={glyph} tier={tier} size={80} single={single} kind={kind} />
+        </span>
+        <span className="hidden sm:block">
+          <MedalIcon glyph={glyph} tier={tier} size={112} single={single} kind={kind} />
+        </span>
         <div className="relative min-w-0 flex-1 basis-72">
           <p className="font-mono text-xs font-bold tracking-widest text-kart-yellow">{kicker}</p>
           <h4 className="mt-1 font-display text-4xl leading-[0.95] font-black sm:text-6xl">{name}</h4>
@@ -220,7 +225,7 @@ export function EpicCard({
             <div className="h-2 bg-line" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={next ?? count} aria-label={name}>
               <div className="h-full" style={{ width: `${next ? Math.min(100, Math.round((count / next) * 100)) : 100}%`, background: kind === 'ruby' ? RUBY : TIER_COLOR[Math.min(4, tier + 1) as Tier] }} />
             </div>
-            <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
+            <p className="mt-1.5 flex flex-wrap justify-between gap-x-4 font-mono text-xs text-muted">
               <span>
                 <span className="font-bold text-ink">{count}</span> {countLabel}
                 {topPercent !== null && <span className="ml-2 font-bold text-kart-yellow">· {t('ach.top', { pct: topPercent })}</span>}
@@ -230,7 +235,7 @@ export function EpicCard({
                   </span>
                 )}
               </span>
-              <span>{single ? (earned ? t('ach.done') : '') : next ? t('badge.nextAt', { n: next }) : t('badge.maxed')}</span>
+              <span>{single ? '' : next ? t('badge.nextAt', { n: next }) : t('badge.maxed')}</span>
             </p>
           </div>
         </div>
@@ -354,17 +359,22 @@ export function GrandCard({
           ))}
         <div className={`relative flex flex-wrap items-center gap-x-10 gap-y-5 px-6 py-8 sm:px-12 ${earned ? '' : 'opacity-60'}`}>
           <div className={earned ? 'glam-float' : ''}>
-            <MedalIcon glyph={glyph} tier={earned ? 4 : 0} size={150} single kind="legend" />
+            <span className="sm:hidden">
+              <MedalIcon glyph={glyph} tier={earned ? 4 : 0} size={104} single kind="legend" />
+            </span>
+            <span className="hidden sm:block">
+              <MedalIcon glyph={glyph} tier={earned ? 4 : 0} size={150} single kind="legend" />
+            </span>
           </div>
           <div className="min-w-0 flex-1 basis-80">
             <p className="font-mono text-xs font-bold tracking-[0.35em] text-kart-yellow">{kicker}</p>
-            <h4 className={`mt-1 font-display text-5xl leading-[0.92] font-black uppercase sm:text-7xl ${earned ? 'glam-text' : 'text-muted'}`}>{name}</h4>
+            <h4 className={`mt-1 font-display text-4xl leading-[0.92] font-black uppercase sm:text-7xl ${earned ? 'glam-text' : 'text-muted'}`}>{name}</h4>
             <p className="mt-3 max-w-2xl text-sm text-ink/80">{description}</p>
             <div className="mt-5 max-w-2xl">
               <div className="h-2.5 bg-line" role="progressbar" aria-valuenow={progress.count} aria-valuemin={0} aria-valuemax={total} aria-label={name}>
                 <div className={`h-full ${earned ? 'glam-bar' : ''}`} style={{ width: `${pct}%`, background: earned ? undefined : TIER_COLOR[4] }} />
               </div>
-              <p className="mt-1.5 flex justify-between font-mono text-xs text-muted">
+              <p className="mt-1.5 flex flex-wrap justify-between gap-x-4 font-mono text-xs text-muted">
                 <span>
                   <span className="font-bold text-ink">{Math.min(progress.count, total)}</span> / {total} {countLabel}
                   {topPercent !== null && <span className="ml-2 font-bold text-kart-yellow">· {t('ach.top', { pct: topPercent })}</span>}

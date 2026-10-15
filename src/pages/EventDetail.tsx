@@ -147,7 +147,7 @@ export default function EventDetail() {
 
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="flex items-center gap-2 text-sm">
+          <p className="flex flex-wrap items-center gap-2 text-sm">
             <span
               className={`px-2 py-0.5 font-mono text-[11px] font-bold uppercase ${
                 isWar ? 'bg-kart-yellow text-bg' : 'bg-ink text-bg'

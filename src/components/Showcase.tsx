@@ -152,7 +152,7 @@ export function ShowcaseEditor({
                   >
                     <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} kind={medalKindOf(f.id)} levels={Math.max(4, f.tier)} />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{featuredName(f.id, t)}</span>
+                      <span className="block text-sm leading-tight font-semibold break-words">{featuredName(f.id, t)}</span>
                       <span className="font-mono text-[11px]" style={{ color: TIER_COLOR[f.tier] }}>
                         {t(tierLabel(f.tier))}
                       </span>

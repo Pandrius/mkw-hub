@@ -16,7 +16,7 @@ export function VerifiedMark({ event, tier, className = '' }: { event: Verifiabl
   const label = { lounge: t('ver.lounge'), sq: t('ver.sq'), vouched: t('ver.vouched'), trusted: t('ver.trusted') }[by]
   const how = { lounge: t('ver.howLounge'), sq: t('ver.howSq'), vouched: t('ver.howVouched'), trusted: t('ver.howTrusted') }[by]
   return (
-    <span className={className} title={how}>
+    <span className={`${className} whitespace-nowrap`} title={how}>
       <Badge color="var(--color-kart-green)">
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden className="mr-1 fill-current">
           <polygon points="0,5 1.5,3.5 4,6 8.5,1 10,2.5 4,9" />

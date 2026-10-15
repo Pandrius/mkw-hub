@@ -31,6 +31,8 @@ export type LoungeChange = {
   partnerIds: number[]
   /** MMR de cada compañero justo antes de la mesa (null = no se pudo averiguar); se rellena aparte */
   partnerMmrs: (number | null)[]
+  /** Nombre de cada compañero (null = aún no se conoce); se rellena aparte junto con el MMR */
+  partnerNames: (string | null)[]
   /** Posición del equipo en la mesa */
   rank: number | null
   /** Q, SQ, A..G (y mezclas como CD, DE, EF) */
@@ -74,6 +76,7 @@ export function parseChanges(raw: RawChange[] | null | undefined, season: number
       partnerScores: (c.partnerScores ?? []).filter(isNum),
       partnerIds: (c.partnerIds ?? []).filter(isNum),
       partnerMmrs: [],
+      partnerNames: [],
       rank: isNum(c.rank) ? c.rank : null,
       tier: c.tier ?? null,
       numTeams: isNum(c.numTeams) ? c.numTeams : null,
@@ -319,6 +322,19 @@ function partnerOf(rows: LoungeChange[]): PartnerStats | null {
   }
 }
 
+/** Diferencia de puntos de una mesa por equipos: tu puntuación menos la media de tus compañeros */
+const carryDiff = (c: LoungeChange) => (c.score as number) - mean(c.partnerScores)
+
+function carryOf(rows: LoungeChange[]): LoungeStats['carry'] {
+  const team = rows.filter((c) => c.score !== null && c.partnerScores.length > 0)
+  const best = team.reduce<LoungeChange | null>((a, c) => (!a || carryDiff(c) > carryDiff(a) ? c : a), null)
+  const worst = team.reduce<LoungeChange | null>((a, c) => (!a || carryDiff(c) < carryDiff(a) ? c : a), null)
+  return {
+    best: best ? { change: best, diff: round1(carryDiff(best)) } : null,
+    worst: worst ? { change: worst, diff: round1(carryDiff(worst)) } : null,
+  }
+}
+
 export type LoungeStats = {
   tables: number
   mmr: number
@@ -343,6 +359,10 @@ export type LoungeStats = {
   /** Tu puntuación frente a la media de tus compañeros de equipo (solo mesas por equipos) */
   /** Tu puntuación frente a la media de tus compañeros en las mesas por equipos: todas juntas, solo SQ y solo Lounge (sin SQ) */
   partnerSplit: { all: PartnerStats | null; sq: PartnerStats | null; lounge: PartnerStats | null }
+  /** Compañeros de SQ: la lista (de más a menos mesas juntos) y los destacados */
+  teammates: { list: TeammateStat[]; highlights: TeammateHighlights } | null
+  /** La mesa en que más superaste a tus compañeros y aquella en que más te superaron (diferencia de puntos con su media) */
+  carry: { best: { change: LoungeChange; diff: number } | null; worst: { change: LoungeChange; diff: number } | null }
   byFormat: Group[]
   byTier: Group[]
   /** Mesas por semana (lunes UTC) de las últimas 12 semanas con actividad */
@@ -445,6 +465,11 @@ export function computeLoungeStats(changes: LoungeChange[], tzOffsetMin = 0): Lo
       sq: partnerOf(tables.filter((t) => t.tier === 'SQ')),
       lounge: partnerOf(tables.filter((t) => t.tier !== 'SQ')),
     },
+    teammates: (() => {
+      const list = teammateStats(tables.filter((t) => t.tier === 'SQ'))
+      return list.length ? { list, highlights: teammateHighlights(list) } : null
+    })(),
+    carry: carryOf(tables),
     byFormat: FORMATS.flatMap((f) => {
       const rows = tables.filter((t) => formatOf(t.numTeams) === f)
       return rows.length ? [group(f, rows)] : []
@@ -460,6 +485,93 @@ export function computeLoungeStats(changes: LoungeChange[], tzOffsetMin = 0): Lo
 /** Mejor grupo (con suficientes mesas) por variación media de MMR */
 export function bestGroup(groups: Group[]): Group | null {
   return groups.filter((g) => g.tables >= MIN_GROUP).reduce<Group | null>((a, g) => (!a || g.avgDelta > a.avgDelta ? g : a), null)
+}
+
+/** Peor grupo (con suficientes mesas) por variación media de MMR */
+export function worstGroup(groups: Group[]): Group | null {
+  return groups.filter((g) => g.tables >= MIN_GROUP).reduce<Group | null>((a, g) => (!a || g.avgDelta < a.avgDelta ? g : a), null)
+}
+
+/** Mesas jugadas con un compañero para que sus medias cuenten en los destacados */
+export const MIN_TOGETHER = 3
+
+export type TeammateStat = {
+  id: number
+  name: string | null
+  tables: number
+  /** MMR total ganado (o perdido) en las mesas que jugasteis juntos */
+  net: number
+  avgDelta: number
+  winRate: number
+  /** Puntuación media de él y la tuya en esas mesas */
+  theirAvgScore: number
+  myAvgScore: number
+  /** MMR medio suyo antes de esas mesas (null si no se conoce) */
+  avgMmr: number | null
+}
+
+/** Estadísticas por compañero a partir de mesas por equipos (de más a menos mesas juntos) */
+export function teammateStats(rows: LoungeChange[]): TeammateStat[] {
+  const by = new Map<number, { name: string | null; rows: { c: LoungeChange; i: number }[] }>()
+  for (const c of rows) {
+    if (c.reason !== 'Table' || c.score === null) continue
+    c.partnerIds.forEach((id, i) => {
+      const e = by.get(id) ?? { name: null, rows: [] }
+      e.name ??= c.partnerNames[i] ?? null
+      e.rows.push({ c, i })
+      by.set(id, e)
+    })
+  }
+  return [...by]
+    .map(([id, e]): TeammateStat => {
+      const mmrs = e.rows.map(({ c, i }) => c.partnerMmrs[i]).filter((m): m is number => m !== null && m !== undefined)
+      const theirs = e.rows.map(({ c, i }) => c.partnerScores[i]).filter((x): x is number => x !== undefined)
+      return {
+        id,
+        name: e.name,
+        tables: e.rows.length,
+        net: e.rows.reduce((a, { c }) => a + c.delta, 0),
+        avgDelta: round1(mean(e.rows.map(({ c }) => c.delta))),
+        winRate: Math.round((e.rows.filter(({ c }) => c.delta > 0).length / e.rows.length) * 100),
+        theirAvgScore: round1(mean(theirs)),
+        myAvgScore: round1(mean(e.rows.map(({ c }) => c.score as number))),
+        avgMmr: mmrs.length ? Math.round(mean(mmrs)) : null,
+      }
+    })
+    .sort((a, b) => b.tables - a.tables || b.net - a.net)
+}
+
+export type TeammateHighlights = {
+  mostPlayed: TeammateStat | null
+  /** Con quien más MMR has ganado y con quien más has perdido, en total */
+  bestNet: TeammateStat | null
+  worstNet: TeammateStat | null
+  /** Mejor MMR por mesa (con al menos MIN_TOGETHER mesas juntos) */
+  bestAvg: TeammateStat | null
+  /** Quien puntúa más cuando juega contigo (con al menos MIN_TOGETHER mesas) */
+  bestScore: TeammateStat | null
+  /** El compañero de mayor MMR (con al menos 2 mesas y MMR conocido) */
+  highestMmr: TeammateStat | null
+}
+
+const pick = (list: TeammateStat[], better: (a: TeammateStat, b: TeammateStat) => boolean): TeammateStat | null =>
+  list.reduce<TeammateStat | null>((a, x) => (!a || better(x, a) ? x : a), null)
+
+export function teammateHighlights(list: TeammateStat[]): TeammateHighlights {
+  const regular = list.filter((t) => t.tables >= MIN_TOGETHER)
+  const best = pick(list, (x, a) => x.net > a.net)
+  const worst = pick(list, (x, a) => x.net < a.net)
+  return {
+    mostPlayed: pick(list, (x, a) => x.tables > a.tables || (x.tables === a.tables && x.net > a.net)),
+    bestNet: best && best.net > 0 ? best : null,
+    worstNet: worst && worst.net < 0 ? worst : null,
+    bestAvg: pick(regular, (x, a) => x.avgDelta > a.avgDelta),
+    bestScore: pick(regular, (x, a) => x.theirAvgScore > a.theirAvgScore),
+    highestMmr: pick(
+      list.filter((t) => t.tables >= 2 && t.avgMmr !== null),
+      (x, a) => (x.avgMmr as number) > (a.avgMmr as number),
+    ),
+  }
 }
 
 export type MmrPoint = { time: string; mmr: number; season: number; delta: number }

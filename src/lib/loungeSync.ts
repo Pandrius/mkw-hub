@@ -121,11 +121,12 @@ async function syncAccount(admin: SupabaseClient, profileId: string, found: { pl
   )
 
   // El MMR de los compañeros se averigua aparte y tarda: lo que ya estaba guardado se conserva al volver a guardar el historial
-  const { data: stored } = await admin.from('lounge_changes').select('change_id, reason, partner_mmrs').eq('profile_id', profileId).limit(5000)
-  const known = new Map((stored ?? []).map((r) => [`${r.reason}|${r.change_id}`, r.partner_mmrs as (number | null)[]]))
+  const { data: stored } = await admin.from('lounge_changes').select('change_id, reason, partner_mmrs, partner_names').eq('profile_id', profileId).limit(5000)
+  const known = new Map((stored ?? []).map((r) => [`${r.reason}|${r.change_id}`, r as { partner_mmrs: (number | null)[]; partner_names: (string | null)[] }]))
   for (const c of changes) {
     const k = known.get(`${c.reason}|${c.changeId}`)
-    if (k && k.length === c.partnerIds.length) c.partnerMmrs = k
+    if (k && k.partner_mmrs.length === c.partnerIds.length) c.partnerMmrs = k.partner_mmrs
+    if (k && k.partner_names.length === c.partnerIds.length) c.partnerNames = k.partner_names
   }
 
   const { error } = await admin.from('lounge_players').upsert({
@@ -176,6 +177,7 @@ async function syncAccount(admin: SupabaseClient, profileId: string, found: { pl
       partner_scores: c.partnerScores,
       partner_ids: c.partnerIds,
       partner_mmrs: c.partnerMmrs,
+      partner_names: c.partnerNames,
       rank: c.rank,
       tier: c.tier,
       num_teams: c.numTeams,
@@ -423,12 +425,13 @@ export async function fillPartnerMmrs(admin: SupabaseClient, profileId: string, 
       c.tier === 'SQ' &&
       c.partnerIds.length > 0 &&
       c.partnerScores.length === c.partnerIds.length &&
-      c.partnerMmrs.length !== c.partnerIds.length,
+      (c.partnerMmrs.length !== c.partnerIds.length || c.partnerNames.length !== c.partnerIds.length),
   )
   if (need.length === 0) return 0
 
   const keys = [...new Set(need.flatMap((c) => c.partnerIds.map((id) => `${id}|${c.season}`)))]
   const history = new Map<string, LoungeChange[]>()
+  const names = new Map<number, string>()
   const started = Date.now()
   let next = 0
   await Promise.all(
@@ -439,6 +442,7 @@ export async function fillPartnerMmrs(admin: SupabaseClient, profileId: string, 
         try {
           const d = await loungeGet<PlayerDetails>(`player/details?id=${id}&game=${LOUNGE_GAME}&season=${season}`)
           history.set(key, parseChanges(d?.mmrChanges, Number(season)))
+          if (d?.name) names.set(Number(id), d.name)
         } catch {
           // se reintenta en la siguiente sincronización
         }
@@ -447,23 +451,28 @@ export async function fillPartnerMmrs(admin: SupabaseClient, profileId: string, 
   )
 
   let filled = 0
-  const done: { c: LoungeChange; mmrs: (number | null)[] }[] = []
+  const done: { c: LoungeChange; mmrs: (number | null)[]; partnerNames: (string | null)[] }[] = []
   for (const c of need) {
     const lists = c.partnerIds.map((id) => history.get(`${id}|${c.season}`))
     if (lists.some((l) => l === undefined)) continue
-    done.push({ c, mmrs: c.partnerIds.map((_, i) => partnerMmrBefore(c, c.partnerScores[i], lists[i] ?? [])) })
+    done.push({
+      c,
+      mmrs: c.partnerIds.map((_, i) => partnerMmrBefore(c, c.partnerScores[i], lists[i] ?? [])),
+      partnerNames: c.partnerIds.map((id) => names.get(id) ?? null),
+    })
   }
   for (const part of chunks(done, 10)) {
     await Promise.all(
-      part.map(async ({ c, mmrs }) => {
+      part.map(async ({ c, mmrs, partnerNames }) => {
         const { error } = await admin
           .from('lounge_changes')
-          .update({ partner_mmrs: mmrs })
+          .update({ partner_mmrs: mmrs, partner_names: partnerNames })
           .eq('profile_id', profileId)
           .eq('reason', 'Table')
           .eq('change_id', c.changeId)
         if (!error) {
           c.partnerMmrs = mmrs
+          c.partnerNames = partnerNames
           filled++
         }
       }),

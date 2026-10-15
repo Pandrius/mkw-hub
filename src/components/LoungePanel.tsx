@@ -3,6 +3,9 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import {
   bestGroup,
+  worstGroup,
+  MIN_TOGETHER,
+  type TeammateStat,
   computeLoungeStats,
   mmrSeries,
   topPercent,
@@ -112,6 +115,8 @@ export function LoungePanel({ data, isMe }: { data: LoungeData | null; isMe: boo
           <StatsGrid stats={stats} />
 
           <PartnerPanel stats={stats} />
+
+          <TeammatesPanel stats={stats} />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <GroupTable
@@ -229,7 +234,7 @@ function GroupTable({ title, hint, groups, label }: { title: string; hint: strin
               <td className="px-3 py-2 text-right font-mono font-bold">
                 <Signed value={g.avgDelta} digits={1} />
               </td>
-              <td className="px-3 py-2 text-right font-mono">{g.winRate} %</td>
+              <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{g.winRate} %</td>
             </tr>
           ))}
         </tbody>
@@ -238,33 +243,37 @@ function GroupTable({ title, hint, groups, label }: { title: string; hint: strin
   )
 }
 
-/** Mejor día de la semana y mejor franja horaria según el MMR medio ganado por mesa */
+/** Mejor y peor día de la semana y franja horaria según el MMR medio ganado por mesa */
 function WhenPanel({ stats }: { stats: LoungeStats }) {
   const { t, locale } = useI18n()
-  const day = bestGroup(stats.byWeekday)
-  const hour = bestGroup(stats.byHour)
+  const bestDay = bestGroup(stats.byWeekday)
+  const worstDay = worstGroup(stats.byWeekday)
+  const bestHour = bestGroup(stats.byHour)
+  const worstHour = worstGroup(stats.byHour)
   const weekday = (key: string) => new Date(Date.UTC(2024, 0, 7 + Number(key))).toLocaleDateString(locale, { weekday: 'long', timeZone: 'UTC' })
   const hours = (key: string) => `${String(key).padStart(2, '0')}:00`
+  const sub = (g: Group) => t('lg.whenSub', { delta: g.avgDelta > 0 ? `+${g.avgDelta}` : String(g.avgDelta), n: g.tables })
+  const items: { key: string; label: string; g: Group | null; text: (g: Group) => string; good: boolean }[] = [
+    { key: 'bd', label: t('lg.bestDay'), g: bestDay, text: (g) => weekday(g.key), good: true },
+    { key: 'wd', label: t('lg.worstDay'), g: worstDay, text: (g) => weekday(g.key), good: false },
+    { key: 'bh', label: t('lg.bestHour'), g: bestHour, text: (g) => hours(g.key), good: true },
+    { key: 'wh', label: t('lg.worstHour'), g: worstHour, text: (g) => hours(g.key), good: false },
+  ]
   return (
     <div className="panel p-5">
       <SectionTitle title={t('lg.when')} hint={t('lg.whenHint')} />
-      {!day && !hour ? (
+      {!bestDay && !bestHour ? (
         <p className="text-sm text-muted">{t('lg.whenFew')}</p>
       ) : (
-        <dl className="space-y-3 text-sm">
-          {day && (
-            <div>
-              <dt className="text-muted">{t('lg.bestDay')}</dt>
-              <dd className="font-display text-2xl font-bold capitalize">{weekday(day.key)}</dd>
-              <dd className="font-mono text-xs text-muted">{t('lg.whenSub', { delta: day.avgDelta > 0 ? `+${day.avgDelta}` : String(day.avgDelta), n: day.tables })}</dd>
-            </div>
-          )}
-          {hour && (
-            <div>
-              <dt className="text-muted">{t('lg.bestHour')}</dt>
-              <dd className="font-display text-2xl font-bold">{hours(hour.key)}</dd>
-              <dd className="font-mono text-xs text-muted">{t('lg.whenSub', { delta: hour.avgDelta > 0 ? `+${hour.avgDelta}` : String(hour.avgDelta), n: hour.tables })}</dd>
-            </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+          {items.map(({ key, label, g, text, good }) =>
+            g ? (
+              <div key={key} className="min-w-0">
+                <dt className="text-muted">{label}</dt>
+                <dd className={`font-display text-xl font-bold capitalize sm:text-2xl ${good ? '' : 'text-kart-red'}`}>{text(g)}</dd>
+                <dd className="font-mono text-xs text-muted">{sub(g)}</dd>
+              </div>
+            ) : null,
           )}
         </dl>
       )}
@@ -317,6 +326,107 @@ function PartnerPanel({ stats }: { stats: LoungeStats }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+/** Ficha con el nombre de un compañero (el nombre puede ser largo: se parte en vez de salirse de la ficha) */
+function MateTile({ label, mate, sub }: { label: string; mate: TeammateStat | null; sub?: (m: TeammateStat) => React.ReactNode }) {
+  if (!mate) return null
+  return (
+    <div className="panel min-w-0 p-4">
+      <p className="text-xs text-muted sm:text-sm">{label}</p>
+      <p className="mt-1 font-display text-xl leading-tight font-extrabold break-words sm:text-3xl">{mate.name ?? `#${mate.id}`}</p>
+      {sub && <p className="mt-1.5 font-mono text-xs text-muted">{sub(mate)}</p>}
+    </div>
+  )
+}
+
+/** Compañeros de SQ: con quién más juegas, con quién ganas y pierdes más MMR, y la lista de los más habituales */
+function TeammatesPanel({ stats }: { stats: LoungeStats }) {
+  const { t, locale } = useI18n()
+  const num = useNum()
+  const mates = stats.teammates
+  const date = (iso: string) => new Date(iso).toLocaleDateString(locale, { dateStyle: 'medium' })
+  if (!mates) return null
+  const h = mates.highlights
+  const net = (m: TeammateStat) => (
+    <>
+      {t('lg.mateTables', { n: m.tables })} · <Signed value={m.net} digits={0} /> MMR
+    </>
+  )
+  const top = mates.list.slice(0, 10)
+  return (
+    <div className="space-y-3">
+      <SectionTitle title={t('lg.mates')} hint={t('lg.matesHint', { n: MIN_TOGETHER })} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <MateTile label={t('lg.mateMost')} mate={h.mostPlayed} sub={net} />
+        <MateTile label={t('lg.mateBestNet')} mate={h.bestNet} sub={net} />
+        <MateTile label={t('lg.mateWorstNet')} mate={h.worstNet} sub={net} />
+        <MateTile
+          label={t('lg.mateBestAvg')}
+          mate={h.bestAvg}
+          sub={(m) => (
+            <>
+              <Signed value={m.avgDelta} digits={1} /> MMR · {t('lg.mateTables', { n: m.tables })}
+            </>
+          )}
+        />
+        <MateTile
+          label={t('lg.mateBestScore')}
+          mate={h.bestScore}
+          sub={(m) => t('lg.mateScoreSub', { them: num(m.theirAvgScore, 1), me: num(m.myAvgScore, 1) })}
+        />
+        <MateTile
+          label={t('lg.mateHighestMmr')}
+          mate={h.highestMmr}
+          sub={(m) => t('lg.mateMmrSub', { mmr: num(m.avgMmr ?? 0, 0), n: m.tables })}
+        />
+      </div>
+
+      {(stats.carry.best || stats.carry.worst) && (
+        <div className="grid grid-cols-2 gap-3">
+          {stats.carry.best && (
+            <StatTile label={t('lg.carryBest')} value={<Signed value={stats.carry.best.diff} digits={1} />} sub={`${date(stats.carry.best.change.time)} · ${stats.carry.best.change.score} pts`} hint={t('lg.carryHint')} />
+          )}
+          {stats.carry.worst && (
+            <StatTile label={t('lg.carryWorst')} value={<Signed value={stats.carry.worst.diff} digits={1} />} sub={`${date(stats.carry.worst.change.time)} · ${stats.carry.worst.change.score} pts`} hint={t('lg.carryHint')} />
+          )}
+        </div>
+      )}
+
+      <div className="panel overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-bg font-display text-xs text-kart-yellow">
+            <tr>
+              <Th right={false}>{t('lg.mate')}</Th>
+              <Th>{t('lg.col.tables')}</Th>
+              <Th>{t('lg.mateNet')}</Th>
+              <Th>{t('lg.mateAvg')}</Th>
+              <Th>{t('lg.col.win')}</Th>
+              <Th>{t('lg.mateTheirScore')}</Th>
+              <Th>{t('lg.mateTheirMmr')}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {top.map((m) => (
+              <tr key={m.id} className="border-t border-line/60">
+                <td className="max-w-40 px-3 py-2 font-semibold break-words">{m.name ?? `#${m.id}`}</td>
+                <td className="px-3 py-2 text-right font-mono text-muted">{m.tables}</td>
+                <td className="px-3 py-2 text-right font-mono font-bold">
+                  <Signed value={m.net} digits={0} />
+                </td>
+                <td className="px-3 py-2 text-right font-mono">
+                  <Signed value={m.avgDelta} digits={1} />
+                </td>
+                <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{m.winRate} %</td>
+                <td className="px-3 py-2 text-right font-mono">{num(m.theirAvgScore, 1)}</td>
+                <td className="px-3 py-2 text-right font-mono">{m.avgMmr !== null ? num(m.avgMmr, 0) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

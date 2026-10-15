@@ -151,8 +151,8 @@ function VerifiedRanking({ country }: { country: string }) {
                   </td>
                   <td className="px-3 py-2 text-right font-mono font-bold text-kart-yellow">{num(r.avg_points, 2)}</td>
                   <td className="px-3 py-2 text-right font-mono">{num(r.avg_pos, 2)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{num(r.win_rate, 1)} %</td>
-                  <td className="px-3 py-2 text-right font-mono">{num(r.podium_rate, 1)} %</td>
+                  <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{num(r.win_rate, 1)} %</td>
+                  <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{num(r.podium_rate, 1)} %</td>
                   <td className="px-3 py-2 text-right font-mono text-muted">{r.races}</td>
                   <td className="px-3 py-2 text-right font-mono text-muted">{r.events}</td>
                 </tr>
@@ -249,7 +249,7 @@ function LoungeRanking({ country }: { country: string }) {
                       <td className="px-3 py-2 text-right font-mono font-bold">{r.mmr !== null ? num(r.mmr, 0) : '—'}</td>
                       <td className="px-3 py-2 text-right font-mono text-muted">{r.maxMmr !== null ? num(r.maxMmr, 0) : '—'}</td>
                       <td className="px-3 py-2 text-right font-mono text-muted">{r.events}</td>
-                      <td className="px-3 py-2 text-right font-mono">{r.winRate !== null ? `${r.winRate} %` : '—'}</td>
+                      <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{r.winRate !== null ? `${r.winRate} %` : '—'}</td>
                     </tr>
                   )
                 })}

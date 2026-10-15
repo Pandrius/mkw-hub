@@ -10,6 +10,9 @@ import {
   mmrSeries,
   parseChanges,
   partnerMmrBefore,
+  teammateHighlights,
+  teammateStats,
+  worstGroup,
   topPercent,
   weekStart,
   type LoungeChange,
@@ -28,6 +31,7 @@ function change(over: Partial<LoungeChange> & { time: string }): LoungeChange {
     partnerScores: [],
     partnerIds: [],
     partnerMmrs: [],
+    partnerNames: [],
     rank: 5,
     tier: 'C',
     numTeams: 12,
@@ -280,6 +284,62 @@ describe('MMR de los compañeros', () => {
   it('con algún compañero desconocido usa los que sí se conocen', () => {
     const rows = [sqChange(1, '2026-10-05T10:00:00Z', 100, 7100, 100, [80, 70], [1, 2], [6000, null])]
     expect(computeLoungeStats(rows)!.partnerSplit.sq?.avgPartnerMmr).toBe(6000)
+  })
+})
+
+describe('compañeros de SQ', () => {
+  const sq = (id: number, delta: number, score: number, partnerIds: number[], partnerScores: number[], names: (string | null)[], mmrs: (number | null)[] = []) =>
+    change({ changeId: id, time: `2026-10-${String(id).padStart(2, '0')}T10:00:00Z`, tier: 'SQ', numTeams: 6, delta, score, partnerIds, partnerScores, partnerNames: names, partnerMmrs: mmrs })
+  const rows = [
+    sq(1, 100, 100, [10], [80], ['Ana'], [6000]),
+    sq(2, 80, 95, [10], [90], ['Ana'], [6200]),
+    sq(3, -30, 70, [10], [60], ['Ana'], [6100]),
+    sq(4, -120, 60, [20], [95], ['Bob']),
+    sq(5, -90, 62, [20], [90], ['Bob']),
+    sq(6, 40, 90, [20, 30], [88, 70], ['Bob', 'Cris']),
+    sq(7, 200, 110, [30], [85], ['Cris']),
+  ]
+
+  it('agrupa por compañero con mesas, MMR neto, % que sube y puntuaciones', () => {
+    const list = teammateStats(rows)
+    expect(list.map((m) => [m.name, m.tables])).toEqual([
+      ['Ana', 3],
+      ['Bob', 3],
+      ['Cris', 2],
+    ])
+    const ana = list[0]
+    expect(ana).toMatchObject({ net: 150, avgDelta: 50, winRate: 67, theirAvgScore: 76.7, myAvgScore: 88.3, avgMmr: 6100 })
+    expect(list[1].avgMmr).toBeNull()
+  })
+
+  it('destacados: más jugado, con quien más ganas y pierdes, mejor por mesa y mayor MMR', () => {
+    const h = teammateHighlights(teammateStats(rows))
+    expect(h.mostPlayed?.name).toBe('Ana')
+    expect(h.bestNet?.name).toBe('Cris') // 40 + 200 = 240 frente a 150 de Ana
+    expect(h.worstNet?.name).toBe('Bob') // −120 − 90 + 40 = −170
+    expect(h.bestAvg?.name).toBe('Ana') // Cris tiene solo 2 mesas: no cuenta (mínimo 3)
+    expect(h.bestScore?.name).toBe('Bob')
+    expect(h.highestMmr?.name).toBe('Ana')
+  })
+
+  it('sin pérdidas ni ganancias netas no hay mejor ni peor compañero', () => {
+    const only = teammateHighlights(teammateStats([sq(1, 50, 90, [1], [80], ['X']), sq(2, 40, 90, [1], [80], ['X'])]))
+    expect(only.worstNet).toBeNull()
+    expect(only.bestNet?.name).toBe('X')
+  })
+
+  it('computeLoungeStats incluye los compañeros de SQ y la mesa con más y menos «carry»', () => {
+    const s = computeLoungeStats(rows)!
+    expect(s.teammates?.list).toHaveLength(3)
+    expect(s.carry.best?.change.changeId).toBe(7) // 110 − 85 = +25
+    expect(s.carry.worst?.change.changeId).toBe(4) // 60 − 95 = −35
+    expect(computeLoungeStats([change({ time: '2026-10-01T10:00:00Z' })])!.teammates).toBeNull()
+  })
+
+  it('worstGroup devuelve el peor grupo con suficientes mesas', () => {
+    const g = (key: string, tables: number, avgDelta: number) => ({ key, tables, avgScore: 0, avgDelta, winRate: 0 })
+    expect(worstGroup([g('a', 2, -90), g('b', 6, 10), g('c', 9, -30)])?.key).toBe('c')
+    expect(worstGroup([g('a', 2, -90)])).toBeNull()
   })
 })
 
