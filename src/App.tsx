@@ -13,6 +13,7 @@ import Teams from './pages/Teams'
 import TimeTrials from './pages/TimeTrials'
 import TrackDetail from './pages/TrackDetail'
 import Notices from './pages/Notices'
+import FreeTable from './pages/FreeTable'
 import ValidateWar from './pages/ValidateWar'
 import Tracks from './pages/Tracks'
 
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="eventos/:eventId/validar" element={<ValidateWar />} />
         <Route path="avisos" element={<Notices />} />
         <Route path="ranking" element={<Ranking />} />
+        <Route path="tablas" element={<FreeTable />} />
         <Route path="equipos" element={<Teams />} />
         <Route path="equipos/:teamId" element={<TeamDetail />} />
         <Route path="admin" element={<Admin />} />

@@ -148,7 +148,7 @@ export function computePlayerAnalytics(all: TimedResult[], filter: StatsFilter):
 
   // Pistas
   const byTrack = new Map<string, TimedResult[]>()
-  for (const r of rows) byTrack.set(r.trackId, [...(byTrack.get(r.trackId) ?? []), r])
+  for (const r of rows) if (!r.section) byTrack.set(r.trackId, [...(byTrack.get(r.trackId) ?? []), r])
   const tracks: PlayerTrack[] = [...byTrack.entries()]
     .map(([trackId, rs]) => {
       const ps = rs.map((r) => r.position)

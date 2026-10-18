@@ -65,3 +65,13 @@ describe('bestAndWorst', () => {
     expect(worst.map((t) => t.trackId)).toEqual(['g', 'f', 'e'])
   })
 })
+
+describe('tramos', () => {
+  it('cuentan en lo general pero no salen en las estadísticas de pista', () => {
+    const rows: PlayerResult[] = [r('a', 1), r('a', 3), { ...r('tramo', 2), section: true }]
+    const stats = computeStats(rows, 'war')
+    expect(stats.races).toBe(3)
+    expect(stats.average).toBe(2)
+    expect(stats.tracks.map((t) => t.trackId)).toEqual(['a'])
+  })
+})

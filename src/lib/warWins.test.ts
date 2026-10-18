@@ -3,7 +3,7 @@ import { computeAchievements } from './achievements'
 import { computeBadges } from './badges'
 import type { TimedResult } from './form'
 import { validateTitle, type TitleContext } from './titles'
-import { wonWar, type WarRaceLine } from './warWins'
+import { wonWar, type WarRaceLine, warMvps } from './warWins'
 
 /** 12 carreras en las que nuestro equipo ocupa las posiciones dadas */
 const races = (positions: number[]): WarRaceLine[] => Array.from({ length: 12 }, () => ({ positions, missingHome: 0, missingAway: 0 }))
@@ -61,5 +61,29 @@ describe('logro de victorias de war', () => {
     expect(validateTitle('warRank1', ctx(wins(5)))).toBe('warRank1')
     expect(validateTitle('warRank2', ctx(wins(5)))).toBeUndefined()
     expect(validateTitle('warRank5', ctx(wins(250)))).toBe('warRank5')
+  })
+})
+
+describe('warMvps', () => {
+  const race = (own: [number, number][], opp: [string, number][] | null, racers = 12) => ({
+    own: own.map(([playerId, position]) => ({ playerId, position })),
+    opponents: opp ? opp.map(([name, position]) => ({ name, position })) : null,
+    racers,
+  })
+
+  it('el MVP es el mejor de los 12, no solo de tu equipo', () => {
+    // El jugador 1 es el mejor de los suyos (2.º) pero el rival «R1» gana la carrera
+    const races = [race([[1, 2], [2, 4]], [['R1', 1], ['R2', 3]], 4)]
+    expect(warMvps(races)).toEqual([])
+  })
+
+  it('devuelve los jugadores propios que tienen la máxima puntuación, con empates', () => {
+    expect(warMvps([race([[1, 1], [2, 3]], [['R1', 2], ['R2', 4]], 4)])).toEqual([1])
+    expect(warMvps([race([[1, 1]], [['R1', 2]], 2), race([[1, 2]], [['R1', 1]], 2)])).toEqual([1])
+  })
+
+  it('sin las posiciones de los rivales no se sabe', () => {
+    expect(warMvps([race([[1, 1]], null, 12)])).toBeNull()
+    expect(warMvps([race([[1, 1]], [['R1', 2]], 12)])).toBeNull()
   })
 })

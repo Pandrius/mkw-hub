@@ -44,7 +44,7 @@ export function computeBadges(timeline: TimedResult[], totalTracks: number): Bad
   const perTrack = new Map<string, number>()
   const events = new Set<string>()
   for (const r of timeline) {
-    perTrack.set(r.trackId, (perTrack.get(r.trackId) ?? 0) + 1)
+    if (!r.section) perTrack.set(r.trackId, (perTrack.get(r.trackId) ?? 0) + 1)
     events.add(r.eventId)
   }
   const sorted = [...perTrack.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))

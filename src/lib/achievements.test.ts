@@ -64,6 +64,27 @@ describe('computeAchievements', () => {
     expect(get(rows, 'finalRace').count).toBe(1)
   })
 
+  it('ganador sigiloso: primero del evento sin ganar ninguna carrera', () => {
+    const first = (rows: TimedResult[]) => rows.map((r) => ({ ...r, eventFirst: true }))
+    const quiet = [2, 2, 3, 2, 3, 2, 2, 3, 2, 2, 3, 2]
+    const rows = [
+      ...first(event('a', quiet)), // cuenta
+      ...first(event('b', [1, ...quiet.slice(1)])), // ganó una carrera: no
+      ...event('c', quiet), // no quedó primero: no
+      ...first(event('d', quiet.slice(0, 6))), // evento incompleto: no
+    ]
+    expect(get(rows, 'stealthWin').count).toBe(1)
+    expect(get(rows, 'stealthWin').tier).toBe(1)
+    expect(get(rows, 'stealthWin').thresholds).toEqual([1, 3, 5, 10])
+  })
+
+  it('los tramos cuentan para el evento pero no como pista', () => {
+    const rows = event('a', [1, 1, 1, 1], (i) => `t${i}`).map((r, i) => ({ ...r, section: i >= 2 }))
+    expect(get(rows, 'wins').count).toBe(4)
+    expect(get(rows, 'winEverywhere').count).toBe(2)
+    expect(get(rows, 'podiumEverywhere').count).toBe(2)
+  })
+
   it('ya no existe el logro «Dueño de la pista»', () => {
     expect(computeAchievements([], 40).some((a) => (a.id as string) === 'domination')).toBe(false)
   })

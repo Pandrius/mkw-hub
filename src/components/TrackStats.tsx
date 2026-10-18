@@ -16,7 +16,7 @@ export default function TrackStats({ trackId }: { trackId: string }) {
     if (!profile) return
     let cancelled = false
     getPlayerResults(profile.id).then(
-      (data) => !cancelled && setResults(data.filter((r) => r.track_id === trackId)),
+      (data) => !cancelled && setResults(data.filter((r) => r.track_id === trackId && !r.section)),
       () => !cancelled && setResults([]),
     )
     return () => {

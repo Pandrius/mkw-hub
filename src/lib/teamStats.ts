@@ -9,6 +9,8 @@ export type TeamWarResult = { name: string; profileId: string | null; position: 
 export type TeamWarRace = {
   track_id: string
   race_no: number
+  /** Tramo: cuenta en la war pero no en las estadísticas de pista */
+  section?: boolean
   missing_home: number
   missing_away: number
   positions: number[]
@@ -128,7 +130,7 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
       warAwayScore += score.away
       totalRaces += 1
 
-      // Acumulador de pista
+      // Acumulador de pista (los tramos no son pistas)
       const currentTrack = trackMap.get(r.track_id) ?? {
         races: 0,
         pointsHome: 0,
@@ -152,7 +154,7 @@ export function computeTeamStats(teamId: number, wars: TeamWar[]): TeamStats {
       currentTrack.positionsAwaySum += awayRacers.reduce((a, b) => a + b, 0)
       currentTrack.racersCount += homeRacers
 
-      trackMap.set(r.track_id, currentTrack)
+      if (!r.section) trackMap.set(r.track_id, currentTrack)
     }
 
     // Las penalties restan al resultado de la war (no a las pistas)
@@ -384,10 +386,12 @@ export function computeTeamPlayerStats(wars: TeamWar[]): TeamPlayerStats[] {
         acc.timeline.push({ order, pts })
         if (!acc.ran.has(raceId)) acc.onDiffs.push(score.home - score.away)
         acc.ran.add(raceId)
-        const tr = acc.tracks.get(race.track_id) ?? { points: 0, races: 0 }
-        tr.points += pts
-        tr.races += 1
-        acc.tracks.set(race.track_id, tr)
+        if (!race.section) {
+          const tr = acc.tracks.get(race.track_id) ?? { points: 0, races: 0 }
+          tr.points += pts
+          tr.races += 1
+          acc.tracks.set(race.track_id, tr)
+        }
         map.set(key, acc)
       }
     }
@@ -478,6 +482,7 @@ export function mirrorWar(war: RawWar): MirroredWar {
       return {
         track_id: r.track_id,
         race_no: r.race_no,
+        section: r.section,
         missing_home: r.missing_away,
         missing_away: r.missing_home,
         positions: Array.from({ length: racers }, (_, i) => i + 1).filter((p) => !taken.has(p)),
@@ -547,7 +552,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
   const [{ data: races, error: raceError }, { data: players, error: playerError }] = await Promise.all([
     supabase
       .from('event_races')
-      .select('id, event_id, race_no, track_id, missing_home, missing_away, opponent_results, race_results(position, player_id)')
+      .select('id, event_id, race_no, track_id, missing_home, missing_away, opponent_results, is_section, race_results(position, player_id)')
       .in('event_id', eventIds)
       .order('race_no', { ascending: true }),
     supabase.from('event_players').select('id, name, profile_id').in('event_id', eventIds),
@@ -566,6 +571,7 @@ async function fetchWars(column: 'team_id' | 'opponent_team_id', teamId: number)
     list.push({
       track_id: r.track_id as string,
       race_no: r.race_no as number,
+      section: !!r.is_section,
       missing_home: r.missing_home as number,
       missing_away: r.missing_away as number,
       positions: results.map((res) => res.position),

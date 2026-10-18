@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import EditableName from '../components/EditableName'
+import FinalPositions from '../components/FinalPositions'
 import RaceForm from '../components/RaceForm'
 import SubstituteForm from '../components/SubstituteForm'
 import WarImageButtons from '../components/WarImageButtons'
@@ -109,6 +110,8 @@ export default function EventDetail() {
 
   const canVouch =
     !isOpen && !!profile && (isAdmin || (profile.trusted === true && players.some((p) => p.profile_id === profile.id)))
+  // El puesto final en el evento lo pone un perfil de confianza que jugó en él (o un admin)
+  const canSetFinal = !!profile && (isAdmin || (profile.trusted === true && (event.created_by === profile.id || players.some((p) => p.profile_id === profile.id))))
   const vouch = (value: boolean) => act(() => vouchEvent(event.id, value))
 
   const recheck = async () => {
@@ -259,6 +262,10 @@ export default function EventDetail() {
           if (confirm(t('event.confirmDeleteRace', { n: race.race_no }))) act(() => deleteRace(event.id, race.race_no))
         }}
       />
+
+      {canSetFinal && races.length > 0 && (
+        <FinalPositions key={players.map((p) => `${p.id}:${p.final_position ?? ''}`).join(',')} eventId={event.id} players={players} onSaved={reload} />
+      )}
 
       {isWar && !isOpen && (
         <WarProofPanel
@@ -455,7 +462,14 @@ function RacesTable({
             <span className="w-14 font-display font-black normal-case" style={track?.abbr === 'RR' ? { backgroundImage: RAINBOW, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' } : { color: getTrackColor(track) }}>
               {track?.abbr}
             </span>
-            <span className="min-w-32 flex-1 truncate text-sm">{track?.name ?? race.track_id}</span>
+            <span className="min-w-32 flex-1 truncate text-sm">
+              {track?.name ?? race.track_id}
+              {race.is_section && (
+                <span className="ml-1 font-display text-lg font-black text-kart-yellow" title={t('event.sectionTag')} aria-label={t('event.sectionTag')}>
+                  *
+                </span>
+              )}
+            </span>
             {/* max-w-full: en móvil las posiciones bajan de línea en vez de desbordar */}
             <span className="flex max-w-full flex-wrap gap-1.5">
               {results.map((r) => (
@@ -496,6 +510,7 @@ function RacesTable({
           </div>
         )
       })}
+      {races.some((r) => r.is_section) && <p className="text-xs text-muted">* {t('event.sectionNote')}</p>}
     </div>
   )
 }

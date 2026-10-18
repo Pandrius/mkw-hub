@@ -45,7 +45,7 @@ export type GameEvent = {
   proof_reading?: unknown
 }
 
-export type EventPlayer = { id: number; event_id: string; name: string; profile_id: string | null }
+export type EventPlayer = { id: number; event_id: string; name: string; profile_id: string | null; /** Puesto final en el evento, puesto por un perfil de confianza */ final_position?: number | null }
 
 export type RaceResult = { player_id: number; position: number }
 export type OpponentResult = { name: string; position: number }
@@ -58,6 +58,8 @@ export type EventRace = {
   missing_away: number
   race_results: RaceResult[]
   opponent_results?: OpponentResult[] | null
+  /** Tramo: cuenta para el evento y los logros, pero no como pista */
+  is_section?: boolean
 }
 
 export type EventDetail = { event: GameEvent; players: EventPlayer[]; races: EventRace[] }
@@ -151,6 +153,7 @@ export function saveRace(
   missingHome = 0,
   missingAway = 0,
   opponentResults?: OpponentResult[] | null,
+  isSection = false,
 ): Promise<void> {
   return rpc<void>('save_race', {
     target: eventId,
@@ -160,8 +163,13 @@ export function saveRace(
     missing_home: missingHome,
     missing_away: missingAway,
     opponent_results: opponentResults ?? null,
+    is_section: isSection,
   })
 }
+
+/** Un perfil de confianza (o un admin) pone el puesto final de los jugadores del evento: {idJugador: puesto | null} */
+export const setFinalPositions = (eventId: string, positions: Record<number, number | null>) =>
+  rpc<void>('set_final_positions', { target: eventId, positions })
 
 export const deleteRace = (eventId: string, raceNo: number) => rpc<void>('delete_race', { target: eventId, race_no: raceNo })
 /** Un perfil de confianza que jugó en el evento (o un admin) lo avala (value = false retira su aval) */
@@ -211,10 +219,10 @@ export async function getEvent(eventId: string): Promise<EventDetail | null> {
   const db = client()
   const [ev, players, races] = await Promise.all([
     db.from('events').select('*').eq('id', eventId).maybeSingle(),
-    db.from('event_players').select('id, event_id, name, profile_id').eq('event_id', eventId).order('id'),
+    db.from('event_players').select('id, event_id, name, profile_id, final_position').eq('event_id', eventId).order('id'),
     db
       .from('event_races')
-      .select('id, race_no, track_id, missing_home, missing_away, opponent_results, race_results(player_id, position)')
+      .select('id, race_no, track_id, missing_home, missing_away, opponent_results, is_section, race_results(player_id, position)')
       .eq('event_id', eventId)
       .order('race_no'),
   ])
@@ -240,13 +248,13 @@ export async function listEventsFor(profileId: string): Promise<(GameEvent & { r
   })
 }
 
-export type PlayerResult = { kind: EventKind; event_id: string; track_id: string; position: number; racers: number | null; verified?: boolean; tier?: string | null }
+export type PlayerResult = { kind: EventKind; event_id: string; track_id: string; position: number; racers: number | null; verified?: boolean; tier?: string | null; /** Tramo: no cuenta en las estadísticas de pista */ section?: boolean }
 
 /** Resultados de eventos finalizados de un jugador (para estadísticas) */
 export async function getPlayerResults(profileId: string): Promise<PlayerResult[]> {
   const { data, error } = await client()
     .from('player_results')
-    .select('kind, event_id, track_id, position, racers, verified, tier')
+    .select('kind, event_id, track_id, position, racers, verified, tier, section')
     .eq('profile_id', profileId)
     .limit(10000)
   if (error) throw error

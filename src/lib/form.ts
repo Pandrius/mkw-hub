@@ -17,6 +17,10 @@ export type TimedResult = {
   tier?: string | null
   /** La war a la que pertenece la carrera la ganó el equipo del jugador (solo wars; penalties incluidas) */
   warWon?: boolean
+  /** Quedó primero del evento: mesa del Lounge en el puesto 1, o máximo anotador (MVP) de su equipo en una war, gane o no */
+  eventFirst?: boolean
+  /** Tramo: cuenta para el evento y los logros, pero no como pista */
+  section?: boolean
 }
 
 export type Streak = { current: number; best: number }

@@ -25,6 +25,7 @@ const NAV: NavEntry[] = [
   { to: '/tiempos', label: 'nav.times' },
   { to: '/estadisticas', label: 'nav.stats' },
   { to: '/ranking', label: 'nav.ranking' },
+  { to: '/tablas', label: 'nav.tables' },
   { to: '/equipos', label: 'nav.teams' },
 ]
 

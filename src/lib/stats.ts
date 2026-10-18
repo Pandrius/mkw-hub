@@ -43,7 +43,8 @@ function pointsForPos(position: number): number {
 export function computeStats(results: PlayerResult[], filter: StatsFilter): Stats {
   const rows = results.filter((r) => matchesFilter(r, filter))
   const byTrack = new Map<string, number[]>()
-  for (const r of rows) byTrack.set(r.track_id, [...(byTrack.get(r.track_id) ?? []), r.position])
+  // Los tramos cuentan en lo general pero no son una pista
+  for (const r of rows) if (!r.section) byTrack.set(r.track_id, [...(byTrack.get(r.track_id) ?? []), r.position])
 
   const tracks = [...byTrack.entries()]
     .map(([trackId, positions]) => {

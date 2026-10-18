@@ -40,6 +40,7 @@ export default function RaceForm({
   const { t } = useI18n()
   const formRef = useRef<HTMLFormElement>(null)
   const [trackId, setTrackId] = useState(initial?.track_id ?? '')
+  const [isSection, setIsSection] = useState(initial?.is_section ?? false)
   const [positions, setPositions] = useState<Record<number, string>>(() =>
     Object.fromEntries((initial?.race_results ?? []).map((r) => [r.player_id, String(r.position)])),
   )
@@ -146,6 +147,7 @@ export default function RaceForm({
         kind === 'war' ? missingHome : 0,
         kind === 'war' ? missingAway : 0,
         finalOpponentResults,
+        isSection,
       )
       await onSaved()
     } catch (err) {
@@ -178,6 +180,12 @@ export default function RaceForm({
             setTimeout(() => formRef.current?.querySelector<HTMLInputElement>('input[data-position]')?.focus(), 0)
           }}
         />
+        <label className="mt-2 flex items-start gap-2 text-sm">
+          <input type="checkbox" checked={isSection} onChange={(e) => setIsSection(e.target.checked)} className="mt-1 accent-kart-yellow" />
+          <span>
+            <b>{t('event.section')}</b> <span className="text-muted">{t('event.sectionHint')}</span>
+          </span>
+        </label>
       </div>
 
       {kind === 'war' && (

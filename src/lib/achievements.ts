@@ -14,6 +14,7 @@ export type AchievementId =
   | 'legendEvent'
   | 'redemption'
   | 'finalRace'
+  | 'stealthWin'
   | 'warWins'
   | 'podiumEverywhere'
   | 'winEverywhere'
@@ -88,19 +89,30 @@ const DEFS: Def[] = [
     },
   },
   { id: 'finalRace', glyph: 'flag', thresholds: () => [1, 5, 15, 40], count: (rows) => countWhere(rows, (r) => r.raceNo === RACES_PER_WAR && r.position === 1) },
+  // Sigilo: primero del evento (evento completo) sin haber ganado ni una carrera
+  {
+    id: 'stealthWin',
+    glyph: 'ring',
+    thresholds: () => [1, 3, 5, 10],
+    count: (rows) => {
+      const byEvent = new Map<string, TimedResult[]>()
+      for (const r of rows) byEvent.set(r.eventId, [...(byEvent.get(r.eventId) ?? []), r])
+      return [...byEvent.values()].filter((rs) => rs.length >= RACES_PER_WAR && rs.some((r) => r.eventFirst) && rs.every((r) => r.position !== 1)).length
+    },
+  },
   // Rangos militares: soldado raso, cabo, sargento, capitán y general (ver `ach.warWins.rank.*`)
   { id: 'warWins', glyph: 'chevrons', thresholds: () => [5, 25, 50, 100, 250], count: (rows) => new Set(rows.filter((r) => r.warWon).map((r) => r.eventId)).size },
   {
     id: 'podiumEverywhere',
     glyph: 'podium',
     thresholds: (total) => [10, 20, 30, total],
-    count: (rows) => new Set(rows.filter((r) => r.position <= 3).map((r) => r.trackId)).size,
+    count: (rows) => new Set(rows.filter((r) => r.position <= 3 && !r.section).map((r) => r.trackId)).size,
   },
   {
     id: 'winEverywhere',
     glyph: 'ring',
     thresholds: (total) => [5, 12, 22, 32, total],
-    count: (rows) => new Set(rows.filter((r) => r.position === 1).map((r) => r.trackId)).size,
+    count: (rows) => new Set(rows.filter((r) => r.position === 1 && !r.section).map((r) => r.trackId)).size,
   },
 ]
 
