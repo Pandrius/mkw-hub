@@ -556,8 +556,6 @@ function WarTableCard({
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h2 className="font-display text-xl font-bold">{t('event.table')}</h2>
         <span className="flex flex-wrap gap-4 text-sm font-semibold">
-          {/* Tabla propia en PNG para compartir en Discord */}
-          <WarImageButtons event={event} races={races} table={table} />
           <PerspectiveToggle />
           <button onClick={() => setDesignOpen((o) => !o)} aria-expanded={designOpen} className="text-kart-blue hover:underline">
             🎨 {t('design.title')}
@@ -572,6 +570,11 @@ function WarTableCard({
       </header>
 
       {designOpen && <WarDesignPanel eventId={event.id} />}
+
+      {/* Tabla propia en PNG para pegar en Discord: copiar con un clic, compartir en el móvil o descargar */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
+        <WarImageButtons event={event} races={races} table={table} />
+      </div>
 
       {/* La misma imagen que se descarga o se copia: marcador, escudos, diferencia por pista y posiciones medias */}
       <WarImagePreview event={event} races={races} table={table} />

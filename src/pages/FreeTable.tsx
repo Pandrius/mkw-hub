@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { PageHeader } from '../components/ui'
 import { useI18n } from '../i18n'
-import { rankRows, tableText, type FreeRow, type RankedRow } from '../lib/freeTable'
+import { copyText } from '../lib/clipboard'
+import { decodeTable, encodeTable, MAX_SHARE_LENGTH, rankRows, tableText, type FreeRow, type RankedRow } from '../lib/freeTable'
 
 const STORE = 'mkw-free-table'
 
 type Saved = { title: string; rows: FreeRow[] }
 
 /** Lo último que se estaba editando en este navegador (solo local: esta tabla no se guarda en ningún servidor) */
-function load(): Saved {
+function load(shared: string | null): Saved {
+  // Una tabla que llega por enlace (?d=) manda sobre lo guardado
+  const fromLink = decodeTable(shared)
+  if (fromLink) return { title: fromLink.title, rows: fromLink.rows.map((r, id) => ({ id, ...r })) }
   try {
     const raw = JSON.parse(localStorage.getItem(STORE) ?? 'null') as Saved | null
     if (raw && Array.isArray(raw.rows) && raw.rows.every((r) => typeof r?.name === 'string' && typeof r?.points === 'string' && typeof r?.id === 'number')) {
@@ -58,21 +63,26 @@ function drawPng(title: string, rows: RankedRow[], fallbackTitle: string): HTMLC
 
 /** Editor de tablas libre: sin cuenta, sin límite de jugadores y sin tocar ninguna estadística */
 export default function FreeTable() {
-  const { t } = useI18n()
-  const [initial] = useState(load)
+  const { t, lang } = useI18n()
+  const [params] = useSearchParams()
+  const [initial] = useState(() => load(params.get('d')))
+  const opened = useRef(decodeTable(params.get('d')) !== null)
   const [title, setTitle] = useState(initial.title)
   const [rows, setRows] = useState<FreeRow[]>(initial.rows)
   const [copied, setCopied] = useState(false)
+  const [linkNote, setLinkNote] = useState<string | null>(null)
   const nextId = useRef(Math.max(-1, ...initial.rows.map((r) => r.id)) + 1)
   const ranked = useMemo(() => rankRows(rows), [rows])
 
   useEffect(() => {
+    // Una tabla recién abierta desde un enlace no pisa la que tenías guardada hasta que la toques
+    if (opened.current && title === initial.title && rows === initial.rows) return
     try {
       localStorage.setItem(STORE, JSON.stringify({ title, rows } satisfies Saved))
     } catch {
       // almacenamiento no disponible: la tabla sigue funcionando
     }
-  }, [title, rows])
+  }, [title, rows, initial])
 
   const update = (id: number, patch: Partial<FreeRow>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   const add = () => setRows((rs) => [...rs, { id: nextId.current++, name: '', points: '' }])
@@ -85,6 +95,13 @@ export default function FreeTable() {
     } catch {
       // el navegador no deja copiar
     }
+  }
+  const copyLink = async () => {
+    const data = encodeTable(title, rows)
+    if (data.length > MAX_SHARE_LENGTH) return setLinkNote(t('share.tooLong'))
+    const ok = await copyText(`${window.location.origin}/t?d=${data}&lang=${lang}`)
+    setLinkNote(ok ? t('share.copied') : null)
+    setTimeout(() => setLinkNote(null), 2500)
   }
   const download = () => {
     const a = document.createElement('a')
@@ -155,7 +172,12 @@ export default function FreeTable() {
             <button type="button" className="btn-line" onClick={copy} disabled={ranked.length === 0}>
               {copied ? t('free.copied') : t('free.copy')}
             </button>
+            <button type="button" className="btn-line" onClick={copyLink} disabled={ranked.length === 0}>
+              {t('share.copyLink')}
+            </button>
           </div>
+          {linkNote && <p role="status" className="mt-2 text-sm text-kart-yellow">{linkNote}</p>}
+          <p className="mt-3 text-xs text-muted">{t('share.tableHint')}</p>
         </section>
       </div>
     </div>

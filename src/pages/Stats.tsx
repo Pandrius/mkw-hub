@@ -17,6 +17,8 @@ import { entityKey, teamsOf, type Entity } from '../lib/compare'
 import { achievementTotals, computeAchievements, demoAchievements } from '../lib/achievements'
 import { getAchievementStats, type AchievementStats } from '../lib/achievementStats'
 import { getOwnedTracks } from '../lib/trackOwners'
+import { copyText } from '../lib/clipboard'
+import { headToHead } from '../lib/headToHead'
 import { computeBadges } from '../lib/badges'
 import { listEventsFor } from '../lib/events'
 import type { TimedResult } from '../lib/form'
@@ -25,7 +27,7 @@ import { isGuideHidden } from '../lib/guideStore'
 import { getLoungeData, requestLoungeSync, type LoungeData } from '../lib/loungeApi'
 import { DEFAULT_BOLT_STYLE, featurable, isBoltStyle, loungeFactsOf, type BoltStyle } from '../lib/titles'
 import { computePlayerAnalytics } from '../lib/playerAnalytics'
-import type { StatsFilter } from '../lib/stats'
+import { matchesFilter, type StatsFilter } from '../lib/stats'
 import { rankHits, REMOTE_MIN_LENGTH, sanitizeTerm, searchRemote, type SearchHit } from '../lib/search'
 import { supabase } from '../lib/supabase'
 
@@ -154,8 +156,9 @@ const LOUNGE_SYNC_KEY = 'mkwhub.loungeSync'
 const LOUNGE_SYNC_EVERY_MS = 5 * 60 * 1000
 
 function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profileId: string; isMe: boolean; meId: string | null; vsId: string | null; demo: boolean; openEditor: boolean }) {
-  const { t, locale } = useI18n()
+  const { t, locale, lang } = useI18n()
   const navigate = useNavigate()
+  const [shared, setShared] = useState(false)
   const [filter, setFilter] = useState<StatsFilter>('all')
   const [verifyFilter, setVerifyFilter] = useState<VerifyFilter>('all')
   const [lounge, setLounge] = useState<LoungeData | null>(null)
@@ -251,6 +254,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
     return demo ? demoAchievements(real) : real
   }, [verifiedTimeline, demo])
   const vsAnalytics = useMemo(() => (vsShown ? computePlayerAnalytics(vsShown, filter) : null), [vsShown, filter])
+  const h2h = useMemo(() => (shown && vsShown ? headToHead(shown.filter((r) => matchesFilter(r, filter)), vsShown.filter((r) => matchesFilter(r, filter))) : null), [shown, vsShown, filter])
   const eventCounts = useMemo(() => {
     const all = new Set((timeline ?? []).map((r) => r.eventId))
     return { total: all.size, verified: new Set(verifiedTimeline.map((r) => r.eventId)).size }
@@ -290,6 +294,18 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
               [{tm.kind === 'team' ? tm.tag : ''}]
             </Link>
           ))}
+          <button
+            type="button"
+            className="font-mono text-xs font-bold text-kart-yellow hover:underline"
+            onClick={async () => {
+              if (await copyText(`${window.location.origin}/p/${profileId}?lang=${lang}`)) {
+                setShared(true)
+                setTimeout(() => setShared(false), 2000)
+              }
+            }}
+          >
+            {shared ? t('share.copied') : t('share.profile')}
+          </button>
           <Link
             to={`/tiempos?con=player:${profileId}`}
             className="font-mono text-xs font-bold text-muted hover:text-kart-yellow"
@@ -390,7 +406,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
         !analytics || !vsAnalytics ? (
           <EmptyState title={t('cmp.noData')}>{t('cmp.noDataOf', { user: !analytics ? ownerName : vsName })}</EmptyState>
         ) : (
-          <PlayerCompareView a={analytics} b={vsAnalytics} nameA={ownerName} nameB={vsName} filter={filter} />
+          <PlayerCompareView a={analytics} b={vsAnalytics} nameA={ownerName} nameB={vsName} filter={filter} h2h={h2h} />
         )
       ) : (
         <>

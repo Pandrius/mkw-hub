@@ -5,13 +5,14 @@ import type { GameEvent, EventRace } from '../lib/events'
 import type { WarTable } from '../lib/warTable'
 import { useWarImage } from './useWarImage'
 
-type Status = 'idle' | 'busy' | 'copied' | 'downloaded' | 'fallback' | 'error'
+type Status = 'idle' | 'busy' | 'copied' | 'downloaded' | 'fallback' | 'shared' | 'error'
 
 const STATUS_TEXT: Partial<Record<Status, MessageKey>> = {
   busy: 'warImg.generating',
   copied: 'warImg.copied',
   downloaded: 'warImg.downloaded',
   fallback: 'warImg.fallback',
+  shared: 'warImg.shared',
   error: 'warImg.error',
 }
 
@@ -29,6 +30,9 @@ function download(blob: Blob, fileName: string) {
 /** ¿Se puede copiar una imagen al portapapeles? (Clipboard API con ClipboardItem) */
 const canCopyImage = () =>
   typeof ClipboardItem !== 'undefined' && typeof navigator !== 'undefined' && !!navigator.clipboard?.write
+
+/** ¿Se puede compartir un archivo con la hoja de compartir del sistema (móviles)? */
+const canShareFile = (file: File) => typeof navigator !== 'undefined' && !!navigator.canShare && !!navigator.share && navigator.canShare({ files: [file] })
 
 /** Botones para descargar o copiar la tabla de la war como imagen PNG (para Discord) */
 export default function WarImageButtons({ event, races, table }: { event: GameEvent; races: EventRace[]; table: WarTable }) {
@@ -72,16 +76,37 @@ export default function WarImageButtons({ event, races, table }: { event: GameEv
     }
   }
 
+  const onShare = async () => {
+    setStatus('busy')
+    try {
+      const file = new File([await render()], fileName, { type: 'image/png' })
+      if (!canShareFile(file)) return flash('error')
+      await navigator.share({ files: [file] })
+      flash('shared')
+    } catch (err) {
+      // Cancelar la hoja de compartir no es un error
+      if (err instanceof DOMException && err.name === 'AbortError') setStatus('idle')
+      else flash('error')
+    }
+  }
+
   const busy = status === 'busy'
+  const mobile = typeof navigator !== 'undefined' && !!navigator.canShare && !!navigator.share && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
   const message = STATUS_TEXT[status]
 
   return (
     <>
-      <button onClick={onDownload} disabled={busy} className="text-kart-blue hover:underline disabled:opacity-50">
-        {t('warImg.download')}
-      </button>
-      <button onClick={onCopy} disabled={busy} className="text-kart-blue hover:underline disabled:opacity-50">
-        {t('warImg.copy')}
+      {mobile ? (
+        <button onClick={onShare} disabled={busy} className="btn-yellow text-base">
+          {t('warImg.share')}
+        </button>
+      ) : (
+        <button onClick={onCopy} disabled={busy} className="btn-yellow text-base">
+          {t('warImg.copy')}
+        </button>
+      )}
+      <button onClick={mobile ? onCopy : onDownload} disabled={busy} className="btn-line text-base">
+        {mobile ? t('warImg.copy') : t('warImg.download')}
       </button>
       {message && (
         <span role="status" className={status === 'error' ? 'text-kart-red' : 'text-muted'}>

@@ -7,6 +7,9 @@ import { PHASES } from '../lib/statMath'
 import { SectionTitle, Signed, Th, TrackName } from './StatBlocks'
 import { perEventKey, useNum } from './statFormat'
 import type { StatsFilter } from '../lib/stats'
+import { copyText } from '../lib/clipboard'
+import type { HeadToHead } from '../lib/headToHead'
+import { useState } from 'react'
 
 type Metric = {
   key: MessageKey
@@ -28,13 +31,59 @@ const METRICS: Metric[] = [
 ]
 
 /** Estadísticas de dos jugadores frente a frente: resumen, fases y pistas donde cada uno es mejor */
-export function PlayerCompareView({ a, b, nameA, nameB, filter }: { a: PlayerAnalytics; b: PlayerAnalytics; nameA: string; nameB: string; filter: StatsFilter }) {
+export function PlayerCompareView({ a, b, nameA, nameB, filter, h2h }: { a: PlayerAnalytics; b: PlayerAnalytics; nameA: string; nameB: string; filter: StatsFilter; h2h: HeadToHead | null }) {
   const { t } = useI18n()
   const num = useNum()
   const cmp = comparePlayers(a, b)
+  const [copied, setCopied] = useState(false)
+  // Veredicto: en cuántas métricas del resumen gana cada uno y en cuántas pistas comunes
+  const wins = METRICS.reduce(
+    (acc, m) => {
+      const va = m.value(a)
+      const vb = m.value(b)
+      if (va === vb) return acc
+      return (m.higherBetter ? va > vb : va < vb) ? { ...acc, a: acc.a + 1 } : { ...acc, b: acc.b + 1 }
+    },
+    { a: 0, b: 0 },
+  )
+  const tracksA = cmp.duels.filter((d) => d.diff >= DUEL_TIE).length
+  const tracksB = cmp.duels.filter((d) => d.diff <= -DUEL_TIE).length
+  const copyLink = async () => {
+    if (await copyText(window.location.href)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   return (
     <div className="space-y-8">
+      <section className="panel space-y-3 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="font-display text-2xl font-black">
+            {wins.a === wins.b ? t('cmp.verdictTie', { a: wins.a, b: wins.b }) : t('cmp.verdict', { name: wins.a > wins.b ? nameA : nameB, w: Math.max(wins.a, wins.b), l: Math.min(wins.a, wins.b) })}
+          </p>
+          <button type="button" onClick={copyLink} className="btn-line text-sm">
+            {copied ? t('share.copied') : t('cmp.copyLink')}
+          </button>
+        </div>
+        <p className="text-sm text-muted">
+          {t('cmp.verdictTracks', { a: nameA, na: tracksA, b: nameB, nb: tracksB })}
+        </p>
+        {h2h ? (
+          <div className="border-t border-line pt-3 text-sm">
+            <p className="font-semibold">{t('cmp.h2hTitle', { n: h2h.events })}</p>
+            <p className="mt-1">
+              {t('cmp.h2hEvents', { a: nameA, wa: h2h.aWins, b: nameB, wb: h2h.bWins, ties: h2h.ties })}
+            </p>
+            <p className="text-muted">
+              {t('cmp.h2hRaces', { a: nameA, ra: h2h.aAhead, b: nameB, rb: h2h.bAhead, pa: num(h2h.aPoints, 2), pb: num(h2h.bPoints, 2) })}
+            </p>
+          </div>
+        ) : (
+          <p className="border-t border-line pt-3 text-sm text-muted">{t('cmp.h2hNone')}</p>
+        )}
+      </section>
+
       <section>
         <SectionTitle title={t('cmp.summary')} hint={t('cmp.summaryHint')} />
         <div className="panel overflow-x-auto">

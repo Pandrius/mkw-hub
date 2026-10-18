@@ -483,6 +483,8 @@ export const es = {
   // Imagen de la war para compartir (warImg.*)
   'warImg.download': 'Descargar imagen',
   'warImg.copy': 'Copiar imagen',
+  'warImg.share': 'Compartir imagen',
+  'warImg.shared': 'Imagen compartida',
   'warImg.generating': 'Generando…',
   'warImg.copied': '¡Imagen copiada!',
   'warImg.downloaded': 'Imagen descargada',
@@ -1057,6 +1059,24 @@ export const es = {
   'event.final.title': 'Puesto final en el evento',
   'event.final.hint': 'En qué puesto quedó cada jugador en general (no en una carrera). Solo lo ponen los perfiles de confianza que jugaron en el evento; si lo pones, es el que cuenta para «Ganador sigiloso» en vez del calculado. Déjalo vacío si no lo sabes.',
   'event.final.save': 'Guardar puestos',
+  'og.events': 'Eventos',
+  'og.achievements': 'Logros',
+  'og.more': 'y {n} más',
+  'og.profileDesc': 'Estadísticas, logros y títulos de {name} en MKW Hub.',
+  'og.tableDesc': 'Tabla creada con el editor de MKW Hub.',
+  'share.profile': 'Compartir perfil',
+  'share.copied': '¡Enlace copiado!',
+  'share.copyLink': 'Copiar enlace',
+  'share.tableHint': 'El enlace lleva la tabla dentro y enseña una vista previa en Discord y otros chats. No se guarda en la web.',
+  'share.tooLong': 'La tabla es demasiado grande para un enlace.',
+  'cmp.verdict': '{name} gana {w}–{l} en el resumen',
+  'cmp.verdictTie': 'Empate {a}–{b} en el resumen',
+  'cmp.verdictTracks': 'Pistas en común: {a} rinde mejor en {na} y {b} en {nb}.',
+  'cmp.copyLink': 'Copiar enlace',
+  'cmp.h2hTitle': 'Cara a cara: {n} eventos en los que coincidieron',
+  'cmp.h2hEvents': 'Eventos: {a} {wa} · {b} {wb} · empates {ties}',
+  'cmp.h2hRaces': 'Carreras: {a} quedó por delante {ra} veces y {b} {rb}. Puntos por carrera: {pa} contra {pb}.',
+  'cmp.h2hNone': 'Cara a cara: nunca han coincidido en un evento (con estos filtros).',
 } as const
 
 export type MessageKey = keyof typeof es

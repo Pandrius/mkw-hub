@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
+    { "source": "/p/:id", "destination": "/api/share?kind=profile&id=:id" },
+    { "source": "/t", "destination": "/api/share?kind=table" },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
@@ -64,6 +66,9 @@
   "functions": {
     "api/sync.ts": {
       "maxDuration": 60
+    },
+    "api/og.ts": {
+      "maxDuration": 30
     },
     "api/lounge.ts": {
       "maxDuration": 30
