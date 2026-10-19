@@ -11,6 +11,8 @@ import { es, type MessageKey } from '../src/i18n/es.js'
 import { achievementTotals, computeAchievements } from '../src/lib/achievements.js'
 import { computeBadges } from '../src/lib/badges.js'
 import { buildTable, decodeWar } from '../src/lib/freeTable.js'
+import { chevronsSvg, medalDataUri, type MedalKind } from '../src/lib/medalSvg.js'
+import { titleSpec } from '../src/lib/ogTitle.js'
 import { profileCardNode, renderCard, tableCardNode, TABLE_CARD_ROWS, type CardFonts, type ProfileCard } from '../src/lib/ogCard.js'
 import { POINTS } from '../src/lib/scoring.js'
 import { parseDesign, resolvePalette } from '../src/lib/warDesign.js'
@@ -49,7 +51,7 @@ async function loadFonts(origin: string): Promise<CardFonts> {
   return fontCache
 }
 
-/** Foto de perfil como data URI (null si no se puede descargar a tiempo) */
+/** Imagen (foto de perfil, bandera) como data URI; null si no se puede descargar a tiempo */
 async function fetchAvatar(url: string | null): Promise<string | null> {
   if (!url || !url.startsWith('https://')) return null
   try {
@@ -103,15 +105,27 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
     if (!f) return []
     const color = fid === 'ach:legendEvent' ? RUBY : fid === 'ach:allAchievements' ? '#ffffff' : TIER_HEX[f.tier]
     const tierName = fid === 'ach:legendEvent' ? t('badge.tier.ruby') : fid === 'ach:allAchievements' ? t('badge.tier.legendary') : t(`badge.tier.${f.tier}` as MessageKey)
-    return [{ name: featuredLabel(fid, f.tier, t), tier: tierName, color }]
+    // La medalla de la web: el escudo de metal del nivel (rubí y multicolor para los dos logros únicos) con su dibujo
+    const kind: MedalKind = fid === 'ach:legendEvent' ? 'ruby' : fid === 'ach:allAchievements' ? 'legend' : 'metal'
+    const single = kind !== 'metal'
+    const levels = Math.max(4, f.tier)
+    return [{ src: medalDataUri(f.glyph, f.tier, kind), name: featuredLabel(fid, f.tier, t), tier: tierName, color, levels: single ? 0 : levels, earned: f.tier }]
   })
 
   const nf = new Intl.NumberFormat(lang === 'en' ? 'en-GB' : 'es-ES')
+  const titleId = (prof.title_id as string | null) ?? null
+  const spec = titleId ? titleSpec(titleId) : null
+  const country = (prof.country_code as string | null)?.toLowerCase() ?? null
+  const [avatar, flag] = await Promise.all([
+    fetchAvatar((prof.avatar_url as string | null) ?? null),
+    // Misma bandera que la web (flagcdn): a la derecha del nombre
+    country && /^[a-z]{2}$/.test(country) ? fetchAvatar(`https://flagcdn.com/w80/${country}.png`) : Promise.resolve(null),
+  ])
   return {
     name: String(prof.username ?? '?'),
-    country: (prof.country_code as string | null) ?? null,
-    title: prof.title_id ? titleLabel(prof.title_id as string, t) : null,
-    avatar: await fetchAvatar((prof.avatar_url as string | null) ?? null),
+    flag,
+    title: titleId && spec ? { text: titleLabel(titleId, t), spec, chevrons: spec.war ? chevronsSvg(spec.war.level, spec.war.color) : undefined } : null,
+    avatar,
     stats: [
       { label: t('og.mmr'), value: mmr === null ? '—' : nf.format(mmr) },
       { label: t('og.events'), value: nf.format(new Set(timeline.map((r) => r.eventId)).size) },
@@ -119,7 +133,7 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
       { label: t('og.winrate'), value: `${winRate}%` },
       { label: t('og.achievements'), value: `${totals.earned}/${totals.possible}` },
     ],
-    badges: featured,
+    medals: featured,
     footer: 'mkw-hub.vercel.app',
   }
 }

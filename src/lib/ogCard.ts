@@ -5,6 +5,7 @@
  */
 import { Resvg } from '@resvg/resvg-js'
 import satori from 'satori'
+import type { TitleSpec } from './ogTitle.js'
 
 export const CARD_W = 1200
 export const CARD_H = 630
@@ -14,6 +15,7 @@ const SURFACE = '#1c1c1b'
 const SURFACE2 = '#292927'
 const INK = '#f4f2ec'
 const MUTED = '#a5a29a'
+const LINE = '#3b3b38'
 const YELLOW = '#ffd500'
 const RED = '#ff5a4d'
 
@@ -39,15 +41,38 @@ function frame(content: Node[], footer: string): Node {
   ])
 }
 
+
 export type ProfileCard = {
   name: string
-  country: string | null
-  title: string | null
+  /** Bandera del país como data URI (null si no tiene país o no se pudo descargar) */
+  flag: string | null
+  /** Título con el aspecto de su placa en la web; `chevrons` son los galones de los rangos de guerra (data URI) */
+  title: { text: string; spec: TitleSpec; chevrons?: string } | null
   /** Foto como data URI (null si no hay o no se pudo descargar) */
   avatar: string | null
   stats: { label: string; value: string }[]
-  badges: { name: string; tier: string; color: string }[]
+  /** Insignias destacadas: la medalla de la web (data URI), su nombre, el nivel y los niveles conseguidos de los posibles */
+  medals: { src: string; name: string; tier: string; color: string; levels: number; earned: number }[]
   footer: string
+}
+
+const TITLE_FONT = { fontFamily: 'Big Shoulders', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1 } as const
+
+/** El título como su placa de la web (colores, degradados y filetes de index.css; los rangos de guerra llevan sus galones) */
+function titleNode(title: NonNullable<ProfileCard['title']>): Node {
+  const s = title.spec
+  const text = (color: string): Style => ({ ...TITLE_FONT, fontSize: 30, color })
+  if (s.war) {
+    return h({ alignItems: 'stretch' }, [
+      h({ background: '#141414', padding: '8px 16px 8px 12px', alignItems: 'center' }, { type: 'img', props: { src: title.chevrons ?? '', width: 20, height: 28, style: { width: 20, height: 28 } } } as Node),
+      h({ background: s.bg ?? '#ffd500', padding: '8px 18px 8px 12px', alignItems: 'center', ...text('#141414') }, title.text),
+    ])
+  }
+  const box: Style = { alignItems: 'center', padding: '8px 18px', ...text(s.ink) }
+  if (s.bg) box.backgroundColor = s.bg
+  if (s.image) box.backgroundImage = s.image
+  if (s.edge) box.border = `${s.edge.width}px solid ${s.edge.color}`
+  return h(box, title.text)
 }
 
 export function profileCardNode(c: ProfileCard): Node {
@@ -58,16 +83,17 @@ export function profileCardNode(c: ProfileCard): Node {
         c.avatar
           ? ({ type: 'img', props: { src: c.avatar, width: 150, height: 150, style: { width: 150, height: 150, borderRadius: 75 } } } as Node)
           : h({ width: 150, height: 150, borderRadius: 75, background: SURFACE2, alignItems: 'center', justifyContent: 'center', ...display(80, YELLOW) }, initial),
-        h({ flexDirection: 'column', gap: 14, flex: 1 }, [
-          h({ ...display(c.name.length > 16 ? 64 : 84), maxWidth: 900, overflow: 'hidden' }, c.name),
-          h({ alignItems: 'center', gap: 16, fontSize: 30, color: MUTED }, [
-            ...(c.title ? [h({ background: YELLOW, color: BG, padding: '4px 16px', fontWeight: 700, fontSize: 28 }, c.title)] : []),
-            ...(c.country ? [h({}, c.country)] : []),
+        h({ flexDirection: 'column', gap: 16, flex: 1 }, [
+          // Nombre y, a su derecha, la bandera de su país
+          h({ alignItems: 'center', gap: 24 }, [
+            h({ ...display(c.name.length > 14 ? 60 : 84), maxWidth: c.flag ? 800 : 900, overflow: 'hidden', whiteSpace: 'nowrap' }, c.name),
+            ...(c.flag ? [{ type: 'img', props: { src: c.flag, width: 60, height: 45, style: { width: 60, height: 45 } } } as Node] : []),
           ]),
+          ...(c.title ? [h({}, titleNode(c.title))] : []),
         ]),
       ]),
       h(
-        { gap: 14, marginTop: 40 },
+        { gap: 14, marginTop: 36 },
         c.stats.map((s) =>
           h({ flexDirection: 'column', flex: 1, background: SURFACE, borderTop: `6px solid ${YELLOW}`, padding: '16px 18px', gap: 8 }, [
             h({ ...display(58) }, s.value),
@@ -76,11 +102,20 @@ export function profileCardNode(c: ProfileCard): Node {
         ),
       ),
       h(
-        { gap: 20, marginTop: 28 },
-        c.badges.map((b) =>
-          h({ width: 350, alignItems: 'center', gap: 14, background: SURFACE, padding: '14px 18px' }, [
-            h({ width: 22, height: 22, borderRadius: 11, background: b.color }),
-            h({ flexDirection: 'column', gap: 2 }, [h({ fontSize: 26, fontWeight: 700 }, b.name), h({ fontSize: 20, color: MUTED }, b.tier)]),
+        { gap: 20, marginTop: 24 },
+        c.medals.map((m) =>
+          h({ width: 350, alignItems: 'center', gap: 16, background: SURFACE, padding: '12px 18px' }, [
+            { type: 'img', props: { src: m.src, width: 56, height: 62, style: { width: 56, height: 62 } } } as Node,
+            h({ flexDirection: 'column', gap: 6 }, [
+              h({ fontSize: 24, fontWeight: 700 }, m.name),
+              h({ alignItems: 'center', gap: 10 }, [
+                h({ fontSize: 19, color: m.color, fontWeight: 700 }, m.tier),
+                h(
+                  { gap: 3 },
+                  Array.from({ length: m.levels }, (_, k) => h({ width: 9, height: 9, background: k < m.earned ? m.color : LINE })),
+                ),
+              ]),
+            ]),
           ]),
         ),
       ),
