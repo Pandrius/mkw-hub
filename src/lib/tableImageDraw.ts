@@ -7,7 +7,7 @@
 import { medalOf, type TableData, type TableTeam } from './freeTable'
 import { coverRect, luminance, medalColor, mixColors, PRESET_STYLE, readable, resolvePalette, type Palette, type PresetStyle, type WarDesign } from './warDesign'
 import { fitText } from './warImage'
-import { skinBackground, skinBar, skinPanel, moltenPaint, type Skin } from './tableSkins'
+import { skinBackground, skinBar, skinGrain, skinPanel, moltenPaint, type Skin } from './tableSkins'
 import { canvasToPng, loadPhoto, waitForFonts } from './warImageDraw'
 
 type Ctx = CanvasRenderingContext2D
@@ -88,9 +88,9 @@ function polygon(ctx: Ctx, points: [number, number][], color: string) {
 }
 
 /** Panel plano: borde de 2px (1px y esquinas en el elegante, bloque con sombra dura en el arcade) */
-function panel(env: Env, x: number, y: number, w: number, h: number, accent?: string) {
+function panel(env: Env, x: number, y: number, w: number, h: number, accent?: string, drip = 14) {
   const { ctx, C, style } = env
-  if (env.skin) return skinPanel(env.skin, ctx, C, x, y, w, h, env.alpha)
+  if (env.skin) return skinPanel(env.skin, ctx, C, x, y, w, h, env.alpha, drip)
   if (style === 'arcade') {
     ctx.fillStyle = C.bg
     ctx.fillRect(x + 5, y + 5, w, h)
@@ -309,7 +309,7 @@ function teamHeads(env: Env, data: TableData, y: number) {
   const teamBox = (team: TableTeam, home: boolean) => {
     const x = home ? PAD : PAD + COL_W + GAP
     const color = sideColor(env, home)
-    panel(env, x, y, COL_W, TEAM_H, style === 'arcade' ? color : undefined)
+    panel(env, x, y, COL_W, TEAM_H, style === 'arcade' ? color : undefined, 34)
     if (style === 'standard') {
       ctx.fillStyle = color
       ctx.fillRect(home ? x : x + COL_W - 8, y, 8, TEAM_H)
@@ -324,11 +324,11 @@ function teamHeads(env: Env, data: TableData, y: number) {
     fitted(env, team.tag, edge, y + (team.name ? 104 : 116), nameW, 900, style === 'elegant' ? 64 : 76, display, gold, align, 34)
     if (team.name) fitted(env, team.name, edge, y + 140, nameW, 600, 22, SANS, C.muted, align)
     const total = style === 'arcade' && team.total >= 0 ? String(team.total).padStart(4, '0') : String(team.total)
-    const totalPaint = env.skin === 'magma' ? moltenPaint(ctx, C, y + 20, y + 130) : style === 'standard' || style === 'arcade' ? color : gold
+    const totalPaint = env.skin === 'magma' ? moltenPaint(ctx, C) : style === 'standard' || style === 'arcade' ? color : gold
     ctx.save()
     if (env.skin === 'magma') {
-      ctx.shadowColor = C.accent
-      ctx.shadowBlur = 22
+      ctx.shadowColor = C.red
+      ctx.shadowBlur = 9
     }
     fitted(env, total, home ? x + COL_W - 84 : x + 84, y + 118, totalW, style === 'arcade' ? 700 : 900, style === 'arcade' ? 78 : 112, style === 'arcade' ? MONO : display, totalPaint, home ? 'right' : 'left', 40)
     ctx.restore()
@@ -463,6 +463,15 @@ function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement |
     ctx.globalAlpha = 1
   }
   scrim(0, top)
+  // Sobre la lava el texto suelto se pierde: una sombra de roca detrás de la cabecera y del pie
+  const rockShade = (y0: number, y1: number, fromTop: boolean) => {
+    const g = ctx.createLinearGradient(0, y0, 0, y1)
+    g.addColorStop(0, fromTop ? 'rgba(8,3,2,0.7)' : 'rgba(8,3,2,0)')
+    g.addColorStop(1, fromTop ? 'rgba(8,3,2,0)' : 'rgba(8,3,2,0.7)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, y0, W, y1 - y0)
+  }
+  if (skin === 'magma') rockShade(0, top + 10, true)
   header(env, data, design, labels.war)
 
   let y = top + (style === 'versus' ? 0 : 24)
@@ -472,8 +481,10 @@ function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement |
   playersTable(env, data, data.away, false, PAD + COL_W + GAP, y, rows, labels)
   y += tableH + 36
   scrim(y - 14, H)
+  if (skin === 'magma') rockShade(y - 24, H, false)
   footer(env, y)
 
+  if (skin) skinGrain(ctx, W, H)
   if (style === 'elegant') {
     ctx.strokeStyle = mixColors(C.accent, '#ffffff', 0.2)
     ctx.lineWidth = 2

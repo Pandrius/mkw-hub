@@ -238,14 +238,22 @@ export default function FreeTable() {
 
       <div className="flex flex-wrap items-center gap-3">
         <input className="field max-w-xl flex-1" value={war.title} maxLength={60} onChange={(e) => setWar((w) => ({ ...w, title: e.target.value }))} placeholder={t('free.tableName')} aria-label={t('free.tableName')} />
-        <button type="button" className="btn-line text-sm" onClick={() => setDesignOpen((o) => !o)} aria-expanded={designOpen}>
-          🎨 {t('design.title')}
-        </button>
         <button type="button" className="min-h-11 text-sm text-muted hover:text-kart-red" onClick={clear}>
           {t('free.clear')}
         </button>
       </div>
 
+      <div className="grid gap-6 md:grid-cols-2">
+        {teamEditor('home')}
+        {teamEditor('away')}
+      </div>
+      <p className="text-sm text-muted">{t('free.hint')}</p>
+
+      <div>
+        <button type="button" className="btn-line text-sm" onClick={() => setDesignOpen((o) => !o)} aria-expanded={designOpen}>
+          🎨 {t('design.title')}
+        </button>
+      </div>
       {designOpen && (
         <div className="panel overflow-hidden">
           <WarDesignPanel
@@ -260,12 +268,6 @@ export default function FreeTable() {
           <p className="px-4 pb-4 text-xs text-muted sm:px-5">{t('free.photoSafe')}</p>
         </div>
       )}
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {teamEditor('home')}
-        {teamEditor('away')}
-      </div>
-      <p className="text-sm text-muted">{t('free.hint')}</p>
 
       <section className="panel overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 sm:px-5">

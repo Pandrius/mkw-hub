@@ -37,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
   const origin = url.origin
   // Discord y otros chats guardan la vista previa de cada enlace: cada copia del enlace lleva `v` para que sea siempre la de ahora
   const version = url.searchParams.get('v')
-  const vq = version && /^[w-]{1,20}$/.test(version) ? `&v=${version}` : ''
+  const vq = version && /^[A-Za-z0-9_-]{1,20}$/.test(version) ? `&v=${version}` : ''
   const kind = url.searchParams.get('kind')
 
   if (kind === 'profile') {
