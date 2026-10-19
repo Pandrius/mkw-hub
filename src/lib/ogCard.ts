@@ -67,18 +67,18 @@ export function profileCardNode(c: ProfileCard): Node {
         ]),
       ]),
       h(
-        { gap: 20, marginTop: 40 },
+        { gap: 14, marginTop: 40 },
         c.stats.map((s) =>
-          h({ flexDirection: 'column', flex: 1, background: SURFACE, borderTop: `6px solid ${YELLOW}`, padding: '18px 22px', gap: 8 }, [
-            h({ ...display(64) }, s.value),
-            h({ fontSize: 24, color: MUTED }, s.label),
+          h({ flexDirection: 'column', flex: 1, background: SURFACE, borderTop: `6px solid ${YELLOW}`, padding: '16px 18px', gap: 8 }, [
+            h({ ...display(58) }, s.value),
+            h({ fontSize: 22, color: MUTED }, s.label),
           ]),
         ),
       ),
       h(
         { gap: 20, marginTop: 28 },
         c.badges.map((b) =>
-          h({ flex: 1, alignItems: 'center', gap: 14, background: SURFACE, padding: '14px 18px' }, [
+          h({ width: 350, alignItems: 'center', gap: 14, background: SURFACE, padding: '14px 18px' }, [
             h({ width: 22, height: 22, borderRadius: 11, background: b.color }),
             h({ flexDirection: 'column', gap: 2 }, [h({ fontSize: 26, fontWeight: 700 }, b.name), h({ fontSize: 20, color: MUTED }, b.tier)]),
           ]),

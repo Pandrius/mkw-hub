@@ -82,7 +82,10 @@ function titleLabel(id: string, t: ReturnType<typeof translator>): string {
 
 async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> {
   const admin = createClient(process.env.VITE_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } })
-  const { data: prof } = await admin.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id').eq('id', id).maybeSingle()
+  const [{ data: prof }, { data: lounge }] = await Promise.all([
+    admin.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id').eq('id', id).maybeSingle(),
+    admin.from('lounge_players').select('mmr').eq('profile_id', id).maybeSingle(),
+  ])
   if (!prof) return null
   const t = translator(lang)
   const timeline = (await fetchTimeline(admin, id)).filter((r) => r.verified)
@@ -91,7 +94,9 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
   const totals = achievementTotals(achievements)
   const owned = featurable(achievements, badges)
   const points = timeline.reduce((n, r) => n + (POINTS[r.position - 1] ?? 0), 0)
-  const perWar = timeline.length ? Math.round((points / timeline.length) * 12) : 0
+  const perEvent = timeline.length ? Math.round((points / timeline.length) * 12) : 0
+  const winRate = timeline.length ? Math.round((timeline.filter((r) => r.position === 1).length / timeline.length) * 100) : 0
+  const mmr = typeof lounge?.mmr === 'number' ? lounge.mmr : null
 
   const featured = ((prof.featured_badges as string[] | null) ?? []).flatMap((fid) => {
     const f = owned.find((o) => o.id === fid)
@@ -108,9 +113,10 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
     title: prof.title_id ? titleLabel(prof.title_id as string, t) : null,
     avatar: await fetchAvatar((prof.avatar_url as string | null) ?? null),
     stats: [
+      { label: t('og.mmr'), value: mmr === null ? '—' : nf.format(mmr) },
       { label: t('og.events'), value: nf.format(new Set(timeline.map((r) => r.eventId)).size) },
-      { label: t('stats.races'), value: nf.format(timeline.length) },
-      { label: t('an.perWar'), value: String(perWar) },
+      { label: t('og.perEvent'), value: String(perEvent) },
+      { label: t('og.winrate'), value: `${winRate}%` },
       { label: t('og.achievements'), value: `${totals.earned}/${totals.possible}` },
     ],
     badges: featured,
