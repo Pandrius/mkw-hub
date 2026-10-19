@@ -3,7 +3,8 @@
  * No tiene nada que ver con las wars guardadas: no hace falta cuenta y no cuenta en ninguna estadística, ranking ni logro.
  */
 export type FreePlayer = { id: number; name: string; /** Lo escrito en el campo: un número o una suma como 15+12+10 */ points: string }
-export type FreeTeam = { tag: string; name: string; players: FreePlayer[] }
+/** `teamId`: el equipo de la web elegido en el buscador (sirve para sugerir a sus jugadores); sin él, el tag y el nombre son libres */
+export type FreeTeam = { tag: string; name: string; players: FreePlayer[]; teamId?: number | null }
 export type FreeWar = { title: string; home: FreeTeam; away: FreeTeam }
 
 /** Jugadores de cada equipo al empezar (se pueden añadir y quitar sin límite) */

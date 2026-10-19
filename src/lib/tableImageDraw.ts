@@ -7,6 +7,7 @@
 import { medalOf, type TableData, type TableTeam } from './freeTable'
 import { coverRect, luminance, medalColor, mixColors, PRESET_STYLE, readable, resolvePalette, type Palette, type PresetStyle, type WarDesign } from './warDesign'
 import { fitText } from './warImage'
+import { skinBackground, skinBar, skinPanel, moltenPaint, type Skin } from './tableSkins'
 import { canvasToPng, loadPhoto, waitForFonts } from './warImageDraw'
 
 type Ctx = CanvasRenderingContext2D
@@ -30,9 +31,10 @@ export const MIN_TABLE_DIM = 0.3
 /** Opacidad de los paneles con foto de fondo: casi sólidos, la foto se ve por los lados y entre ellos */
 const PANEL_ALPHA_PHOTO = 0.9
 
-type Env = { ctx: Ctx; C: Palette; style: PresetStyle; display: string; alpha: number; light: boolean }
+/** `style` es el trazado (los diseños de hielo y magma usan el estándar) y `skin` la textura que se les añade */
+type Env = { ctx: Ctx; C: Palette; style: PresetStyle; skin: Skin | null; display: string; alpha: number; light: boolean }
 
-function text(env: Env, s: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') {
+function text(env: Env, s: string, x: number, y: number, font: string, color: string | CanvasGradient, align: CanvasTextAlign = 'left') {
   env.ctx.font = font
   env.ctx.fillStyle = color
   env.ctx.textAlign = align
@@ -40,7 +42,7 @@ function text(env: Env, s: string, x: number, y: number, font: string, color: st
 }
 
 /** Texto que se encoge hasta `minSize` y, si aun así no cabe, se recorta con «…» */
-function fitted(env: Env, s: string, x: number, y: number, maxWidth: number, weight: number, size: number, family: string, color: string, align: CanvasTextAlign = 'left', minSize = size) {
+function fitted(env: Env, s: string, x: number, y: number, maxWidth: number, weight: number, size: number, family: string, color: string | CanvasGradient, align: CanvasTextAlign = 'left', minSize = size) {
   const { ctx } = env
   let px = size
   ctx.font = `${weight} ${px}px ${family}`
@@ -88,6 +90,7 @@ function polygon(ctx: Ctx, points: [number, number][], color: string) {
 /** Panel plano: borde de 2px (1px y esquinas en el elegante, bloque con sombra dura en el arcade) */
 function panel(env: Env, x: number, y: number, w: number, h: number, accent?: string) {
   const { ctx, C, style } = env
+  if (env.skin) return skinPanel(env.skin, ctx, C, x, y, w, h, env.alpha)
   if (style === 'arcade') {
     ctx.fillStyle = C.bg
     ctx.fillRect(x + 5, y + 5, w, h)
@@ -161,6 +164,7 @@ function background(env: Env, H: number, photo: HTMLImageElement | null, dim: nu
     ctx.fillStyle = g
     ctx.fillRect(0, 0, W, H)
   }
+  if (env.skin) skinBackground(env.skin, ctx, C, W, H)
   if (style === 'arcade') {
     // Cuadrícula en perspectiva abajo, como el suelo de una recreativa
     ctx.strokeStyle = C.accent
@@ -205,18 +209,21 @@ function hazard(env: Env, y: number, h: number, stripes: boolean) {
 }
 
 type Header = { height: number }
-const headerHeight = (style: PresetStyle): number => ({ standard: 14 + 64, elegant: 30 + 124, versus: 96, arcade: 88 })[style]
+const headerHeight = (style: PresetStyle, skin: Skin | null = null): number => ({ standard: 14 + 64, elegant: 30 + 124, versus: 96, arcade: 88, ice: 78, magma: 78 })[style] + (skin ? 12 : 0)
 
 function header(env: Env, data: TableData, design: WarDesign, wordWar: string): Header {
   const { ctx, C, style, display } = env
   const title = (data.title || wordWar).toUpperCase()
   if (style === 'standard') {
-    hazard(env, 0, 14, design.stripes)
-    text(env, 'MKW HUB', PAD, 14 + 42, `900 30px ${display}`, C.accent)
+    // Con textura, los carámbanos o la lava de la barra cuelgan sobre la cabecera: el texto baja un poco
+    const dy = env.skin ? 12 : 0
+    if (env.skin) skinBar(env.skin, ctx, C, W, 14)
+    else hazard(env, 0, 14, design.stripes)
+    text(env, 'MKW HUB', PAD, 14 + 42 + dy, `900 30px ${display}`, C.accent)
     ctx.font = `900 30px ${display}`
     const brandW = ctx.measureText('MKW HUB').width
-    slant(ctx, PAD + brandW + 14, 14 + 20, 12, 28, 7, C.accent)
-    fitted(env, title, PAD + brandW + 44, 14 + 43, W - PAD * 2 - brandW - 44, 900, 30, display, C.ink, 'left', 18)
+    slant(ctx, PAD + brandW + 14, 14 + 20 + dy, 12, 28, 7, C.accent)
+    fitted(env, title, PAD + brandW + 44, 14 + 43 + dy, W - PAD * 2 - brandW - 44, 900, 30, display, C.ink, 'left', 18)
   } else if (style === 'elegant') {
     spaced(env, 'MKW HUB', PAD + 14, 30 + 36, `600 13px ${SANS}`, C.muted, 5)
     let size = 48
@@ -239,7 +246,7 @@ function header(env: Env, data: TableData, design: WarDesign, wordWar: string): 
     text(env, 'MKW HUB', PAD, 44, `700 20px ${MONO}`, C.accent)
     fitted(env, title, W / 2, 62, 760, 900, 52, display, C.ink, 'center', 26)
   }
-  return { height: headerHeight(style) }
+  return { height: headerHeight(style, env.skin) }
 }
 
 function footer(env: Env, y: number) {
@@ -262,7 +269,7 @@ function footer(env: Env, y: number) {
     text(env, 'mkw-hub.vercel.app/tablas', W - PAD, y + 32, `700 14px ${MONO}`, C.ink, 'right')
   }
 }
-const footerHeight = (style: PresetStyle): number => ({ standard: 56, elegant: 76, versus: 50, arcade: 50 })[style]
+const footerHeight = (style: PresetStyle): number => ({ standard: 56, elegant: 76, versus: 50, arcade: 50, ice: 56, magma: 56 })[style]
 
 // ───────────────────────── Equipos y marcador ─────────────────────────
 
@@ -317,7 +324,14 @@ function teamHeads(env: Env, data: TableData, y: number) {
     fitted(env, team.tag, edge, y + (team.name ? 104 : 116), nameW, 900, style === 'elegant' ? 64 : 76, display, gold, align, 34)
     if (team.name) fitted(env, team.name, edge, y + 140, nameW, 600, 22, SANS, C.muted, align)
     const total = style === 'arcade' && team.total >= 0 ? String(team.total).padStart(4, '0') : String(team.total)
-    fitted(env, total, home ? x + COL_W - 84 : x + 84, y + 118, totalW, style === 'arcade' ? 700 : 900, style === 'arcade' ? 78 : 112, style === 'arcade' ? MONO : display, style === 'standard' || style === 'arcade' ? color : gold, home ? 'right' : 'left', 40)
+    const totalPaint = env.skin === 'magma' ? moltenPaint(ctx, C, y + 20, y + 130) : style === 'standard' || style === 'arcade' ? color : gold
+    ctx.save()
+    if (env.skin === 'magma') {
+      ctx.shadowColor = C.accent
+      ctx.shadowBlur = 22
+    }
+    fitted(env, total, home ? x + COL_W - 84 : x + 84, y + 118, totalW, style === 'arcade' ? 700 : 900, style === 'arcade' ? 78 : 112, style === 'arcade' ? MONO : display, totalPaint, home ? 'right' : 'left', 40)
+    ctx.restore()
   }
   teamBox(data.home, true)
   teamBox(data.away, false)
@@ -361,10 +375,13 @@ function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean,
   panel(env, x, y, COL_W, h, style === 'arcade' ? color : undefined)
 
   // Cabecera de la tabla: tag del equipo y títulos de columna
-  ctx.fillStyle = C.bg
-  ctx.globalAlpha = env.alpha
-  ctx.fillRect(x + 3, y + 3, COL_W - 6, HEAD_H - 3)
-  ctx.globalAlpha = 1
+  // (en el hielo la cabecera no lleva banda: taparía los carámbanos)
+  if (env.skin !== 'ice') {
+    ctx.fillStyle = C.bg
+    ctx.globalAlpha = env.alpha
+    ctx.fillRect(x + 3, y + 3, COL_W - 6, HEAD_H - 3)
+    ctx.globalAlpha = 1
+  }
   if (style === 'versus') {
     ctx.fillStyle = color
     ctx.fillRect(x + 3, y + 3, 6, HEAD_H - 3)
@@ -403,10 +420,7 @@ function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean,
     const base = ry + ROW_H / 2 + 8
     const medal = medalOf(p.points, data)
     const medalPaint = medal === null ? null : medalColor(medal, light)
-    const rank = String(i + 1).padStart(2, '0')
-    text(env, rank, x + 22, base - 1, `600 14px ${MONO}`, style === 'standard' || style === 'elegant' ? C.muted : color)
-    const nameX = x + 62
-    fitted(env, p.name, nameX, base, COL_W - 62 - 130, 600, 22, SANS, medalPaint ?? C.ink, 'left', 16)
+    fitted(env, p.name, x + 24, base, COL_W - 24 - 130, 600, 22, SANS, medalPaint ?? C.ink, 'left', 16)
     text(env, String(p.points), x + COL_W - 22, base + 2, style === 'arcade' ? `700 26px ${MONO}` : `800 30px ${display}`, p.points < 0 ? C.red : (medalPaint ?? C.ink), 'right')
   })
 
@@ -421,11 +435,14 @@ export type TableLabels = { player: string; points: string; war: string }
 
 function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement | null, labels: TableLabels): HTMLCanvasElement {
   const C = resolvePalette(design)
-  const style = PRESET_STYLE[design.preset]
+  const visual = PRESET_STYLE[design.preset]
+  // Hielo y magma se trazan como el estándar y llevan encima su textura
+  const skin: Skin | null = visual === 'ice' ? 'ice' : visual === 'magma' ? 'magma' : null
+  const style: PresetStyle = skin ? 'standard' : visual
   const display = style === 'elegant' ? DISPLAY_SERIF : DISPLAY_SANS
   const rows = Math.max(1, data.home.players.length, data.away.players.length)
   const tableH = HEAD_H + rows * ROW_H + 6
-  const top = headerHeight(style)
+  const top = headerHeight(style, skin)
   const H = top + (style === 'versus' ? 0 : 24) + TEAM_H + 24 + tableH + 36 + footerHeight(style) + 16
 
   const canvas = document.createElement('canvas')
@@ -435,7 +452,7 @@ function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement |
   if (!ctx) throw new Error('Canvas 2D no disponible')
   ctx.scale(SCALE, SCALE)
 
-  const env: Env = { ctx, C, style, display, alpha: photo ? PANEL_ALPHA_PHOTO : 1, light: luminance(C.bg) > 0.5 }
+  const env: Env = { ctx, C, style, skin, display, alpha: photo ? PANEL_ALPHA_PHOTO : 1, light: luminance(C.bg) > 0.5 }
   background(env, H, photo, design.photo?.dim ?? 0.55)
   // Con foto, el texto suelto (cabecera y pie) va sobre una banda del color de fondo para que se lea con cualquier imagen
   const scrim = (y0: number, y1: number) => {

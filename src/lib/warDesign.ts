@@ -23,10 +23,11 @@ export type PresetId = 'asphalt' | 'official' | 'light' | 'neon' | 'sunset' | 'o
 
 /**
  * Cómo se dibuja: "standard" (placas inclinadas, franjas), "elegant" (serif, filetes finos y marco) y, solo en las tablas libres
- * (tableImageDraw.ts), "versus" (pantalla de combate partida en diagonal) y "arcade" (recreativa con líneas de barrido). En la
- * imagen de la war esos dos se dibujan como el estándar, con sus colores.
+ * (tableImageDraw.ts), "versus" (pantalla de combate partida en diagonal), "arcade" (recreativa con líneas de barrido), "ice"
+ * (tabla congelada, con carámbanos y escarcha) y "magma" (roca volcánica con grietas de lava). En la imagen de la war esos
+ * cuatro se dibujan como el estándar, con sus colores.
  */
-export type PresetStyle = 'standard' | 'elegant' | 'versus' | 'arcade'
+export type PresetStyle = 'standard' | 'elegant' | 'versus' | 'arcade' | 'ice' | 'magma'
 
 export const PRESETS: Record<PresetId, Palette> = {
   // El de siempre: asfalto y amarillo kart
@@ -60,8 +61,8 @@ export const PRESET_STYLE: Record<PresetId, PresetStyle> = {
   ocean: 'standard',
   versus: 'versus',
   arcade: 'arcade',
-  frost: 'standard',
-  lava: 'standard',
+  frost: 'ice',
+  lava: 'magma',
 }
 
 /** Colores que se pueden retocar sobre el preset */

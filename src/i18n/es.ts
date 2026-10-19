@@ -1056,6 +1056,8 @@ export const es = {
   'free.team2': 'Equipo 2',
   'free.tag': 'Tag',
   'free.teamName': 'Nombre del equipo (opcional)',
+  'free.searchTeam': 'Buscar equipo (tag o nombre)',
+  'free.clearTeam': 'Quitar el equipo elegido',
   'free.photoSafe': 'La foto siempre se oscurece un mínimo y las tablas van sobre paneles casi opacos, así que nunca tapa los nombres ni los puntos.',
   'design.preset.versus': 'Versus',
   'design.preset.arcade': 'Arcade',

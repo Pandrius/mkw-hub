@@ -298,7 +298,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
             type="button"
             className="font-mono text-xs font-bold text-kart-yellow hover:underline"
             onClick={async () => {
-              if (await copyText(`${window.location.origin}/p/${profileId}?lang=${lang}`)) {
+              if (await copyText(`${window.location.origin}/p/${profileId}?lang=${lang}&v=${Date.now().toString(36)}`)) {
                 setShared(true)
                 setTimeout(() => setShared(false), 2000)
               }

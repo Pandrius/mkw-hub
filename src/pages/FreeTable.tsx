@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { PageHeader } from '../components/ui'
+import PlayerInput from '../components/PlayerInput'
+import { SearchBox } from '../components/SearchBox'
+import { PageHeader, Plate } from '../components/ui'
 import WarDesignPanel from '../components/WarDesignPanel'
 import { useWarDesign } from '../components/useWarDesign'
 import { useI18n } from '../i18n'
 import { copyText } from '../lib/clipboard'
+import { getAllTeams, type TeamWithMembers } from '../lib/compare'
+import { rankTeams } from '../lib/search'
 import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, MAX_SHARE_LENGTH, newPlayerId, tableText, type FreePlayer, type FreeTeam, type FreeWar } from '../lib/freeTable'
 import { renderTableImage, tableFileName, MIN_TABLE_DIM } from '../lib/tableImageDraw'
 import { DEFAULT_DESIGN, parseDesign, type WarDesign } from '../lib/warDesign'
@@ -50,6 +54,19 @@ export default function FreeTable() {
   const [note, setNote] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ key: string; url: string } | null>(null)
   const [failed, setFailed] = useState(false)
+  // Equipos de la web para el buscador (si no se pueden leer, el tag y el nombre se escriben a mano)
+  const [teams, setTeams] = useState<TeamWithMembers[]>([])
+  const [queries, setQueries] = useState<Record<Side, string>>({ home: '', away: '' })
+  useEffect(() => {
+    let cancelled = false
+    getAllTeams().then(
+      (list) => !cancelled && setTeams(list),
+      () => {},
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const data = useMemo(() => buildTable(war), [war])
   const ready = hasContent(data)
@@ -146,14 +163,48 @@ export default function FreeTable() {
     setWar(emptyWar())
   }
 
+  const pickTeam = (side: Side, tm: TeamWithMembers) => {
+    patchTeam(side, { tag: tm.tag, name: tm.name, teamId: tm.id })
+    setQueries((q) => ({ ...q, [side]: '' }))
+  }
+  const clearTeam = (side: Side) => patchTeam(side, { tag: '', name: '', teamId: null })
+
   const teamEditor = (side: Side) => {
     const team = war[side]
     const label = side === 'home' ? t('free.team1') : t('free.team2')
+    const picked = team.teamId ? teams.find((tm) => tm.id === team.teamId) : undefined
+    const other = war[side === 'home' ? 'away' : 'home'].teamId
+    const found = rankTeams(queries[side], teams.filter((tm) => tm.id !== other)).slice(0, 6)
+    const members = picked?.members.map((m) => m.username) ?? []
     return (
       <section key={side} className="panel space-y-3 p-4">
         <h2 className="font-display text-lg font-black text-kart-yellow uppercase">{label}</h2>
+        {picked ? (
+          <div className="flex items-center justify-between border-2 border-kart-yellow bg-surface p-3">
+            <div className="flex items-center gap-2">
+              <Plate>{picked.tag}</Plate>
+              <span className="font-display text-lg font-bold">{picked.name}</span>
+            </div>
+            <button type="button" onClick={() => clearTeam(side)} className="text-sm text-muted hover:text-kart-red" aria-label={t('free.clearTeam')} title={t('free.clearTeam')}>
+              ✕
+            </button>
+          </div>
+        ) : (
+          teams.length > 0 && (
+            <SearchBox
+              value={queries[side]}
+              onChange={(v) => setQueries((q) => ({ ...q, [side]: v }))}
+              suggestions={found.map((tm) => ({ key: String(tm.id), label: tm.name, icon: <Plate>{tm.tag}</Plate>, detail: `MKC #${tm.id}` }))}
+              onPick={(s) => {
+                const tm = found.find((o) => String(o.id) === s.key)
+                if (tm) pickTeam(side, tm)
+              }}
+              placeholder={t('free.searchTeam')}
+            />
+          )
+        )}
         <div className="grid grid-cols-[6rem_1fr] gap-2">
-          <input className="field" value={team.tag} maxLength={12} onChange={(e) => patchTeam(side, { tag: e.target.value })} placeholder={t('free.tag')} aria-label={`${label}: ${t('free.tag')}`} />
+          <input className="field" value={team.tag} maxLength={12} onChange={(e) => patchTeam(side, { tag: e.target.value, ...(picked && e.target.value !== picked.tag ? { teamId: null } : {}) })} placeholder={t('free.tag')} aria-label={`${label}: ${t('free.tag')}`} />
           <input className="field" value={team.name} maxLength={40} onChange={(e) => patchTeam(side, { name: e.target.value })} placeholder={t('free.teamName')} aria-label={`${label}: ${t('free.teamName')}`} />
         </div>
         <div>
@@ -165,7 +216,7 @@ export default function FreeTable() {
           <ul className="space-y-2">
             {team.players.map((p) => (
               <li key={p.id} className="grid grid-cols-[1fr_7rem_2.5rem] gap-2">
-                <input className="field" value={p.name} maxLength={40} onChange={(e) => patchPlayer(side, p.id, { name: e.target.value })} placeholder={t('free.player')} aria-label={t('free.player')} />
+                <PlayerInput value={p.name} onChange={(v) => patchPlayer(side, p.id, { name: v })} suggestions={members} taken={team.players.filter((q) => q.id !== p.id).map((q) => q.name)} placeholder={t('free.player')} maxLength={40} />
                 <input className="field time" inputMode="text" value={p.points} maxLength={40} onChange={(e) => patchPlayer(side, p.id, { points: e.target.value })} placeholder="0" aria-label={t('free.points')} />
                 <button type="button" className="btn-line !px-0" onClick={() => removePlayer(side, p.id)} aria-label={t('free.remove')} title={t('free.remove')}>
                   ×

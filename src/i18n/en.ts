@@ -1057,6 +1057,8 @@ export const en: Record<MessageKey, string> = {
   'free.team2': 'Team 2',
   'free.tag': 'Tag',
   'free.teamName': 'Team name (optional)',
+  'free.searchTeam': 'Search team (tag or name)',
+  'free.clearTeam': 'Remove the chosen team',
   'free.photoSafe': 'The photo is always dimmed a minimum and the tables sit on almost opaque panels, so it never covers names or points.',
   'design.preset.versus': 'Versus',
   'design.preset.arcade': 'Arcade',

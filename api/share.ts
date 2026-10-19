@@ -27,7 +27,7 @@ function page(o: { title: string; description: string; image: string; target: st
 <meta name="theme-color" content="#ffd500">
 <meta http-equiv="refresh" content="0;url=${escapeHtml(o.target)}"></head>
 <body><a href="${escapeHtml(o.target)}">${t}</a></body></html>`
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' } })
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' } })
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -35,6 +35,9 @@ export async function GET(request: Request): Promise<Response> {
   const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'es'
   const t = (key: MessageKey, vars?: Record<string, string>) => (lang === 'en' ? en : es)[key].replace(/\{(\w+)\}/g, (_, k: string) => vars?.[k] ?? '')
   const origin = url.origin
+  // Discord y otros chats guardan la vista previa de cada enlace: cada copia del enlace lleva `v` para que sea siempre la de ahora
+  const version = url.searchParams.get('v')
+  const vq = version && /^[w-]{1,20}$/.test(version) ? `&v=${version}` : ''
   const kind = url.searchParams.get('kind')
 
   if (kind === 'profile') {
@@ -47,7 +50,7 @@ export async function GET(request: Request): Promise<Response> {
     return page({
       title: `${name} · MKW Hub`,
       description: t('og.profileDesc', { name }),
-      image: `${origin}/api/og?kind=profile&id=${id}&lang=${lang}`,
+      image: `${origin}/api/og?kind=profile&id=${id}&lang=${lang}${vq}`,
       target: `/estadisticas/${id}`,
       canonical: `${origin}/p/${id}`,
     })
@@ -61,7 +64,7 @@ export async function GET(request: Request): Promise<Response> {
     return page({
       title: `${table.title || `${table.home.tag} ${table.home.total} – ${table.away.total} ${table.away.tag}`} · MKW Hub`,
       description: t('og.tableDesc'),
-      image: `${origin}/api/og?kind=table&d=${encodeURIComponent(d)}&lang=${lang}`,
+      image: `${origin}/api/og?kind=table&d=${encodeURIComponent(d)}&lang=${lang}${vq}`,
       target: `/tablas?d=${encodeURIComponent(d)}`,
       canonical: `${origin}/t?d=${encodeURIComponent(d)}`,
     })
