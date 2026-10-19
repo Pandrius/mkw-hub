@@ -19,10 +19,14 @@ export type Palette = {
   green: string
 }
 
-export type PresetId = 'asphalt' | 'official' | 'light' | 'neon' | 'sunset' | 'ocean'
+export type PresetId = 'asphalt' | 'official' | 'light' | 'neon' | 'sunset' | 'ocean' | 'versus' | 'arcade' | 'frost' | 'lava'
 
-/** Cómo se dibuja: "standard" (placas inclinadas, franjas) o "elegant" (serif, filetes finos y marco) */
-export type PresetStyle = 'standard' | 'elegant'
+/**
+ * Cómo se dibuja: "standard" (placas inclinadas, franjas), "elegant" (serif, filetes finos y marco) y, solo en las tablas libres
+ * (tableImageDraw.ts), "versus" (pantalla de combate partida en diagonal) y "arcade" (recreativa con líneas de barrido). En la
+ * imagen de la war esos dos se dibujan como el estándar, con sus colores.
+ */
+export type PresetStyle = 'standard' | 'elegant' | 'versus' | 'arcade'
 
 export const PRESETS: Record<PresetId, Palette> = {
   // El de siempre: asfalto y amarillo kart
@@ -35,6 +39,14 @@ export const PRESETS: Record<PresetId, Palette> = {
   neon: { bg: '#0c0716', surface: '#150d24', surface2: '#20143a', line: '#3a2761', ink: '#f7f0ff', muted: '#a595c9', accent: '#ff2bd6', away: '#00e5ff', red: '#ff3b5c', green: '#2ee59d' },
   sunset: { bg: '#1d1020', surface: '#2a1630', surface2: '#3a1f42', line: '#5a3560', ink: '#fff3e8', muted: '#c9a7b8', accent: '#ff8a3d', away: '#4fd1c5', red: '#ff4d5e', green: '#4be08a' },
   ocean: { bg: '#08141f', surface: '#0e2233', surface2: '#153247', line: '#265068', ink: '#eaf6ff', muted: '#8fb2c8', accent: '#35c7ff', away: '#ff8a65', red: '#ff5470', green: '#3ddc97' },
+  // Versus: pantalla de combate, rojo contra azul sobre carbono
+  versus: { bg: '#0d0d12', surface: '#16161d', surface2: '#202029', line: '#34343f', ink: '#ffffff', muted: '#9a9aa8', accent: '#ff3d4f', away: '#2e8bff', red: '#ff5a4d', green: '#2fd47a' },
+  // Arcade: recreativa de los 90, azul noche con amarillo y cian
+  arcade: { bg: '#0a0a24', surface: '#12123a', surface2: '#1b1b52', line: '#3a3aa0', ink: '#fffbe6', muted: '#8f8fd0', accent: '#ffe600', away: '#00f0ff', red: '#ff3b6b', green: '#3dff8b' },
+  // Hielo: claro y frío, azul contra frambuesa
+  frost: { bg: '#e6f1f8', surface: '#f4f9fc', surface2: '#d6e6f1', line: '#b5cde0', ink: '#12263a', muted: '#5f7a91', accent: '#1d7fd6', away: '#e0457b', red: '#d6203f', green: '#17895a' },
+  // Lava: marrón volcánico con naranja y turquesa
+  lava: { bg: '#160a07', surface: '#221009', surface2: '#33170c', line: '#5a2a16', ink: '#fff1e6', muted: '#c49a85', accent: '#ff5a1f', away: '#4ad8c4', red: '#ff4d5e', green: '#4be08a' },
 }
 
 export const PRESET_IDS = Object.keys(PRESETS) as PresetId[]
@@ -46,6 +58,10 @@ export const PRESET_STYLE: Record<PresetId, PresetStyle> = {
   neon: 'standard',
   sunset: 'standard',
   ocean: 'standard',
+  versus: 'versus',
+  arcade: 'arcade',
+  frost: 'standard',
+  lava: 'standard',
 }
 
 /** Colores que se pueden retocar sobre el preset */

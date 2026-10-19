@@ -56,22 +56,25 @@ const COLOR_LABEL: Record<EditableColor, MessageKey> = {
 }
 
 /** Editor del diseño de las tablas: estilo, foto de fondo y colores propios (se guarda en este navegador) */
-export default function WarDesignPanel({ eventId }: { eventId: string }) {
+export default function WarDesignPanel({ eventId, minDim = 0, value, onChange }: { /** Diseño y cambio propios (si no, los guardados en este navegador) */ value?: WarDesign; onChange?: (design: WarDesign) => void; /** La war a la que pertenece (null en las tablas libres, que llevan su propio título) */ eventId: string | null; /** Mínimo de oscurecimiento de la foto (de 0 a 1): en las tablas se pide un mínimo para que siempre se lean */ minDim?: number }) {
   const { t } = useI18n()
-  const [design, setDesign] = useWarDesign()
-  const [competition, setCompetition] = useCompetition(eventId)
+  const [stored, setStored] = useWarDesign()
+  const design = value ?? stored
+  const setDesign = onChange ?? setStored
+  const [competition, setCompetition] = useCompetition(eventId ?? '')
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const palette = resolvePalette(design)
   // El diseño elegante no lleva franjas de peligro
   const hasStripes = PRESET_STYLE[design.preset] === 'standard'
+  const showCompetition = eventId !== null && PRESET_STYLE[design.preset] === 'elegant'
   const change = (patch: Partial<WarDesign>) => setDesign({ ...design, ...patch })
 
   const onPhoto = async (file: File | undefined) => {
     if (!file) return
     setError(null)
     try {
-      change({ photo: { dataUrl: await readPhoto(file), dim: design.photo?.dim ?? 0.55 } })
+      change({ photo: { dataUrl: await readPhoto(file), dim: Math.max(design.photo?.dim ?? 0.55, minDim) } })
     } catch {
       setError(t('design.photoError'))
     } finally {
@@ -111,7 +114,7 @@ export default function WarDesignPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
 
-      {!hasStripes && (
+      {showCompetition && (
         <div>
           <p className={section}>{t('design.competition')}</p>
           <input
@@ -142,7 +145,7 @@ export default function WarDesignPanel({ eventId }: { eventId: string }) {
                 <span className="text-muted">{t('design.dim')}</span>
                 <input
                   type="range"
-                  min={0}
+                  min={Math.round(minDim * 100)}
                   max={Math.round(MAX_DIM * 100)}
                   step={5}
                   value={Math.round(design.photo.dim * 100)}

@@ -7,7 +7,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { en } from '../src/i18n/en.js'
 import { es, type MessageKey } from '../src/i18n/es.js'
-import { decodeTable } from '../src/lib/freeTable.js'
+import { buildTable, decodeWar } from '../src/lib/freeTable.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -55,10 +55,11 @@ export async function GET(request: Request): Promise<Response> {
 
   if (kind === 'table') {
     const d = url.searchParams.get('d')
-    const table = decodeTable(d)
-    if (!d || !table) return Response.redirect(`${origin}/tablas`, 302)
+    const shared = decodeWar(d)
+    if (!d || !shared) return Response.redirect(`${origin}/tablas`, 302)
+    const table = buildTable(shared.war)
     return page({
-      title: `${table.title.trim() || t('free.defaultTitle')} · MKW Hub`,
+      title: `${table.title || `${table.home.tag} ${table.home.total} – ${table.away.total} ${table.away.tag}`} · MKW Hub`,
       description: t('og.tableDesc'),
       image: `${origin}/api/og?kind=table&d=${encodeURIComponent(d)}&lang=${lang}`,
       target: `/tablas?d=${encodeURIComponent(d)}`,

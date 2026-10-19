@@ -1,185 +1,262 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '../components/ui'
+import WarDesignPanel from '../components/WarDesignPanel'
+import { useWarDesign } from '../components/useWarDesign'
 import { useI18n } from '../i18n'
 import { copyText } from '../lib/clipboard'
-import { decodeTable, encodeTable, MAX_SHARE_LENGTH, rankRows, tableText, type FreeRow, type RankedRow } from '../lib/freeTable'
+import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, MAX_SHARE_LENGTH, newPlayerId, tableText, type FreePlayer, type FreeTeam, type FreeWar } from '../lib/freeTable'
+import { renderTableImage, tableFileName, MIN_TABLE_DIM } from '../lib/tableImageDraw'
+import { DEFAULT_DESIGN, parseDesign, type WarDesign } from '../lib/warDesign'
+import { lorenziEditorUrl } from '../lib/warTable'
 
-const STORE = 'mkw-free-table'
+const STORE = 'mkw-free-war'
 
-type Saved = { title: string; rows: FreeRow[] }
+const validTeam = (t: unknown): t is FreeTeam =>
+  !!t && typeof t === 'object' && typeof (t as FreeTeam).tag === 'string' && typeof (t as FreeTeam).name === 'string' && Array.isArray((t as FreeTeam).players) &&
+  (t as FreeTeam).players.every((p) => typeof p?.name === 'string' && typeof p?.points === 'string' && typeof p?.id === 'number')
 
-/** Lo último que se estaba editando en este navegador (solo local: esta tabla no se guarda en ningún servidor) */
-function load(shared: string | null): Saved {
-  // Una tabla que llega por enlace (?d=) manda sobre lo guardado
-  const fromLink = decodeTable(shared)
-  if (fromLink) return { title: fromLink.title, rows: fromLink.rows.map((r, id) => ({ id, ...r })) }
+/** Lo último que se estaba editando en este navegador (solo local: la tabla no se guarda en ningún servidor) */
+function loadSaved(): FreeWar | null {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORE) ?? 'null') as Saved | null
-    if (raw && Array.isArray(raw.rows) && raw.rows.every((r) => typeof r?.name === 'string' && typeof r?.points === 'string' && typeof r?.id === 'number')) {
-      return { title: typeof raw.title === 'string' ? raw.title : '', rows: raw.rows }
+    const raw = JSON.parse(localStorage.getItem(STORE) ?? 'null') as FreeWar | null
+    if (raw && typeof raw.title === 'string' && validTeam(raw.home) && validTeam(raw.away)) {
+      // Los ids siguientes empiezan por encima de los guardados
+      const top = Math.max(0, ...raw.home.players.map((p) => p.id), ...raw.away.players.map((p) => p.id))
+      while (newPlayerId() <= top);
+      return raw
     }
   } catch {
     // sin almacenamiento o datos rotos: se empieza de cero
   }
-  return { title: '', rows: [0, 1, 2].map((id) => ({ id, name: '', points: '' })) }
+  return null
 }
 
-/** PNG de la tabla con la estética de la web (asfalto y amarillo kart) */
-function drawPng(title: string, rows: RankedRow[], fallbackTitle: string): HTMLCanvasElement {
-  const W = 720
-  const ROW = 44
-  const TOP = 110
-  const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = TOP + rows.length * ROW + 24
-  const c = canvas.getContext('2d') as CanvasRenderingContext2D
-  c.fillStyle = '#141414'
-  c.fillRect(0, 0, W, canvas.height)
-  c.fillStyle = '#ffd500'
-  c.fillRect(0, 0, W, 8)
-  c.textBaseline = 'middle'
-  c.fillStyle = '#f4f2ec'
-  c.font = '900 44px "Big Shoulders Display", Impact, sans-serif'
-  c.fillText((title.trim() || fallbackTitle).toUpperCase().slice(0, 40), 28, 56)
-  rows.forEach((r, i) => {
-    const y = TOP + i * ROW
-    c.fillStyle = i % 2 ? '#1c1c1b' : '#242422'
-    c.fillRect(20, y, W - 40, ROW - 4)
-    c.fillStyle = r.rank <= 3 ? '#ffd500' : '#a5a29a'
-    c.font = '900 26px "Big Shoulders Display", Impact, sans-serif'
-    c.fillText(String(r.rank), 38, y + ROW / 2 - 2)
-    c.fillStyle = '#f4f2ec'
-    c.font = '600 22px Barlow, Arial, sans-serif'
-    c.fillText(r.name.slice(0, 32), 90, y + ROW / 2 - 2)
-    c.textAlign = 'right'
-    c.font = '700 24px "JetBrains Mono", monospace'
-    c.fillStyle = r.points < 0 ? '#ff5a4d' : '#f4f2ec'
-    c.fillText(String(r.points), W - 38, y + ROW / 2 - 2)
-    c.textAlign = 'left'
-  })
-  return canvas
-}
+type Side = 'home' | 'away'
 
-/** Editor de tablas libre: sin cuenta, sin límite de jugadores y sin tocar ninguna estadística */
+/** Editor de tablas de war libre: dos equipos con sus jugadores, ordenados, con los diseños de la web. Sin cuenta y sin guardar nada en la web */
 export default function FreeTable() {
   const { t, lang } = useI18n()
   const [params] = useSearchParams()
-  const [initial] = useState(() => load(params.get('d')))
-  const opened = useRef(decodeTable(params.get('d')) !== null)
-  const [title, setTitle] = useState(initial.title)
-  const [rows, setRows] = useState<FreeRow[]>(initial.rows)
-  const [copied, setCopied] = useState(false)
-  const [linkNote, setLinkNote] = useState<string | null>(null)
-  const nextId = useRef(Math.max(-1, ...initial.rows.map((r) => r.id)) + 1)
-  const ranked = useMemo(() => rankRows(rows), [rows])
+  const shared = useMemo(() => decodeWar(params.get('d')), [params])
+  const [initial] = useState<FreeWar>(() => shared?.war ?? loadSaved() ?? emptyWar())
+  const opened = useRef(shared !== null)
+  const [war, setWar] = useState<FreeWar>(initial)
+  const [stored, setStored] = useWarDesign()
+  // El diseño que trae un enlace se usa sin tocar el guardado hasta que lo cambies
+  const [linkDesign, setLinkDesign] = useState<WarDesign | null>(() => (shared?.design ? parseDesign({ preset: shared.design.preset, colors: shared.design.colors, photo: null }) : null))
+  const design = linkDesign ?? stored ?? DEFAULT_DESIGN
+  const [designOpen, setDesignOpen] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ key: string; url: string } | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  const data = useMemo(() => buildTable(war), [war])
+  const ready = hasContent(data)
 
   useEffect(() => {
     // Una tabla recién abierta desde un enlace no pisa la que tenías guardada hasta que la toques
-    if (opened.current && title === initial.title && rows === initial.rows) return
+    if (opened.current && war === initial) return
     try {
-      localStorage.setItem(STORE, JSON.stringify({ title, rows } satisfies Saved))
+      localStorage.setItem(STORE, JSON.stringify(war))
     } catch {
       // almacenamiento no disponible: la tabla sigue funcionando
     }
-  }, [title, rows, initial])
+  }, [war, initial])
 
-  const update = (id: number, patch: Partial<FreeRow>) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  const add = () => setRows((rs) => [...rs, { id: nextId.current++, name: '', points: '' }])
+  const labels = useMemo(() => ({ player: t('event.player'), points: t('event.points'), war: 'WAR' }), [t])
+  const designKey = useMemo(() => JSON.stringify(design), [design])
+  const key = JSON.stringify({ data, labels }) + designKey
 
-  const copy = async () => {
+  useEffect(() => {
+    if (!ready) return
+    let cancelled = false
+    let objectUrl: string | null = null
+    setFailed(false)
+    // Un momento de espera: al escribir o arrastrar un color no se redibuja en cada pulsación
+    const timer = setTimeout(() => {
+      renderTableImage(data, design, labels).then(
+        (blob) => {
+          objectUrl = URL.createObjectURL(blob)
+          if (cancelled) URL.revokeObjectURL(objectUrl)
+          else setPreview({ key, url: objectUrl })
+        },
+        () => !cancelled && setFailed(true),
+      )
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+    // data, design y labels ya van en key
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ready])
+
+  useEffect(() => {
+    const url = preview?.url
+    return () => {
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [preview])
+
+  const patchTeam = (side: Side, patch: Partial<FreeTeam>) => setWar((w) => ({ ...w, [side]: { ...w[side], ...patch } }))
+  const patchPlayer = (side: Side, id: number, patch: Partial<FreePlayer>) =>
+    setWar((w) => ({ ...w, [side]: { ...w[side], players: w[side].players.map((p) => (p.id === id ? { ...p, ...patch } : p)) } }))
+  const addPlayer = (side: Side) => setWar((w) => ({ ...w, [side]: { ...w[side], players: [...w[side].players, { id: newPlayerId(), name: '', points: '' }] } }))
+  const removePlayer = (side: Side, id: number) => setWar((w) => ({ ...w, [side]: { ...w[side], players: w[side].players.filter((p) => p.id !== id) } }))
+
+  const flash = (msg: string) => {
+    setNote(msg)
+    setTimeout(() => setNote(null), 2500)
+  }
+  const blob = async () => renderTableImage(data, design, labels)
+
+  const copyImage = async () => {
+    if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) return flash(t('warImg.fallback'))
     try {
-      await navigator.clipboard.writeText(tableText(title, ranked))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      // La promesa se crea ya: Safari exige crear el ClipboardItem dentro del clic
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob() })])
+      flash(t('warImg.copied'))
     } catch {
-      // el navegador no deja copiar
+      flash(t('warImg.error'))
     }
   }
-  const copyLink = async () => {
-    const data = encodeTable(title, rows)
-    if (data.length > MAX_SHARE_LENGTH) return setLinkNote(t('share.tooLong'))
-    const ok = await copyText(`${window.location.origin}/t?d=${data}&lang=${lang}`)
-    setLinkNote(ok ? t('share.copied') : null)
-    setTimeout(() => setLinkNote(null), 2500)
+  const download = async () => {
+    try {
+      const url = URL.createObjectURL(await blob())
+      const a = document.createElement('a')
+      a.href = url
+      a.download = tableFileName(data)
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      flash(t('warImg.downloaded'))
+    } catch {
+      flash(t('warImg.error'))
+    }
   }
-  const download = () => {
-    const a = document.createElement('a')
-    a.href = drawPng(title, ranked, t('free.defaultTitle')).toDataURL('image/png')
-    a.download = 'tabla.png'
-    a.click()
+  const copyLorenzi = async () => flash((await copyText(lorenziFreeText(war))) ? t('free.copied') : t('warImg.error'))
+  const copyPlain = async () => flash((await copyText(tableText(data))) ? t('free.copied') : t('warImg.error'))
+  const copyLink = async () => {
+    const code = encodeWar(war, { preset: design.preset, colors: design.colors })
+    if (code.length > MAX_SHARE_LENGTH) return flash(t('share.tooLong'))
+    flash((await copyText(`${window.location.origin}/t?d=${code}&lang=${lang}`)) ? t('share.copied') : t('warImg.error'))
   }
   const clear = () => {
     if (!window.confirm(t('free.clearConfirm'))) return
-    setTitle('')
-    setRows([0, 1, 2].map(() => ({ id: nextId.current++, name: '', points: '' })))
+    setWar(emptyWar())
   }
 
-  return (
-    <div>
-      <PageHeader title={t('free.title')} subtitle={t('free.subtitle')} />
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section className="panel p-4">
-          <input className="field mb-4" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={t('free.tableName')} aria-label={t('free.tableName')} />
-          <div className="mb-1 grid grid-cols-[1fr_6rem_2.5rem] gap-2 font-display text-sm font-extrabold tracking-wider text-kart-yellow uppercase">
+  const teamEditor = (side: Side) => {
+    const team = war[side]
+    const label = side === 'home' ? t('free.team1') : t('free.team2')
+    return (
+      <section key={side} className="panel space-y-3 p-4">
+        <h2 className="font-display text-lg font-black text-kart-yellow uppercase">{label}</h2>
+        <div className="grid grid-cols-[6rem_1fr] gap-2">
+          <input className="field" value={team.tag} maxLength={12} onChange={(e) => patchTeam(side, { tag: e.target.value })} placeholder={t('free.tag')} aria-label={`${label}: ${t('free.tag')}`} />
+          <input className="field" value={team.name} maxLength={40} onChange={(e) => patchTeam(side, { name: e.target.value })} placeholder={t('free.teamName')} aria-label={`${label}: ${t('free.teamName')}`} />
+        </div>
+        <div>
+          <div className="mb-1 grid grid-cols-[1fr_7rem_2.5rem] gap-2 font-display text-sm font-extrabold tracking-wider text-kart-yellow uppercase">
             <span>{t('free.player')}</span>
             <span>{t('free.points')}</span>
             <span />
           </div>
           <ul className="space-y-2">
-            {rows.map((r) => (
-              <li key={r.id} className="grid grid-cols-[1fr_6rem_2.5rem] gap-2">
-                <input className="field" value={r.name} maxLength={40} onChange={(e) => update(r.id, { name: e.target.value })} placeholder={t('free.player')} aria-label={t('free.player')} />
-                <input className="field time" inputMode="decimal" value={r.points} onChange={(e) => update(r.id, { points: e.target.value })} placeholder="0" aria-label={t('free.points')} />
-                <button type="button" className="btn-line !px-0" onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))} aria-label={t('free.remove')} title={t('free.remove')}>
+            {team.players.map((p) => (
+              <li key={p.id} className="grid grid-cols-[1fr_7rem_2.5rem] gap-2">
+                <input className="field" value={p.name} maxLength={40} onChange={(e) => patchPlayer(side, p.id, { name: e.target.value })} placeholder={t('free.player')} aria-label={t('free.player')} />
+                <input className="field time" inputMode="text" value={p.points} maxLength={40} onChange={(e) => patchPlayer(side, p.id, { points: e.target.value })} placeholder="0" aria-label={t('free.points')} />
+                <button type="button" className="btn-line !px-0" onClick={() => removePlayer(side, p.id)} aria-label={t('free.remove')} title={t('free.remove')}>
                   ×
                 </button>
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" className="btn-yellow" onClick={add}>
-              {t('free.add')}
-            </button>
-            <button type="button" className="btn-line" onClick={clear}>
-              {t('free.clear')}
-            </button>
-          </div>
-          <p className="mt-3 text-sm text-muted">{t('free.hint')}</p>
-        </section>
+        </div>
+        <button type="button" className="btn-yellow text-base" onClick={() => addPlayer(side)}>
+          {t('free.add')}
+        </button>
+      </section>
+    )
+  }
 
-        <section className="panel p-4">
-          <h2 className="mb-3 font-display text-2xl font-black uppercase">{title.trim() || t('free.defaultTitle')}</h2>
-          {ranked.length === 0 ? (
-            <p className="text-muted">{t('free.empty')}</p>
-          ) : (
-            <table className="w-full">
-              <tbody>
-                {ranked.map((r, i) => (
-                  <tr key={i} className="border-t border-line">
-                    <td className={`w-12 py-2 font-display text-2xl font-black ${r.rank <= 3 ? 'text-kart-yellow' : 'text-muted'}`}>{r.rank}</td>
-                    <td className="py-2 break-words">{r.name}</td>
-                    <td className={`time py-2 text-right ${r.points < 0 ? 'text-kart-red' : ''}`}>{r.points}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" className="btn-yellow" onClick={download} disabled={ranked.length === 0}>
-              {t('free.png')}
-            </button>
-            <button type="button" className="btn-line" onClick={copy} disabled={ranked.length === 0}>
-              {copied ? t('free.copied') : t('free.copy')}
-            </button>
-            <button type="button" className="btn-line" onClick={copyLink} disabled={ranked.length === 0}>
-              {t('share.copyLink')}
-            </button>
-          </div>
-          {linkNote && <p role="status" className="mt-2 text-sm text-kart-yellow">{linkNote}</p>}
-          <p className="mt-3 text-xs text-muted">{t('share.tableHint')}</p>
-        </section>
+  return (
+    <div className="space-y-6">
+      <PageHeader title={t('free.title')} subtitle={t('free.subtitle')} />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <input className="field max-w-xl flex-1" value={war.title} maxLength={60} onChange={(e) => setWar((w) => ({ ...w, title: e.target.value }))} placeholder={t('free.tableName')} aria-label={t('free.tableName')} />
+        <button type="button" className="btn-line text-sm" onClick={() => setDesignOpen((o) => !o)} aria-expanded={designOpen}>
+          🎨 {t('design.title')}
+        </button>
+        <button type="button" className="min-h-11 text-sm text-muted hover:text-kart-red" onClick={clear}>
+          {t('free.clear')}
+        </button>
       </div>
+
+      {designOpen && (
+        <div className="panel overflow-hidden">
+          <WarDesignPanel
+            eventId={null}
+            minDim={MIN_TABLE_DIM}
+            value={design}
+            onChange={(next) => {
+              setLinkDesign(null)
+              setStored(next)
+            }}
+          />
+          <p className="px-4 pb-4 text-xs text-muted sm:px-5">{t('free.photoSafe')}</p>
+        </div>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {teamEditor('home')}
+        {teamEditor('away')}
+      </div>
+      <p className="text-sm text-muted">{t('free.hint')}</p>
+
+      <section className="panel overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 sm:px-5">
+          <button type="button" className="btn-yellow text-base" onClick={copyImage} disabled={!ready}>
+            {t('warImg.copy')}
+          </button>
+          <button type="button" className="btn-line text-base" onClick={download} disabled={!ready}>
+            {t('warImg.download')}
+          </button>
+          <button type="button" className="btn-line text-base" onClick={copyLink} disabled={!ready}>
+            {t('share.copyLink')}
+          </button>
+          <button type="button" className="text-sm font-semibold text-kart-blue hover:underline disabled:opacity-50" onClick={copyLorenzi} disabled={!ready}>
+            {t('event.copyTable')}
+          </button>
+          <button type="button" className="text-sm font-semibold text-kart-blue hover:underline disabled:opacity-50" onClick={copyPlain} disabled={!ready}>
+            {t('free.copy')}
+          </button>
+          {ready && (
+            <a href={lorenziEditorUrl(lorenziFreeText(war))} target="_blank" rel="noreferrer" className="text-sm font-semibold text-kart-blue hover:underline">
+              {t('event.openLorenzi')} ↗
+            </a>
+          )}
+          {note && (
+            <span role="status" className="text-sm text-kart-yellow">
+              {note}
+            </span>
+          )}
+        </div>
+        {!ready ? (
+          <p className="bg-bg px-5 py-10 text-center text-sm text-muted">{t('free.empty')}</p>
+        ) : failed && !preview ? (
+          <p className="bg-bg px-5 py-10 text-center text-sm text-muted">{t('warImg.error')}</p>
+        ) : !preview ? (
+          <p className="bg-bg px-5 py-10 text-center text-sm text-muted">{t('warImg.generating')}</p>
+        ) : (
+          <div className="bg-bg">
+            <img src={preview.url} alt={`${data.home.tag} ${data.home.total} – ${data.away.total} ${data.away.tag}`} className={`w-full transition-opacity ${preview.key === key ? '' : 'opacity-60'}`} />
+          </div>
+        )}
+      </section>
+      <p className="text-xs text-muted">{t('share.tableHint')}</p>
     </div>
   )
 }

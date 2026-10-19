@@ -12,7 +12,6 @@ export const CARD_H = 630
 const BG = '#141414'
 const SURFACE = '#1c1c1b'
 const SURFACE2 = '#292927'
-const LINE = '#3b3b38'
 const INK = '#f4f2ec'
 const MUTED = '#a5a29a'
 const YELLOW = '#ffd500'
@@ -90,26 +89,32 @@ export function profileCardNode(c: ProfileCard): Node {
   )
 }
 
-export type TableCard = { title: string; rows: { rank: number; name: string; points: number }[]; more: string | null; footer: string }
+export type TableCardTeam = { tag: string; total: number; players: { name: string; points: number }[]; color: string }
+export type TableCard = { title: string; home: TableCardTeam; away: TableCardTeam; more: string | null; footer: string }
 
-/** Filas que caben en la imagen; el resto se resume en «y N más» */
-export const TABLE_CARD_ROWS = 8
+/** Jugadores por equipo que caben en la imagen; el resto se resume en «y N más» */
+export const TABLE_CARD_ROWS = 6
 
 export function tableCardNode(c: TableCard): Node {
+  const column = (team: TableCardTeam) =>
+    h({ flex: 1, flexDirection: 'column', gap: 6 }, [
+      h({ alignItems: 'center', justifyContent: 'space-between', background: SURFACE, borderLeft: `10px solid ${team.color}`, padding: '8px 22px', height: 84 }, [
+        h({ ...display(team.tag.length > 8 ? 44 : 58, team.color), maxWidth: 300, overflow: 'hidden' }, team.tag),
+        h({ ...display(72) }, String(team.total)),
+      ]),
+      ...team.players.map((p, i) =>
+        h({ alignItems: 'center', background: i % 2 ? SURFACE : '#242422', padding: '0 20px', height: 46 }, [
+          h({ width: 44, ...display(26, i < 3 ? YELLOW : MUTED) }, String(i + 1)),
+          h({ flex: 1, fontSize: 24, fontWeight: 600, overflow: 'hidden' }, p.name),
+          h({ fontFamily: 'Big Shoulders', fontWeight: 900, fontSize: 30, color: p.points < 0 ? RED : INK }, String(p.points)),
+        ]),
+      ),
+    ])
   return frame(
     [
-      h({ ...display(c.title.length > 22 ? 52 : 68), marginBottom: 24, overflow: 'hidden' }, c.title),
-      h(
-        { flexDirection: 'column', gap: 6 },
-        c.rows.map((r, i) =>
-          h({ alignItems: 'center', background: i % 2 ? SURFACE : '#242422', padding: '6px 22px', height: 50 }, [
-            h({ width: 70, ...display(34, r.rank <= 3 ? YELLOW : MUTED) }, String(r.rank)),
-            h({ flex: 1, fontSize: 28, fontWeight: 600, overflow: 'hidden' }, r.name),
-            h({ fontFamily: 'Big Shoulders', fontWeight: 900, fontSize: 34, color: r.points < 0 ? RED : INK }, String(r.points)),
-          ]),
-        ),
-      ),
-      ...(c.more ? [h({ marginTop: 10, fontSize: 24, color: MUTED, borderTop: `2px solid ${LINE}`, paddingTop: 8 }, c.more)] : []),
+      h({ ...display(c.title.length > 26 ? 44 : 56), marginBottom: 22, overflow: 'hidden' }, c.title),
+      h({ gap: 24 }, [column(c.home), column(c.away)]),
+      ...(c.more ? [h({ marginTop: 10, fontSize: 22, color: MUTED }, c.more)] : []),
     ],
     c.footer,
   )

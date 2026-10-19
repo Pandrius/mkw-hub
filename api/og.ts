@@ -10,9 +10,10 @@ import { en } from '../src/i18n/en.js'
 import { es, type MessageKey } from '../src/i18n/es.js'
 import { achievementTotals, computeAchievements } from '../src/lib/achievements.js'
 import { computeBadges } from '../src/lib/badges.js'
-import { decodeTable, rankRows, type FreeRow } from '../src/lib/freeTable.js'
+import { buildTable, decodeWar } from '../src/lib/freeTable.js'
 import { profileCardNode, renderCard, tableCardNode, TABLE_CARD_ROWS, type CardFonts, type ProfileCard } from '../src/lib/ogCard.js'
 import { POINTS } from '../src/lib/scoring.js'
+import { parseDesign, resolvePalette } from '../src/lib/warDesign.js'
 import { featurable } from '../src/lib/titles.js'
 import { fetchTimeline } from '../src/lib/timelineQuery.js'
 
@@ -130,13 +131,17 @@ export async function GET(request: Request): Promise<Response> {
       if (!card) return new Response('Not found', { status: 404 })
       node = profileCardNode(card)
     } else if (url.searchParams.get('kind') === 'table') {
-      const table = decodeTable(url.searchParams.get('d'))
-      if (!table) return new Response('Bad request', { status: 400 })
-      const rows = rankRows(table.rows.map((r, i): FreeRow => ({ id: i, name: r.name, points: r.points })))
+      const shared = decodeWar(url.searchParams.get('d'))
+      if (!shared) return new Response('Bad request', { status: 400 })
+      const table = buildTable(shared.war)
+      // Los colores de los dos equipos son los del diseño del enlace (o los de siempre)
+      const palette = resolvePalette(parseDesign({ preset: shared.design?.preset, colors: shared.design?.colors, photo: null }))
+      const hidden = Math.max(0, table.home.players.length - TABLE_CARD_ROWS) + Math.max(0, table.away.players.length - TABLE_CARD_ROWS)
       node = tableCardNode({
-        title: table.title.trim() || t('free.defaultTitle'),
-        rows: rows.slice(0, TABLE_CARD_ROWS),
-        more: rows.length > TABLE_CARD_ROWS ? t('og.more', { n: rows.length - TABLE_CARD_ROWS }) : null,
+        title: table.title || `${table.home.tag} vs ${table.away.tag}`,
+        home: { tag: table.home.tag, total: table.home.total, players: table.home.players.slice(0, TABLE_CARD_ROWS), color: palette.accent },
+        away: { tag: table.away.tag, total: table.away.total, players: table.away.players.slice(0, TABLE_CARD_ROWS), color: palette.away },
+        more: hidden > 0 ? t('og.more', { n: hidden }) : null,
         footer: 'mkw-hub.vercel.app/tablas',
       })
     } else {

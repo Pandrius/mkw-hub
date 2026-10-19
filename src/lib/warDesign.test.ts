@@ -77,14 +77,17 @@ describe('presets', () => {
 
   it('todos los presets tienen un estilo y colores válidos', () => {
     for (const id of PRESET_IDS) {
-      expect(['standard', 'elegant']).toContain(PRESET_STYLE[id])
+      expect(['standard', 'elegant', 'versus', 'arcade']).toContain(PRESET_STYLE[id])
       for (const color of Object.values(PRESETS[id])) expect(color).toMatch(/^#[0-9a-f]{6}$/i)
     }
   })
 
-  it('Oficial es el estilo elegante y el resto el estándar', () => {
+  it('Oficial es el único elegante; Versus y Arcade tienen estilo propio y el resto es estándar', () => {
     expect(PRESET_STYLE.official).toBe('elegant')
     expect(PRESET_IDS.filter((id) => PRESET_STYLE[id] === 'elegant')).toEqual(['official'])
+    expect(PRESET_STYLE.versus).toBe('versus')
+    expect(PRESET_STYLE.arcade).toBe('arcade')
+    expect(PRESET_IDS.filter((id) => PRESET_STYLE[id] === 'standard')).toEqual(['asphalt', 'light', 'neon', 'sunset', 'ocean', 'frost', 'lava'])
   })
 
   it('Neón y Océano no se parecen: ni el acento ni el fondo', () => {
