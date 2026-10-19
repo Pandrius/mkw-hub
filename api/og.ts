@@ -97,7 +97,10 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
   const owned = featurable(achievements, badges)
   const points = timeline.reduce((n, r) => n + (POINTS[r.position - 1] ?? 0), 0)
   const perEvent = timeline.length ? Math.round((points / timeline.length) * 12) : 0
-  const winRate = timeline.length ? Math.round((timeline.filter((r) => r.position === 1).length / timeline.length) * 100) : 0
+  // Winrate de eventos: los ganados entre los jugados (no de carreras)
+  const eventIds = new Set(timeline.map((r) => r.eventId))
+  const wonIds = new Set(timeline.filter((r) => r.eventWon).map((r) => r.eventId))
+  const winRate = eventIds.size ? Math.round((wonIds.size / eventIds.size) * 100) : 0
   const mmr = typeof lounge?.mmr === 'number' ? lounge.mmr : null
 
   const featured = ((prof.featured_badges as string[] | null) ?? []).flatMap((fid) => {

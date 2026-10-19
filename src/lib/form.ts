@@ -19,6 +19,8 @@ export type TimedResult = {
   warWon?: boolean
   /** Quedó primero del evento: mesa del Lounge en el puesto 1, o máximo anotador (MVP) de su equipo en una war, gane o no */
   eventFirst?: boolean
+  /** Evento ganado: la war la ganó su equipo, o la mesa del Lounge le subió el MMR */
+  eventWon?: boolean
   /** Tramo: cuenta para el evento y los logros, pero no como pista */
   section?: boolean
 }

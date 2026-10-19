@@ -52,7 +52,9 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
         ? r.event_players.final_position === 1
         : r.event_races.events.kind === 'war'
           ? won.firsts.has(`${r.event_races.events.id}|${r.player_id}`)
-          : loungeFirst.has(r.event_races.events.id),
+          : loungeFirst.first.has(r.event_races.events.id),
+    // Evento ganado: la war si la ganó su equipo y el Lounge si la mesa le subió el MMR
+    eventWon: r.event_races.events.kind === 'war' ? won.wars.has(r.event_races.events.id) : loungeFirst.won.has(r.event_races.events.id),
     section: r.event_races.is_section,
   }))
 }
@@ -60,21 +62,29 @@ export async function fetchTimeline(client: SupabaseClient, profileId: string): 
 /** Eventos por consulta al pedir las carreras de las wars (las ids van en la URL) */
 const WAR_CHUNK = 60
 
-/** Eventos Lounge del jugador en los que su mesa acabó primera (rank 1 en su historial del Lounge) */
+/** Eventos Lounge del jugador en los que su mesa acabó primera (rank 1) y en los que ganó (la mesa le subió el MMR) */
 async function loungeFirstIds(
   client: SupabaseClient,
   profileId: string,
   rows: { event_races: { events: { id: string; kind: string; lounge_change_id: number | null } } }[],
-): Promise<Set<string>> {
+): Promise<{ first: Set<string>; won: Set<string> }> {
   const changes = new Map<number, string>()
   for (const r of rows) {
     const e = r.event_races.events
     if (e.kind === 'lounge' && e.lounge_change_id !== null) changes.set(e.lounge_change_id, e.id)
   }
-  if (changes.size === 0) return new Set()
-  const { data, error } = await client.from('lounge_changes').select('change_id').eq('profile_id', profileId).eq('reason', 'Table').eq('rank', 1).limit(10000)
+  const first = new Set<string>()
+  const won = new Set<string>()
+  if (changes.size === 0) return { first, won }
+  const { data, error } = await client.from('lounge_changes').select('change_id, rank, delta').eq('profile_id', profileId).eq('reason', 'Table').limit(10000)
   if (error) throw error
-  return new Set(((data ?? []) as { change_id: number }[]).flatMap((c) => (changes.has(c.change_id) ? [changes.get(c.change_id) as string] : [])))
+  for (const c of (data ?? []) as { change_id: number; rank: number | null; delta: number }[]) {
+    const event = changes.get(c.change_id)
+    if (!event) continue
+    if (c.rank === 1) first.add(event)
+    if (c.delta > 0) won.add(event)
+  }
+  return { first, won }
 }
 
 /**
