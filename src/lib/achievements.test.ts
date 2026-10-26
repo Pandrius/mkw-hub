@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { achievementTotals, computeAchievements, isMaxed, type AchievementId } from './achievements'
+import { achievementTotals, computeAchievements, isMaxed, missingTracks, type AchievementId } from './achievements'
 import type { TimedResult } from './form'
 
 /** Un evento de 12 carreras (o las que se indiquen) con las posiciones dadas */
@@ -177,5 +177,20 @@ describe('un evento de 180 puntos cuenta para los dos', () => {
     const e120 = event('b', [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) // 144: gran evento sí, legendario no
     expect(get(e120, 'bigEvent').count).toBe(1)
     expect(get(e120, 'legendEvent').count).toBe(0)
+  })
+})
+
+describe('missingTracks', () => {
+  const ids = ['t0', 't1', 't2', 't3']
+
+  it('lista las pistas sin podio o sin victoria, en el orden dado', () => {
+    const rows = event('a', [1, 3, 4, 2])
+    expect(missingTracks(rows, 'podiumEverywhere', ids)).toEqual(['t2'])
+    expect(missingTracks(rows, 'winEverywhere', ids)).toEqual(['t1', 't2', 't3'])
+  })
+
+  it('los tramos no cuentan como pista conseguida', () => {
+    const rows = event('a', [1, 1]).map((r, i) => ({ ...r, section: i === 0 }))
+    expect(missingTracks(rows, 'winEverywhere', ids)).toEqual(['t0', 't2', 't3'])
   })
 })

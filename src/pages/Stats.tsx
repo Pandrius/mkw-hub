@@ -433,7 +433,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
             )}
           </div>
 
-          <BadgesPanel badges={badges} achievements={achievements} totalTracks={TRACKS.length} stats={achStats} />
+          <BadgesPanel badges={badges} achievements={achievements} totalTracks={TRACKS.length} timeline={verifiedTimeline} stats={achStats} />
 
           <section>
             <h3 className="mb-3 font-display text-xl font-bold">{t('stats.eventsList')}</h3>

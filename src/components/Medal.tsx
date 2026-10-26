@@ -420,9 +420,12 @@ export function MedalCard({
   suffix,
   single = false,
   topPercent = null,
+  extra,
 }: {
   single?: boolean
   topPercent?: number | null
+  /** Contenido bajo la barra de progreso (p. ej. las pistas que faltan) */
+  extra?: ReactNode
   glyph: Glyph
   name: string
   description: string
@@ -467,6 +470,7 @@ export function MedalCard({
           </span>
           <span>{single ? (tier ? t('ach.done') : '') : next ? t('badge.nextAt', { n: next }) : t('badge.maxed')}</span>
         </p>
+        {extra}
       </div>
     </div>
   )

@@ -116,6 +116,16 @@ const DEFS: Def[] = [
   },
 ]
 
+/** Mejor puesto que cuenta en cada logro de pistas distintas */
+export const TRACK_ACHIEVEMENTS = { podiumEverywhere: 3, winEverywhere: 1 } as const
+
+/** Pistas en las que aún no has conseguido el logro (podio o victoria, sin contar tramos), en el orden de `allTrackIds` */
+export function missingTracks(timeline: TimedResult[], achievement: keyof typeof TRACK_ACHIEVEMENTS, allTrackIds: string[]): string[] {
+  const best = TRACK_ACHIEVEMENTS[achievement]
+  const done = new Set(timeline.filter((r) => r.position <= best && !r.section).map((r) => r.trackId))
+  return allTrackIds.filter((id) => !done.has(id))
+}
+
 /**
  * Logros de desempeño a partir de las carreras de eventos finalizados (War y Lounge).
  * A diferencia de las insignias de volumen, estos dependen de las posiciones. Función pura.

@@ -1,15 +1,56 @@
-﻿import { getTrack } from '../data/tracks'
+﻿import { useState } from 'react'
+import { getTrack, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
-import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, missingTracks, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
+import type { TimedResult } from '../lib/form'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
 import { topPercentIn, type AchievementStats } from '../lib/achievementStats'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
 import { SectionTitle, TrackName } from './StatBlocks'
 import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
+/** Botón «Ver pistas que faltan» de un logro de pistas distintas: despliega las pistas sin podio / victoria */
+function MissingTracks({ ids, label }: { ids: string[]; label: string }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  if (ids.length === 0) return null
+  return (
+    <div className="mt-2.5">
+      <button type="button" className="font-mono text-[11px] font-bold uppercase text-kart-yellow hover:underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {open ? t('ach.hideMissing') : t('ach.viewMissing', { n: ids.length })}
+      </button>
+      {open && (
+        <div className="mt-2 border-t border-line pt-2">
+          <p className="mb-2 text-[11px] text-muted">{label}</p>
+          <ul className="grid gap-y-1.5 sm:grid-cols-2 sm:gap-x-4">
+            {ids.map((id) => (
+              <li key={id} className="flex min-w-0">
+                <TrackName trackId={id} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** Insignias por volumen de juego y logros de desempeño */
-export function BadgesPanel({ badges, achievements, totalTracks, stats = null }: { badges: BadgeSet; achievements: Achievement[]; totalTracks: number; stats?: AchievementStats | null }) {
+export function BadgesPanel({
+  badges,
+  achievements,
+  totalTracks,
+  timeline,
+  stats = null,
+}: {
+  badges: BadgeSet
+  achievements: Achievement[]
+  totalTracks: number
+  /** Carreras verificadas, para saber qué pistas faltan */
+  timeline: TimedResult[]
+  stats?: AchievementStats | null
+}) {
   const { t } = useI18n()
   const { mostPlayed } = badges
   // Niveles conseguidos: los de varios niveles suman hasta 4 y los de una sola vez, 1. El supremo no cuenta aquí
@@ -74,6 +115,11 @@ export function BadgesPanel({ badges, achievements, totalTracks, stats = null }:
             thresholds={a.thresholds}
             single={a.single}
             topPercent={topPercentIn(stats, a.id, a.count)}
+            extra={
+              a.id === 'podiumEverywhere' || a.id === 'winEverywhere' ? (
+                <MissingTracks ids={missingTracks(timeline, a.id, TRACKS.map((tr) => tr.id))} label={t(`ach.${a.id}.missing` as MessageKey)} />
+              ) : undefined
+            }
           />
         ))}
       </div>
