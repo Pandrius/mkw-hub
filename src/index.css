@@ -6,9 +6,9 @@
  * Sin esquinas redondeadas, sin degradados decorativos, sin cristal.
  */
 @theme {
-  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Big Shoulders Display', 'Barlow', ui-sans-serif, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, 'Yu Gothic UI', 'Hiragino Sans', 'Noto Sans CJK JP', 'Meiryo', sans-serif;
+  --font-display: 'Big Shoulders Display', 'Barlow', ui-sans-serif, 'Yu Gothic UI', 'Hiragino Sans', 'Noto Sans CJK JP', 'Meiryo', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Yu Gothic UI', 'Hiragino Sans', 'Noto Sans CJK JP', monospace;
 
   /* Asfalto (negro cálido, nada de azul marino) */
   --color-bg: #141414;

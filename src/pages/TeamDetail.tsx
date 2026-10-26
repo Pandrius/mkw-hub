@@ -4,7 +4,7 @@ import { RivalPreview } from '../components/RivalPreview'
 import { HeadToHead, TeamOverviewPanel, TeamPlayersTable, TeamTracksTable } from '../components/TeamAnalyticsView'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
-import { useI18n } from '../i18n'
+import { useI18n, type Lang } from '../i18n'
 import { useAuth } from '../lib/auth'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { computeTeamForm, type TeamForm } from '../lib/teamForm'
@@ -21,8 +21,15 @@ import { PendingWars } from '../components/PendingWars'
 
 type TabId = 'overview' | 'tracks' | 'players' | 'rivals' | 'preview' | 'wars' | 'members'
 
+const SIBLING_ROSTERS: Record<Lang, string> = {
+  en: 'Club rosters / Sub-teams:',
+  es: 'Rosters / Sub-equipos del club:',
+  fr: 'Rosters / Sous-équipes du club :',
+  ja: 'クラブのロスター / サブチーム：',
+}
+
 export default function TeamDetail() {
-  const { t, locale } = useI18n()
+  const { t, locale, lang } = useI18n()
   const { teamId } = useParams()
   const { profile } = useAuth()
 
@@ -144,7 +151,7 @@ export default function TeamDetail() {
           {siblingRosters.length > 1 && (
             <div className="mt-5 rounded-lg border border-line bg-surface p-3">
               <p className="font-mono text-xs font-bold text-muted mb-2 uppercase">
-                {locale === 'es' ? 'Rosters / Sub-equipos del club:' : 'Club rosters / Sub-teams:'}
+                {SIBLING_ROSTERS[lang]}
               </p>
               <div className="flex flex-wrap gap-2">
                 {siblingRosters.map((sib) => {

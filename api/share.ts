@@ -6,6 +6,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { en } from '../src/i18n/en.js'
+import { fr } from '../src/i18n/fr.js'
 import { es, type MessageKey } from '../src/i18n/es.js'
 import { buildTable, decodeWar } from '../src/lib/freeTable.js'
 
@@ -32,8 +33,10 @@ function page(o: { title: string; description: string; image: string; target: st
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
-  const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'es'
-  const t = (key: MessageKey, vars?: Record<string, string>) => (lang === 'en' ? en : es)[key].replace(/\{(\w+)\}/g, (_, k: string) => vars?.[k] ?? '')
+  const langParam = url.searchParams.get('lang')
+  // El japonés no se puede dibujar en la imagen (sin fuente de kanji): cae al inglés
+  const lang = langParam === 'en' || langParam === 'ja' ? 'en' : langParam === 'fr' ? 'fr' : 'es'
+  const t = (key: MessageKey, vars?: Record<string, string>) => ({ es, en, fr })[lang][key].replace(/\{(\w+)\}/g, (_, k: string) => vars?.[k] ?? '')
   const origin = url.origin
   // Discord y otros chats guardan la vista previa de cada enlace: cada copia del enlace lleva `v` para que sea siempre la de ahora
   const version = url.searchParams.get('v')

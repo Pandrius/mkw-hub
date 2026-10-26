@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
-import { useI18n, type Lang } from '../i18n'
+import { LANGS, useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { teamsOf } from '../lib/compare'
@@ -348,10 +348,9 @@ function NavItem({
 
 function LanguageSwitch() {
   const { lang, setLang, t } = useI18n()
-  const langs: Lang[] = ['es', 'en']
   return (
     <div role="group" aria-label={t('nav.language')} className="flex font-mono text-xs font-bold">
-      {langs.map((l, i) => (
+      {LANGS.map((l, i) => (
         <span key={l} className="flex items-center">
           {i > 0 && <span className="px-1 text-line">/</span>}
           <button

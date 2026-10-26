@@ -1,11 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { en } from './en'
+import { fr } from './fr'
+import { ja } from './ja'
 import { es, type MessageKey } from './es'
 import { format } from './format'
 
-export type Lang = 'es' | 'en'
+/** Idiomas de la web; el inglés es el predeterminado */
+// oxlint-disable-next-line react/only-export-components
+export const LANGS = ['en', 'es', 'fr', 'ja'] as const
+export type Lang = (typeof LANGS)[number]
 
-const DICTS: Record<Lang, Record<MessageKey, string>> = { es, en }
+const DICTS: Record<Lang, Record<MessageKey, string>> = { es, en, fr, ja }
 const STORAGE_KEY = 'mkwhub.lang'
 
 type I18n = {
@@ -13,7 +18,7 @@ type I18n = {
   setLang: (lang: Lang) => void
   /** Texto traducido, sustituyendo {variables} */
   t: (key: MessageKey, vars?: Record<string, string | number>) => string
-  /** Locale para fechas y números (es-ES / en-GB) */
+  /** Locale para fechas y números (es-ES / en-GB / fr-FR / ja-JP) */
   locale: string
 }
 
@@ -22,7 +27,7 @@ const I18nContext = createContext<I18n | null>(null)
 function initialLang(): Lang {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved === 'es' || saved === 'en') return saved
+    if (LANGS.includes(saved as Lang)) return saved as Lang
   } catch {
     // almacenamiento no disponible
   }

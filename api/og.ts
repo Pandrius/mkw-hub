@@ -1,12 +1,13 @@
 /**
  * Imagen de vista previa (PNG 1200×630) de un perfil o de una tabla, para los enlaces que se pegan en Discord y otros chats.
- *   /api/og?kind=profile&id=<uuid>[&lang=es|en]
- *   /api/og?kind=table&d=<tabla codificada>[&lang=es|en]
+ *   /api/og?kind=profile&id=<uuid>[&lang=es|en|fr|ja]
+ *   /api/og?kind=table&d=<tabla codificada>[&lang=es|en|fr|ja]
  * Solo enseña datos que ya son públicos (la web muestra los perfiles a cualquiera): el perfil con sus eventos verificados.
  */
 import { createClient } from '@supabase/supabase-js'
 import { getTrack, TRACKS } from '../src/data/tracks.js'
 import { en } from '../src/i18n/en.js'
+import { fr } from '../src/i18n/fr.js'
 import { es, type MessageKey } from '../src/i18n/es.js'
 import { achievementTotals, computeAchievements } from '../src/lib/achievements.js'
 import { computeBadges } from '../src/lib/badges.js'
@@ -23,9 +24,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TIER_HEX = ['#3b3b38', '#d98a45', '#c9ced6', '#ffd500', '#28d7f5', '#22e07f']
 const RUBY = '#e8112d'
 
-type Lang = 'es' | 'en'
+/** Idiomas de las vistas previas: sin japonés porque las fuentes de la imagen no llevan kanji (cae al inglés) */
+type Lang = 'es' | 'en' | 'fr'
+const DICTS = { es, en, fr }
+const langOf = (value: string | null): Lang => (value === 'en' || value === 'ja' ? 'en' : value === 'fr' ? 'fr' : 'es')
 const translator = (lang: Lang) => (key: MessageKey, vars?: Record<string, string | number>) =>
-  (lang === 'en' ? en : es)[key].replace(/\{(\w+)\}/g, (_, k: string) => String(vars?.[k] ?? ''))
+  DICTS[lang][key].replace(/\{(\w+)\}/g, (_, k: string) => String(vars?.[k] ?? ''))
 
 const FONT_FILES = [
   { file: 'barlow-latin-600-normal.woff', name: 'Barlow', weight: 600 },
@@ -115,7 +119,7 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
     return [{ src: medalDataUri(f.glyph, f.tier, kind), name: featuredLabel(fid, f.tier, t), tier: tierName, color, levels: single ? 0 : levels, earned: f.tier }]
   })
 
-  const nf = new Intl.NumberFormat(lang === 'en' ? 'en-GB' : 'es-ES')
+  const nf = new Intl.NumberFormat(DICTS[lang]['meta.lang'])
   const titleId = (prof.title_id as string | null) ?? null
   const spec = titleId ? titleSpec(titleId) : null
   const country = (prof.country_code as string | null)?.toLowerCase() ?? null
@@ -143,7 +147,7 @@ async function profileCard(id: string, lang: Lang): Promise<ProfileCard | null> 
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
-  const lang: Lang = url.searchParams.get('lang') === 'en' ? 'en' : 'es'
+  const lang = langOf(url.searchParams.get('lang'))
   const t = translator(lang)
   try {
     const fonts = await loadFonts(url.origin)
