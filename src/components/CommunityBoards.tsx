@@ -40,6 +40,19 @@ const BOARD_KEYS: BoardKey[] = [
 const RECORD_TOP = 3
 /** Jugadores que salen en cada lista de «más veces» de las coronas */
 const CROWN_TOP = 3
+/** Filas de las tablas antes de desplegar el ranking completo */
+const PREVIEW_ROWS = 10
+
+/** Botón para desplegar o plegar un ranking completo (no sale si ya se ve entero) */
+function ShowAll({ total, shown, open, onToggle }: { total: number; shown: number; open: boolean; onToggle: () => void }) {
+  const { t } = useI18n()
+  if (total <= shown) return null
+  return (
+    <button type="button" aria-expanded={open} onClick={onToggle} className="font-mono text-[11px] font-bold text-kart-yellow uppercase hover:underline">
+      {open ? t('cb.showLess') : t('cb.showAll', { n: total })}
+    </button>
+  )
+}
 
 /** Carga una vez los datos de la comunidad (rankings de logros, récords y coronas) */
 function useCommunity() {
@@ -69,13 +82,13 @@ function PlayerCell({ id, data }: { id: string; data: Community }) {
 /** Quién lleva ahora cada corona y quién la ha ganado más veces */
 function CrownStrip({ data }: { data: Community }) {
   const { t } = useI18n()
+  const [open, setOpen] = useState<Partial<Record<CrownPeriod, boolean>>>({})
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {CROWN_PERIODS.map((p: CrownPeriod) => {
         const board = data.crowns[p]
-        const top = Object.entries(board.counts)
-          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-          .slice(0, CROWN_TOP)
+        const ranked = Object.entries(board.counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        const top = open[p] ? ranked : ranked.slice(0, CROWN_TOP)
         return (
           <section key={p} className="panel flex gap-4 p-4">
             <CrownBadge period={p} state={board.holder ? 'now' : 'none'} size={64} />
@@ -92,6 +105,9 @@ function CrownStrip({ data }: { data: Community }) {
                   ))}
                 </ol>
               )}
+              <div className="mt-2">
+                <ShowAll total={ranked.length} shown={CROWN_TOP} open={!!open[p]} onToggle={() => setOpen((o) => ({ ...o, [p]: !o[p] }))} />
+              </div>
             </div>
           </section>
         )
@@ -107,11 +123,15 @@ export function AchievementsRanking() {
   const data = useCommunity()
   const [period, setPeriod] = useState<Period>('all')
   const [key, setKey] = useState<BoardKey>('overall')
+  // La lista completa se despliega por ranking: al cambiar de periodo o de logro vuelve a plegarse
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   if (data === undefined) return <p className="text-muted">{t('common.loading')}</p>
   if (data === null) return <p className="text-kart-red">{t('common.loadError')}</p>
 
   const entries = data.board[period][key] ?? []
+  const boardId = `${period}:${key}`
+  const rows = expanded === boardId ? entries : entries.slice(0, PREVIEW_ROWS)
   const name = (k: BoardKey) => (k === 'overall' ? t('cb.overall') : t(`ach.${k}.name` as MessageKey))
 
   return (
@@ -145,7 +165,7 @@ export function AchievementsRanking() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => (
+              {rows.map((e, i) => (
                 <tr key={e.profileId} className="border-t border-line/60">
                   <td className="px-3 py-2 font-mono text-muted">{i + 1}</td>
                   <td className="px-3 py-2">
@@ -158,6 +178,7 @@ export function AchievementsRanking() {
           </table>
         </div>
       )}
+      <ShowAll total={entries.length} shown={PREVIEW_ROWS} open={expanded === boardId} onToggle={() => setExpanded(expanded === boardId ? null : boardId)} />
       <p className="font-mono text-[11px] text-muted">{t('cb.updated', { time: new Date(data.generatedAt).toLocaleString() })}</p>
     </div>
   )
@@ -170,6 +191,7 @@ export function TrackRanking() {
   const data = useCommunity()
   const [period, setPeriod] = useState<'all' | 'week'>('all')
   const [picked, setPicked] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   if (data === undefined) return <p className="text-muted">{t('common.loading')}</p>
   if (data === null) return <p className="text-kart-red">{t('common.loadError')}</p>
@@ -178,6 +200,8 @@ export function TrackRanking() {
   // Por defecto, la primera pista que ya tiene clasificación
   const trackId = picked ?? TRACKS.find((tr) => boards[tr.id])?.id ?? TRACKS[0].id
   const entries = boards[trackId] ?? []
+  const boardId = `${period}:${trackId}`
+  const rows = expanded === boardId ? entries : entries.slice(0, PREVIEW_ROWS)
   const led = TRACKS.filter((tr) => boards[tr.id])
   const titleId = `${period === 'all' ? 'owner' : 'weekly'}:${trackId}`
   const plate = (id: string) => {
@@ -235,7 +259,7 @@ export function TrackRanking() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => (
+              {rows.map((e, i) => (
                 <tr key={e.profileId} className="border-t border-line/60">
                   <td className="px-3 py-2 font-mono text-muted">{i + 1}</td>
                   <td className="px-3 py-2">
@@ -250,6 +274,8 @@ export function TrackRanking() {
           </table>
         </div>
       )}
+
+      <ShowAll total={entries.length} shown={PREVIEW_ROWS} open={expanded === boardId} onToggle={() => setExpanded(expanded === boardId ? null : boardId)} />
 
       {led.length > 0 && (
         <section>
@@ -322,8 +348,10 @@ export function HallOfFame() {
 function RecordCard({ id, data, me, rivalId, open, onToggle }: { id: RecordId; data: Community; me: string | null; rivalId: string | null; open: boolean; onToggle: () => void }) {
   const { t } = useI18n()
   const num = useNum()
+  const [full, setFull] = useState(false)
   const list = data.records[id]
-  const top = list.slice(0, RECORD_TOP)
+  // Primeros puestos (o la clasificación completa si se despliega)
+  const top = full ? list : list.slice(0, RECORD_TOP)
   // Quienes se miran aparte (tú y el otro jugador) si no están ya entre los primeros
   const focus = [me, rivalId].filter((x): x is string => !!x && !top.some((e) => e.profileId === x))
   const history = data.history[id]
@@ -355,6 +383,9 @@ function RecordCard({ id, data, me, rivalId, open, onToggle }: { id: RecordId; d
           </li>
         ))}
       </ol>
+      <div className="mt-2">
+        <ShowAll total={list.length} shown={RECORD_TOP} open={full} onToggle={() => setFull((f) => !f)} />
+      </div>
       {focus.length > 0 && (
         <ul className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
           {focus.map((pid) => {

@@ -10,7 +10,7 @@ export type BoardEntry = { profileId: string; count: number; tier: number }
 export type AchievementBoard = Record<Period, Partial<Record<BoardKey, BoardEntry[]>>>
 
 /** Jugadores que salen en cada ranking */
-export const BOARD_SIZE = 10
+export const BOARD_SIZE = 50
 
 /** Inicio (ISO, UTC) del periodo que contiene `now`; null para todo el tiempo */
 export function periodStart(period: Period, now: Date): string | null {

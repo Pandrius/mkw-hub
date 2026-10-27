@@ -23,7 +23,7 @@ export const WEEK_MIN_RACES = 5
 export const ALL_PRIOR = 10
 export const WEEK_PRIOR = 3
 /** Jugadores que se guardan por pista */
-export const TRACK_BOARD_SIZE = 10
+export const TRACK_BOARD_SIZE = 50
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 const pointsOf = (position: number) => POINTS[position - 1] ?? 0
