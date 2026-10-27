@@ -50,13 +50,7 @@ export function TitleChip({ def, size = 'md', frame = OWNER_FRAME }: { def: Pick
     if (!def.id.startsWith('owner:')) return plate
     return (
       <span className="owner-frame" data-frame={frame} style={{ ['--frame-ink' as string]: rainbow ? '#16121f' : getTrackTextColor(track) }}>
-        <span className="owner-frame__star owner-frame__star--l" aria-hidden>
-          ★
-        </span>
         <span className="owner-frame__body">{plate}</span>
-        <span className="owner-frame__star owner-frame__star--r" aria-hidden>
-          ★
-        </span>
       </span>
     )
   }
