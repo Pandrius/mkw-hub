@@ -4,6 +4,7 @@
  * - Récords mundiales de las 40 pistas desde mkwrs.com.
  * - Equipos de Mario Kart World desde Mario Kart Central (MKC).
  * - Comprobación y sincronización de rosters de los usuarios registrados contra MKC (1 vez al día).
+ * - Recalcula los rankings de logros, récords y coronas de la comunidad (y avisa a quien pierde un récord o el trono).
  * - Mantiene el proyecto de Supabase activo escribiendo cada día.
  *
  * Los imports llevan .js porque Vercel compila cada archivo por separado como ESM.
@@ -12,6 +13,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { MKWRS_CSV_URL, parseWorldRecords } from '../src/lib/mkwrs.js'
+import { loadCommunity } from '../src/lib/communityServer.js'
 import { reverifyPending } from '../src/lib/loungeSync.js'
 import { syncAllRegisteredUsersMkc } from '../src/lib/mkc.js'
 
@@ -167,9 +169,19 @@ export async function GET(request: Request): Promise<Response> {
     console.error('Error reverificando eventos con el Lounge:', err)
   }
 
+  // Recalcula la instantánea de la comunidad (rankings, récords y coronas) y avisa de los relevos
+  let communityOk = true
+  try {
+    await loadCommunity(supabase, { force: true })
+  } catch (err) {
+    communityOk = false
+    console.error('Error recalculando la comunidad:', err)
+  }
+
   return Response.json({
     ok: true,
     syncedAt: startedAt,
+    community: communityOk,
     loungeVerified: loungeStats,
     worldRecords: records.length,
     tracks,

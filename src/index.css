@@ -590,3 +590,45 @@ input[data-position]::-webkit-inner-spin-button {
     animation: none;
   }
 }
+
+/* Títulos del trono. «Rey del asfalto»: placa inclinada de asfalto con el piano rojo y blanco de las curvas como marco y el
+   texto en oro con un reflejo. «Antiguo rey»: la misma placa en fantasma, a trazos y sin relleno (la casilla de pole de antes). */
+.crown-title {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-block;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.crown-title[data-crown='now'] {
+  color: #ffd34d;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(#141414, #141414) padding-box,
+    repeating-linear-gradient(-45deg, #e8112d 0 5px, #f4f4f0 5px 10px) border-box;
+  text-shadow: 0 1px 0 #000;
+}
+.crown-title[data-crown='now']::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 122, 0.7), transparent);
+  animation: chip-sweep 3.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+.crown-title[data-crown='ever'] {
+  color: #d9b84a;
+  border: 2px dashed #8a7430;
+  background: rgba(20, 20, 20, 0.45);
+  font-style: italic;
+}
+@media (prefers-reduced-motion: reduce) {
+  .crown-title::after {
+    animation: none;
+    display: none;
+  }
+}

@@ -11,6 +11,7 @@ const trackName = (id: string) => getTrack(id)?.abbr ?? getTrack(id)?.name ?? id
 /** Nombre de una insignia o logro destacado */
 export function featuredName(id: string, t: Translate, tier = 0): string {
   const [kind, key] = id.split(':')
+  if (kind === 'crown') return t(`crown.${key}.name` as MessageKey)
   // El rango de guerra se llama como su nivel actual (soldado raso, cabo...)
   if (id === 'ach:warWins') return t(`ach.warWins.rank.${tier}` as MessageKey)
   if (kind === 'ach') return t(`ach.${key}.name` as MessageKey)
@@ -19,7 +20,9 @@ export function featuredName(id: string, t: Translate, tier = 0): string {
 }
 
 /** Nombre y color del nivel de una insignia destacada: el evento legendario es «Rubí» (rojo) y la leyenda absoluta «Legendario» (multicolor) */
-export function featuredTier(id: string, tier: Tier, t: Translate): { label: string; color: string; multi: boolean } {
+export function featuredTier(id: string, tier: Tier, t: Translate, count?: number): { label: string; color: string; multi: boolean } {
+  // Coronas: «ahora» o las veces que se ha ganado
+  if (id.startsWith('crown:')) return { label: id.endsWith('Now') ? t('crown.now') : t('crown.times', { n: count ?? 0 }), color: id.startsWith('crown:all') ? '#ffd34d' : 'var(--color-kart-yellow)', multi: false }
   if (id === 'ach:legendEvent') return { label: t('badge.tier.ruby' as MessageKey), color: RUBY, multi: false }
   if (id === 'ach:allAchievements') return { label: t('badge.tier.legendary' as MessageKey), color: TIER_COLOR[tier], multi: true }
   return { label: t(tierLabel(tier)), color: TIER_COLOR[tier], multi: false }

@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
+import { useAuth } from '../lib/auth'
 import { getCommunity, type Community } from '../lib/community'
 import { PERIODS, type BoardKey, type Period } from '../lib/communityBoard'
-import { RECORD_IDS } from '../lib/records'
+import { REDEMPTION_FROM } from '../lib/achievements'
+import { CROWN_PERIODS, type CrownPeriod } from '../lib/crowns'
+import { RECORD_IDS, standingIn, type RecordEntry, type RecordId } from '../lib/records'
+import { CrownBadge } from './CrownBadge'
 import { Th } from './StatBlocks'
 import { useNum } from './statFormat'
 import { EmptyState, Flag, Tabs } from './ui'
@@ -29,7 +33,12 @@ const BOARD_KEYS: BoardKey[] = [
   'allAchievements',
 ]
 
-/** Carga una vez los datos de la comunidad (rankings de logros y récords) */
+/** Jugadores que salen en cada récord antes de «tu posición» */
+const RECORD_TOP = 3
+/** Jugadores que salen en cada lista de «más veces» de las coronas */
+const CROWN_TOP = 3
+
+/** Carga una vez los datos de la comunidad (rankings de logros, récords y coronas) */
 function useCommunity() {
   const [data, setData] = useState<Community | null | undefined>(undefined)
   useEffect(() => {
@@ -46,15 +55,49 @@ function PlayerCell({ id, data }: { id: string; data: Community }) {
   const { locale } = useI18n()
   const p = data.players[id]
   return (
-    <Link to={`/estadisticas/${id}`} className="flex items-center gap-2 font-semibold hover:text-kart-yellow">
-      {p?.avatar_url && <img src={p.avatar_url} alt="" className="size-6 rounded-full" />}
+    <Link to={`/estadisticas/${id}`} className="flex min-w-0 items-center gap-2 font-semibold hover:text-kart-yellow">
+      {p?.avatar_url && <img src={p.avatar_url} alt="" className="size-6 shrink-0 rounded-full" />}
       <Flag code={p?.country_code ?? null} locale={locale} />
-      {p?.username ?? '?'}
+      <span className="truncate">{p?.username ?? '?'}</span>
     </Link>
   )
 }
 
-/** Rankings de cada logro: todo el tiempo, esta semana (desde el lunes) y hoy */
+/** Quién lleva ahora cada corona y quién la ha ganado más veces */
+function CrownStrip({ data }: { data: Community }) {
+  const { t } = useI18n()
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {CROWN_PERIODS.map((p: CrownPeriod) => {
+        const board = data.crowns[p]
+        const top = Object.entries(board.counts)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, CROWN_TOP)
+        return (
+          <section key={p} className="panel flex gap-4 p-4">
+            <CrownBadge period={p} state={board.holder ? 'now' : 'none'} size={64} />
+            <div className="min-w-0 flex-1">
+              <h3 className="font-display text-xl leading-[1.05] font-black">{t(`crown.${p}.name` as MessageKey)}</h3>
+              <div className="mt-1.5 text-sm">{board.holder ? <PlayerCell id={board.holder} data={data} /> : <span className="text-muted">{t('crown.vacant')}</span>}</div>
+              {top.length > 0 && (
+                <ol className="mt-2.5 space-y-0.5 border-t border-line/60 pt-2 font-mono text-[11px] text-muted">
+                  {top.map(([id, n]) => (
+                    <li key={id} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{data.players[id]?.username ?? '?'}</span>
+                      <span className="shrink-0 font-bold text-ink">×{n}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Rankings de cada logro: todo el tiempo, esta semana (desde el lunes) y hoy, y las coronas de la comunidad */
 export function AchievementsRanking() {
   const { t } = useI18n()
   const num = useNum()
@@ -70,7 +113,9 @@ export function AchievementsRanking() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <p className="max-w-3xl text-xs text-muted">{t('crown.rankHint')}</p>
+      <CrownStrip data={data} />
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <Tabs tabs={PERIODS.map((p) => ({ id: p, label: t(`cb.period.${p}` as MessageKey) }))} value={period} onChange={setPeriod} />
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted">{t('cb.achievement')}</span>
@@ -115,11 +160,24 @@ export function AchievementsRanking() {
   )
 }
 
-/** Salón de la fama: las mejores marcas de la comunidad */
+/** Salón de la fama: las mejores marcas de la comunidad, tu posición, la comparación con otro jugador y la historia de cada récord */
 export function HallOfFame() {
   const { t } = useI18n()
-  const num = useNum()
+  const { profile } = useAuth()
   const data = useCommunity()
+  const [rivalId, setRivalId] = useState('')
+  const [open, setOpen] = useState<RecordId | null>(null)
+  const me = profile?.id ?? null
+
+  const choices = useMemo(
+    () =>
+      data
+        ? Object.entries(data.players)
+            .filter(([id]) => id !== me)
+            .sort((a, b) => a[1].username.localeCompare(b[1].username))
+        : [],
+    [data, me],
+  )
 
   if (data === undefined) return <p className="text-muted">{t('common.loading')}</p>
   if (data === null) return <p className="text-kart-red">{t('common.loadError')}</p>
@@ -127,35 +185,110 @@ export function HallOfFame() {
 
   return (
     <div className="space-y-4">
-      <p className="max-w-3xl text-xs text-muted">{t('hof.hint')}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="max-w-2xl flex-1 text-xs text-muted">{t('hof.hint')}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted">{t(me ? 'hof.compareMe' : 'hof.compare')}</span>
+          <select value={rivalId} onChange={(e) => setRivalId(e.target.value)} className="field w-56">
+            <option value="">—</option>
+            {choices.map(([id, p]) => (
+              <option key={id} value={id}>
+                {p.username}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {RECORD_IDS.filter((id) => data.records[id].length > 0).map((id) => (
-          <section key={id} className="panel p-4">
-            <h3 className="font-display text-xl leading-tight font-black">{t(`hof.${id}` as MessageKey)}</h3>
-            <p className="mt-1 text-xs text-muted">{t(`hof.${id}.desc` as MessageKey)}</p>
-            <ol className="mt-3 space-y-2">
-              {data.records[id].map((e, i) => (
-                <li key={e.profileId} className="flex items-center gap-3">
-                  <span className={`w-5 font-mono text-sm font-bold ${i === 0 ? 'text-kart-yellow' : 'text-muted'}`}>{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate">
-                    <PlayerCell id={e.profileId} data={data} />
-                  </span>
-                  <span className="text-right">
-                    {e.eventId ? (
-                      <Link to={`/eventos/${e.eventId}`} className="font-mono text-lg font-bold hover:text-kart-yellow" title={e.date?.slice(0, 10)}>
-                        {num(e.value, 0)}
-                      </Link>
-                    ) : (
-                      <span className="font-mono text-lg font-bold">{num(e.value, 0)}</span>
-                    )}
-                    {e.date && <span className="block font-mono text-[10px] text-muted">{e.date.slice(0, 10)}</span>}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
+          <RecordCard key={id} id={id} data={data} me={me} rivalId={rivalId || null} open={open === id} onToggle={() => setOpen(open === id ? null : id)} />
         ))}
       </div>
     </div>
+  )
+}
+
+function RecordCard({ id, data, me, rivalId, open, onToggle }: { id: RecordId; data: Community; me: string | null; rivalId: string | null; open: boolean; onToggle: () => void }) {
+  const { t } = useI18n()
+  const num = useNum()
+  const list = data.records[id]
+  const top = list.slice(0, RECORD_TOP)
+  // Quienes se miran aparte (tú y el otro jugador) si no están ya entre los primeros
+  const focus = [me, rivalId].filter((x): x is string => !!x && !top.some((e) => e.profileId === x))
+  const history = data.history[id]
+
+  const value = (e: RecordEntry) =>
+    e.eventId ? (
+      <Link to={`/eventos/${e.eventId}`} className="font-mono text-lg font-bold hover:text-kart-yellow" title={e.date.slice(0, 10)}>
+        {num(e.value, 0)}
+      </Link>
+    ) : (
+      <span className="font-mono text-lg font-bold">{num(e.value, 0)}</span>
+    )
+
+  return (
+    <section className="panel flex flex-col p-4">
+      <h3 className="font-display text-xl leading-tight font-black">{t(`hof.${id}` as MessageKey)}</h3>
+      <p className="mt-1 text-xs text-muted">{t(`hof.${id}.desc` as MessageKey, { from: REDEMPTION_FROM })}</p>
+      <ol className="mt-3 space-y-2">
+        {top.map((e, i) => (
+          <li key={e.profileId} className="flex items-center gap-3">
+            <span className={`w-5 font-mono text-sm font-bold ${i === 0 ? 'text-kart-yellow' : 'text-muted'}`}>{i + 1}</span>
+            <span className="min-w-0 flex-1">
+              <PlayerCell id={e.profileId} data={data} />
+            </span>
+            <span className="text-right">
+              {value(e)}
+              <span className="block font-mono text-[10px] text-muted">{e.date.slice(0, 10)}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+      {focus.length > 0 && (
+        <ul className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
+          {focus.map((pid) => {
+            const s = standingIn(list, pid)
+            return (
+              <li key={pid} className="flex items-center gap-3">
+                <span className="w-5 font-mono text-sm font-bold text-muted">{s?.rank ?? '–'}</span>
+                <span className="min-w-0 flex-1">
+                  <PlayerCell id={pid} data={data} />
+                  {pid === me && <span className="ml-1 font-mono text-[10px] text-kart-yellow uppercase">{t('stats.you')}</span>}
+                  {s?.gap != null && <span className="block font-mono text-[10px] text-muted">{t('hof.gap', { n: num(s.gap, 0), rank: s.rank - 1 })}</span>}
+                  {!s && <span className="block font-mono text-[10px] text-muted">{t('hof.noMark')}</span>}
+                </span>
+                {s && <span className="text-right">{value(s.entry)}</span>}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {history.length > 1 && (
+        <div className="mt-auto pt-3">
+          <button type="button" aria-expanded={open} onClick={onToggle} className="font-mono text-[11px] font-bold text-kart-yellow uppercase hover:underline">
+            {open ? t('hof.hideHistory') : t('hof.history', { n: history.length })}
+          </button>
+          {open && (
+            <ol className="mt-2 space-y-1.5 border-t border-line pt-2">
+              {[...history].reverse().map((h, i, arr) => {
+                const before = arr[i + 1]
+                return (
+                  <li key={`${h.profileId}${h.date}${h.value}`} className="text-xs">
+                    <span className="font-mono text-muted">{h.date.slice(0, 10)}</span> · <span className="font-semibold">{data.players[h.profileId]?.username ?? '?'}</span>{' '}
+                    <span className="font-mono font-bold text-kart-yellow">{num(h.value, 0)}</span>
+                    {before && (
+                      <span className="text-muted">
+                        {' '}
+                        — {before.profileId === h.profileId ? t('hof.improved', { value: num(before.value, 0) }) : t('hof.beat', { name: data.players[before.profileId]?.username ?? '?', value: num(before.value, 0) })}
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

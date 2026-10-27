@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { EmptyState, PageHeader, Plate } from '../components/ui'
 import { useI18n } from '../i18n'
+import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { listNotices, markNoticesRead, type Notice } from '../lib/notices'
 
@@ -48,7 +49,25 @@ export default function Notices() {
       {notices?.length === 0 && <EmptyState title={t('notices.empty')} />}
       {!!notices?.length && (
         <ul className="panel divide-y divide-line/60">
-          {notices.map((n) => (
+          {notices.map((n) =>
+            n.kind === 'record_lost' || n.kind === 'throne_lost' ? (
+              <li key={n.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 text-sm">
+                    {!n.read_at && <span className="bg-kart-yellow px-1.5 py-0.5 font-mono text-[10px] font-bold text-bg uppercase">{t('notices.new')}</span>}
+                    <span>
+                      {n.kind === 'throne_lost'
+                        ? t('notices.throneLost', { who: n.actor?.username ?? '?' })
+                        : t('notices.recordLost', { who: n.actor?.username ?? '?', record: t(`hof.${n.data?.record ?? 'bestEvent'}` as MessageKey), value: n.data?.value ?? 0 })}
+                    </span>
+                  </p>
+                  <p className="mt-1 font-mono text-xs text-muted">{new Date(n.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}</p>
+                </div>
+                <Link to={`/ranking?tab=${n.kind === 'throne_lost' ? 'achievements' : 'records'}`} className="btn-line text-sm">
+                  {t('notices.seeRanking')}
+                </Link>
+              </li>
+            ) : (
             <li key={n.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -73,7 +92,8 @@ export default function Notices() {
                 )}
               </div>
             </li>
-          ))}
+            ),
+          )}
         </ul>
       )}
     </>

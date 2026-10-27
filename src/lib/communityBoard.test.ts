@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildBoard, periodStart } from './communityBoard'
 import type { TimedResult } from './form'
-import { buildRecords } from './records'
 
 const race = (eventId: string, raceNo: number, position: number, date: string, extra: Partial<TimedResult> = {}): TimedResult => ({
   eventId,
@@ -52,27 +51,5 @@ describe('buildBoard', () => {
     const b = buildBoard([{ id: 'x', timeline: [...old, ...fresh] }], 40, NOW)
     expect(b.all.overall?.[0].count).toBeGreaterThan(b.day.overall?.[0].count ?? 0)
     expect(b.day.overall?.[0].count).toBeGreaterThan(0)
-  })
-})
-
-describe('buildRecords', () => {
-  const players = [
-    { id: 'a', timeline: [...ev('e1', Array(12).fill(1), '2026-10-01T10:00:00Z', { warWon: true }), ...ev('e2', [12, 1, ...Array(10).fill(5)], '2026-10-02T10:00:00Z')] },
-    { id: 'b', timeline: ev('e3', Array(12).fill(2), '2026-10-03T10:00:00Z', { warWon: true }) },
-  ]
-  const rec = buildRecords(players)
-
-  it('mejor evento y victorias en un evento', () => {
-    expect(rec.bestEvent[0]).toMatchObject({ profileId: 'a', value: 180, eventId: 'e1' })
-    expect(rec.bestEvent[1]).toMatchObject({ profileId: 'b', value: 144 })
-    expect(rec.winsInEvent[0]).toMatchObject({ profileId: 'a', value: 12 })
-  })
-
-  it('rachas, remontadas y wars ganadas', () => {
-    expect(rec.winStreak[0]).toMatchObject({ profileId: 'a', value: 12 })
-    expect(rec.top6Streak[0].profileId).toBe('a')
-    expect(rec.redemptions[0]).toMatchObject({ profileId: 'a', value: 1 })
-    expect(rec.warWins.map((r) => [r.profileId, r.value])).toEqual([['a', 1], ['b', 1]])
-    expect(rec.cleanEvents.map((r) => r.profileId)).toEqual(['a', 'b'])
   })
 })

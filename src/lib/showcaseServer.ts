@@ -6,6 +6,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { TRACKS } from '../data/tracks.js'
 import { computeAchievements } from './achievements.js'
 import { computeBadges } from './badges.js'
+import { loadCommunity } from './communityServer.js'
+import { crownFactsOf, type CrownFacts } from './crowns.js'
 import { fetchTimeline } from './timelineQuery.js'
 import { featurable, loungeFactsOf, type Featurable, type TitleContext } from './titles.js'
 
@@ -14,6 +16,14 @@ export async function loadTitleContext(admin: SupabaseClient, profileId: string)
   const timeline = (await fetchTimeline(admin, profileId)).filter((r) => r.verified)
   const achievements = computeAchievements(timeline, TRACKS.length)
   const badges = computeBadges(timeline, TRACKS.length)
+
+  // Las coronas salen de la instantánea de la comunidad; si no está disponible, no se ofrecen insignias ni títulos de corona
+  let crowns: CrownFacts | null = null
+  try {
+    crowns = crownFactsOf((await loadCommunity(admin)).crowns, profileId)
+  } catch (err) {
+    console.error('showcase crowns', err)
+  }
 
   const [acc, ch, owners] = await Promise.all([
     admin.from('lounge_players').select('overall_rank, total_players').eq('profile_id', profileId).maybeSingle(),
@@ -30,5 +40,5 @@ export async function loadTitleContext(admin: SupabaseClient, profileId: string)
     rows.map((r) => ({ reason: r.reason, tier: r.tier, newMmr: r.new_mmr })),
   )
 
-  return { ctx: { achievements, badges, ownedTracks: ownedTrackIds, lounge }, owned: featurable(achievements, badges) }
+  return { ctx: { achievements, badges, ownedTracks: ownedTrackIds, lounge, crowns }, owned: featurable(achievements, badges, crowns) }
 }

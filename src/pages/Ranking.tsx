@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { AchievementsRanking, HallOfFame } from '../components/CommunityBoards'
 import { Th } from '../components/StatBlocks'
 import { useNum } from '../components/statFormat'
@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase'
 const MIN_RACES = 50
 
 type Tab = 'verified' | 'lounge' | 'achievements' | 'records'
+const TABS: Tab[] = ['verified', 'lounge', 'achievements', 'records']
 type Kind = 'all' | 'war' | 'lounge'
 
 type VerifiedRow = {
@@ -44,7 +45,10 @@ type LoungePage = { ok: boolean; total: number; skip: number; pageSize: number; 
 export default function Ranking() {
   const { t, locale } = useI18n()
   const { profile } = useAuth()
-  const [tab, setTab] = useState<Tab>('verified')
+  // /ranking?tab=records abre directamente esa pestaña (los avisos de récords enlazan así)
+  const [params] = useSearchParams()
+  const asked = params.get('tab')
+  const [tab, setTab] = useState<Tab>(TABS.includes(asked as Tab) ? (asked as Tab) : 'verified')
   const [country, setCountry] = useState<string | null>(null)
   const countries = useMemo(() => allCountries(locale), [locale])
   // Por defecto, el país del propio jugador

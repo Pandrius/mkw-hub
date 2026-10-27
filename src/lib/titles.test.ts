@@ -97,3 +97,30 @@ describe('rayos de los escudos especiales', () => {
     expect(DEFAULT_BOLT_STYLE).toBe('simple')
   })
 })
+
+describe('coronas', () => {
+  const none = { dayNow: false, weekNow: false, allNow: false, dayCount: 0, weekCount: 0, allCount: 0 }
+
+  it('sin coronas no hay insignias ni títulos de corona', () => {
+    expect(featurable([], computeBadges([], 40), none).some((f) => f.id.startsWith('crown:'))).toBe(false)
+    expect(titleCatalog({ ...ctxFor([]), crowns: none }).filter((t) => t.group === 'crown' && t.earned)).toEqual([])
+  })
+
+  it('«ahora» y «alguna vez» son insignias distintas, y la segunda lleva las veces', () => {
+    const crowns = { ...none, weekNow: true, weekCount: 3, dayCount: 2 }
+    const owned = featurable([], computeBadges([], 40), crowns).filter((f) => f.id.startsWith('crown:'))
+    expect(owned.map((f) => f.id).sort()).toEqual(['crown:dayEver', 'crown:weekEver', 'crown:weekNow'])
+    expect(owned.find((f) => f.id === 'crown:weekEver')?.count).toBe(3)
+    expect(validateFeatured(['crown:weekNow'], owned)).toEqual(['crown:weekNow'])
+    expect(validateFeatured(['crown:dayNow'], owned)).toBeNull()
+  })
+
+  it('el título del trono: uno para quien reina y otro para quien ha reinado alguna vez', () => {
+    const former = titleCatalog({ ...ctxFor([]), crowns: { ...none, allCount: 2 } })
+    expect(former.find((t) => t.id === 'kingEver')?.earned).toBe(true)
+    expect(former.find((t) => t.id === 'kingNow')?.earned).toBe(false)
+    const king = { ...ctxFor([]), crowns: { ...none, allNow: true, allCount: 1 } }
+    expect(validateTitle('kingNow', king)).toBe('kingNow')
+    expect(validateTitle('kingNow', { ...king, crowns: none })).toBeUndefined()
+  })
+})
