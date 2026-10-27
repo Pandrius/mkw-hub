@@ -37,6 +37,9 @@ function tidy(s: string): string {
     .trim()
 }
 
+/** Texto sin símbolos raros pero con todo lo demás (también el tag), para quien analiza el tag aparte */
+export const tidyName = (raw: string): string => tidy(raw.normalize('NFKC'))
+
 /** Solo letras y números: la forma de un tag */
 const tagOf = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '').slice(0, MAX_TAG_LENGTH + 1)
 

@@ -143,3 +143,38 @@ describe('bestReading, swapSides y applyCapture', () => {
     expect(out.away).toMatchObject({ tag: 'rkl', name: 'Rival' })
   })
 })
+
+describe('pantalla de resultados de dos columnas', () => {
+  // Lo que lee el OCR de la captura de referencia (columna 0 = izquierda, 1 = derecha)
+  const col = (column: 0 | 1, ...texts: string[]): CaptureLine[] => texts.map((text, i) => ({ text, y: 547 + i * 51, confidence: 80, column }))
+  const reading = parseCaptureLines([
+    ...col(0, '92: Ines 113', '92: 101', '92: sphinx 84', '921 JoyBy 79', '2: Aegis 68', '92: FFFFFF oo 2'),
+    ...col(1, 'GO Polimar 86', 'GO skill 83', 'GO Waguri 82', 'GO tab 79', 'GO Dani 76', 'GO*Rayito 73'),
+  ])
+
+  it('cada columna es un equipo y su tag es la palabra que comparten, aunque el OCR la lea con variaciones', () => {
+    expect(reading.sidesFrom).toBe('column')
+    expect(reading.tags.home).toMatch(/^92/)
+    expect(reading.tags.away).toBe('GO')
+  })
+
+  it('saca los nombres y los puntos de las 12 filas, con el jugador sin nombre incluido', () => {
+    const left = reading.rows.filter((r) => r.side === 'home')
+    const right = reading.rows.filter((r) => r.side === 'away')
+    expect(left.map((r) => [r.name, r.points])).toEqual([['Ines', '113'], ['', '101'], ['sphinx', '84'], ['JoyBy', '79'], ['Aegis', '68'], ['FFFFFF', '2']])
+    expect(right.map((r) => [r.name, r.points])).toEqual([['Polimar', '86'], ['skill', '83'], ['Waguri', '82'], ['tab', '79'], ['Dani', '76'], ['Rayito', '73']])
+    expect(reading.rows.every((r) => r.include)).toBe(true)
+  })
+
+  it('los puntos de cada equipo suman el total de la captura (447 y 479)', () => {
+    const total = (side: string) => reading.rows.filter((r) => r.side === side).reduce((n, r) => n + Number(r.points), 0)
+    expect([total('home'), total('away')]).toEqual([447, 479])
+  })
+
+  it('pasa a la tabla también al jugador sin nombre, con sus puntos', () => {
+    const out = applyCapture(emptyWar(), reading.rows, reading.tags)
+    expect(out.home.players).toHaveLength(6)
+    expect(out.home.players[1]).toMatchObject({ name: '', points: '101' })
+    expect(out.away.tag).toBe('GO')
+  })
+})

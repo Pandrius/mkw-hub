@@ -55,6 +55,21 @@ export default function FreeTable() {
   const design = linkDesign ?? stored ?? DEFAULT_DESIGN
   const [designOpen, setDesignOpen] = useState(false)
   const [captureOpen, setCaptureOpen] = useState(false)
+  // Ctrl+V con una captura en cualquier punto de la página abre el panel y la lee (con el panel abierto, lo recoge él)
+  const [pasted, setPasted] = useState<File | null>(null)
+  useEffect(() => {
+    if (captureOpen) return
+    const onPaste = (e: ClipboardEvent) => {
+      if ((e.target as HTMLElement | null)?.closest('input, textarea')) return
+      const image = [...(e.clipboardData?.items ?? [])].find((i) => i.type.startsWith('image/'))?.getAsFile()
+      if (!image) return
+      e.preventDefault()
+      setPasted(image)
+      setCaptureOpen(true)
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [captureOpen])
   const [note, setNote] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ key: string; url: string } | null>(null)
   const [failed, setFailed] = useState(false)
@@ -248,6 +263,7 @@ export default function FreeTable() {
         <button type="button" className="btn-line text-sm" onClick={() => setCaptureOpen((o) => !o)} aria-expanded={captureOpen}>
           📷 {t('cap.open')}
         </button>
+        <span className="hidden text-xs text-muted lg:inline">{t('cap.paste')}</span>
         <button type="button" className="min-h-11 text-sm text-muted hover:text-kart-red" onClick={clear}>
           {t('free.clear')}
         </button>
@@ -256,14 +272,19 @@ export default function FreeTable() {
       {captureOpen && (
         <CaptureTablePanel
           tags={[war.home.tag, war.away.tag]}
-          onClose={() => setCaptureOpen(false)}
+          initialImage={pasted}
+          onClose={() => {
+            setCaptureOpen(false)
+            setPasted(null)
+          }}
           onApply={(rows, tags) => {
             // Los tags de los nombres pasan a ser los de los equipos y, si son de un equipo de la web, se elige con su nombre
             setWar((w) => matchKnownTeams(applyCapture(w, rows, tags), teams))
             setCaptureOpen(false)
+            setPasted(null)
             // Las filas que no se pasan (puntos que no son de un jugador, como el total de un equipo) se avisan, no se descartan en silencio
             const skipped = rows.filter((r) => !r.include && r.name.trim() !== '').map((r) => `${r.name} (${r.points})`)
-            const used = rows.filter((r) => r.include && r.name.trim() !== '').length
+            const used = rows.filter((r) => r.include && (r.name.trim() !== '' || r.points.trim() !== '')).length
             flash(skipped.length > 0 ? `${t('cap.done', { n: used })} ${t('cap.skipped', { names: skipped.join(', ') })}` : t('cap.done', { n: used }), skipped.length > 0 ? 12000 : 4000)
           }}
         />

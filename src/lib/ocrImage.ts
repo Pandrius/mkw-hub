@@ -13,7 +13,7 @@ export const ALL_LANGS = 'eng+jpn+ell'
 /** Un lector por combinación de idiomas: cada uno carga sus datos la primera vez que se usa */
 const workerPromises = new Map<string, Promise<Worker>>()
 
-function getWorker(langs = LATIN_LANGS, onProgress?: (p: number) => void): Promise<Worker> {
+export function getWorker(langs = LATIN_LANGS, onProgress?: (p: number) => void): Promise<Worker> {
   let workerPromise = workerPromises.get(langs)
   workerPromise ??= import('tesseract.js').then(async ({ createWorker, OEM, PSM }) => {
     const base = `${import.meta.env.BASE_URL}tesseract/`

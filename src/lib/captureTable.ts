@@ -1,6 +1,7 @@
 import { newPlayerId, type FreeWar } from './freeTable'
 import type { OcrLine } from './ocrRace'
-import { cleanPlayerName, extractTag, splitSharedTags } from './playerName'
+import { cleanPlayerName, extractTag, splitSharedTags, tidyName } from './playerName'
+import { alike, firstToken } from './warScreen'
 
 /**
  * De una captura a una tabla de war: lo que el OCR lee de cada fila (nombre y puntos) se convierte en filas editables. El equipo
@@ -10,7 +11,8 @@ import { cleanPlayerName, extractTag, splitSharedTags } from './playerName'
  */
 export type Rgb = [number, number, number]
 /** Una fila leída: el texto y, si se ha podido, el color medio de su fondo */
-export type CaptureLine = OcrLine & { rgb?: Rgb | null }
+/** `column`: 0 = columna izquierda, 1 = derecha, en las pantallas de resultados de dos columnas (un equipo a cada lado) */
+export type CaptureLine = OcrLine & { rgb?: Rgb | null; column?: 0 | 1 }
 export type Side = 'home' | 'away'
 
 export type CaptureRow = {
@@ -25,8 +27,8 @@ export type CaptureRow = {
   raw: string
 }
 
-/** De dónde sale el equipo de cada fila: de los tags, del color de la fila, o de ningún sitio (todas en el equipo 1 y hay que elegir) */
-export type SidesFrom = 'tag' | 'color' | 'none'
+/** De dónde sale el equipo de cada fila: de su columna (pantalla de resultados de dos columnas), de los tags, del color de la fila, o de ningún sitio (todas en el equipo 1 y hay que elegir) */
+export type SidesFrom = 'column' | 'tag' | 'color' | 'none'
 
 export type CaptureReading = {
   rows: CaptureRow[]
@@ -54,15 +56,14 @@ export function teamOfColor([r, g, b]: Rgb): 'red' | 'blue' | null {
 }
 
 /** El número de puntos al final de la fila (separado del nombre) y el nombre sin la posición del principio */
-function splitRow(text: string): { body: string; points: number } | null {
+function splitRow(text: string, stripPosition = true): { body: string; points: number } | null {
   const trimmed = text.trim()
   const m = /(?:^|[^\p{L}\p{N}])(\d{1,3})[^\p{L}\p{N}]*$/u.exec(trimmed)
   if (!m) return null
   // m.index es el separador que hay justo antes de los puntos (o 0 si la fila empieza por ellos)
-  const body = trimmed
-    .slice(0, m.index)
-    // La posición del principio (1, 2.º, 3rd…) no es parte del nombre
-    .replace(/^[^\p{L}\p{N}]{0,3}\d{1,2}(?:st|nd|rd|th|º|°|\.|\)|:)?(?=\s|$)/iu, '')
+  const before = trimmed.slice(0, m.index)
+  // La posición del principio (1, 2.º, 3rd…) no es parte del nombre. Solo hasta 24: «92:» es un tag, no una posición
+  const body = stripPosition ? before.replace(/^[^\p{L}\p{N}]{0,3}(?:[1-9]|1\d|2[0-4])(?:st|nd|rd|th|º|°|\.|\)|:)?(?=\s|$)/iu, '') : before
   return { body, points: Number(m[1]) }
 }
 
@@ -71,11 +72,55 @@ type Parsed = { name: string; points: number; raw: string; color: 'red' | 'blue'
 /** ¿Son el mismo tag? (sin distinguir mayúsculas) */
 const sameTag = (a: string | null, b: string | null) => a !== null && b !== null && a.toLowerCase() === b.toLowerCase()
 
+/** Basura corta que el OCR deja al final de un nombre («FFFFFF oo»): una «o» o un cero sueltos detrás de otra palabra */
+const dropTrailingJunk = (name: string) => name.replace(/(?<=\S)\s+[oO0]{1,2}$/u, '')
+
+/**
+ * Pantalla de resultados de dos columnas (un equipo a cada lado): cada columna es un equipo y su tag es la primera palabra que
+ * comparten los jugadores, aunque el OCR la lea con variaciones («92:», «921», «2:»). Un jugador sin nombre (solo el tag) sale con
+ * el nombre vacío.
+ */
+function parseColumns(lines: CaptureLine[]): CaptureReading {
+  const rows: CaptureRow[] = []
+  const tags = { home: '', away: '' }
+  for (const column of [0, 1] as const) {
+    const parsed = lines
+      .filter((l) => l.column === column)
+      .sort((a, b) => a.y - b.y)
+      .flatMap((line) => {
+        const split = splitRow(line.text, false)
+        return split ? [{ body: tidyName(split.body), points: split.points, raw: line.text.trim() }] : []
+      })
+    // El tag de la columna: la primera palabra que más filas comparten (con una letra de diferencia como mucho)
+    const firsts = parsed.map((p) => p.body.split(' ')[0] ?? '')
+    let tag = ''
+    let support = 1
+    for (const first of new Set(firsts.filter((f) => f !== ''))) {
+      const n = firsts.filter((f) => alike(firstToken(f), firstToken(first))).length
+      if (n > support || (n === support && tag !== '' && first.length > tag.length && alike(firstToken(first), firstToken(tag)))) {
+        support = n
+        tag = first
+      }
+    }
+    if (column === 0) tags.home = tag
+    else tags.away = tag
+    for (const p of parsed) {
+      const words = p.body.split(' ')
+      const tagged = tag !== '' && alike(firstToken(words[0] ?? ''), firstToken(tag))
+      const name = dropTrailingJunk((tagged ? words.slice(1).join(' ') : p.body).trim())
+      rows.push({ id: newPlayerId(), name, points: String(p.points), side: column === 0 ? 'home' : 'away', include: p.points <= MAX_PLAYER_POINTS, raw: p.raw })
+    }
+  }
+  return { rows, sidesFrom: 'column', tags }
+}
+
 /**
  * Filas editables a partir de las líneas leídas. `known` son los tags de equipo ya escritos en el editor (equipo 1 y equipo 2): se
  * reconocen en los nombres y mandan para saber qué equipo es cuál.
  */
 export function parseCaptureLines(lines: CaptureLine[], known: string[] = []): CaptureReading {
+  // Pantalla de dos columnas: el equipo de cada fila es su columna
+  if (lines.some((l) => l.column !== undefined)) return parseColumns(lines)
   const parsed: Parsed[] = [...lines]
     .sort((a, b) => a.y - b.y)
     .flatMap((line) => {
@@ -154,7 +199,7 @@ export function parseCaptureLines(lines: CaptureLine[], known: string[] = []): C
 
 /** De varias lecturas de la misma imagen (normal e invertida), la que saca más filas válidas */
 export function bestReading(readings: CaptureReading[]): CaptureReading {
-  const score = (r: CaptureReading) => r.rows.filter((x) => x.include).length * 10 + (r.sidesFrom === 'tag' ? 8 : r.sidesFrom === 'color' ? 5 : 0)
+  const score = (r: CaptureReading) => r.rows.filter((x) => x.include).length * 10 + (r.sidesFrom === 'column' ? 9 : r.sidesFrom === 'tag' ? 8 : r.sidesFrom === 'color' ? 5 : 0)
   return readings.reduce((best, r) => (score(r) > score(best) ? r : best))
 }
 
@@ -166,7 +211,7 @@ export const swapSides = (rows: CaptureRow[]): CaptureRow[] => rows.map((r) => (
  * ponen como tag de cada equipo (si cambia el tag, el equipo elegido antes del buscador deja de valer).
  */
 export function applyCapture(war: FreeWar, rows: CaptureRow[], tags: { home: string; away: string } = { home: '', away: '' }): FreeWar {
-  const players = (side: Side) => rows.filter((r) => r.include && r.side === side && r.name.trim() !== '').map((r) => ({ id: newPlayerId(), name: r.name.trim(), points: r.points.trim() }))
+  const players = (side: Side) => rows.filter((r) => r.include && r.side === side && (r.name.trim() !== '' || r.points.trim() !== '')).map((r) => ({ id: newPlayerId(), name: r.name.trim(), points: r.points.trim() }))
   const team = (side: Side) => {
     const current = war[side]
     const tag = tags[side].trim()

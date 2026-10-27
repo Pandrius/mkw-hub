@@ -76,7 +76,7 @@ export function normalizeName(s: string): string {
     .replace(/./g, (c) => CONFUSABLES[c] ?? c)
 }
 
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const prev = Array.from({ length: b.length + 1 }, (_, i) => i)
   for (let i = 1; i <= a.length; i++) {
     let diag = prev[0]

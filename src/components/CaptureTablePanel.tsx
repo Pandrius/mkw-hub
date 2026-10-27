@@ -3,13 +3,14 @@ import { useI18n } from '../i18n'
 import { bestReading, parseCaptureLines, swapSides, type CaptureRow, type Side } from '../lib/captureTable'
 import { newPlayerId } from '../lib/freeTable'
 import { readCaptureLines } from '../lib/ocrImage'
+import { readWarScreen } from '../lib/ocrWarScreen'
 
 /**
  * Tabla de war a partir de una captura de la pantalla de resultados. Se lee en el navegador (sin subir nada a ningún servidor): salen
  * los jugadores con sus puntos, sin tag ni símbolos raros, y el equipo de cada uno se saca del tag de su nombre (o, si no lo hay, del
  * color de su fila). Si se sabe el equipo de cada uno, la tabla se rellena directamente; si no, se enseñan las filas para elegirlo.
  */
-export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: string[]; onApply: (rows: CaptureRow[], tags: { home: string; away: string }) => void; onClose: () => void }) {
+export default function CaptureTablePanel({ tags, initialImage = null, onApply, onClose }: { tags: string[]; /** Imagen ya pegada con Ctrl+V fuera del panel: se lee nada más abrirlo */ initialImage?: File | null; onApply: (rows: CaptureRow[], tags: { home: string; away: string }) => void; onClose: () => void }) {
   const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -34,10 +35,13 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
       setError(false)
       setProgress(0)
       try {
-        const { normal, inverted } = await readCaptureLines(image, scripts, setProgress)
-        const reading = bestReading([parseCaptureLines(normal, tags), parseCaptureLines(inverted, tags)])
+        // Primero la pantalla de resultados de una war (dos columnas de barras, un equipo a cada lado); si la imagen no es así, el lector general
+        const warLines = await readWarScreen(image, scripts, setProgress)
+        const reading = warLines
+          ? parseCaptureLines(warLines, tags)
+          : await readCaptureLines(image, scripts, setProgress).then(({ normal, inverted }) => bestReading([parseCaptureLines(normal, tags), parseCaptureLines(inverted, tags)]))
         // Con el equipo de cada jugador claro (por el tag o el color), la tabla se rellena sin más pasos
-        if (reading.sidesFrom !== 'none' && reading.rows.some((r) => r.include && r.name.trim())) {
+        if (reading.sidesFrom !== 'none' && reading.rows.some((r) => r.include && (r.name.trim() || r.points.trim()))) {
           setRows(null)
           onApply(reading.rows, reading.tags)
           return
@@ -63,6 +67,15 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
     },
     [read, allScripts],
   )
+
+  // Una imagen pegada antes de abrir el panel se lee al abrirlo
+  const started = useRef(false)
+  useEffect(() => {
+    if (initialImage && !started.current) {
+      started.current = true
+      choose(initialImage)
+    }
+  }, [initialImage, choose])
 
   // Ctrl+V con una imagen en el portapapeles
   useEffect(() => {
