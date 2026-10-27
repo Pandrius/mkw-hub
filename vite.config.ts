@@ -12,6 +12,9 @@ const pkgDir = (name: string) => dirname(require.resolve(`${name}/package.json`)
 const TESSERACT_FILES: Record<string, string> = {
   'worker.min.js': join(pkgDir('tesseract.js'), 'dist/worker.min.js'),
   'eng.traineddata.gz': join(pkgDir('@tesseract.js-data/eng'), '4.0.0_best_int/eng.traineddata.gz'),
+  // Alfabetos para los nombres de las capturas de tablas (solo se descargan si se activan): japonés y griego
+  'jpn.traineddata.gz': join(pkgDir('@tesseract.js-data/jpn'), '4.0.0_best_int/jpn.traineddata.gz'),
+  'ell.traineddata.gz': join(pkgDir('@tesseract.js-data/ell'), '4.0.0_best_int/ell.traineddata.gz'),
   ...Object.fromEntries(
     ['tesseract-core-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.js', 'tesseract-core-relaxedsimd-lstm.wasm.js'].map(
       (f) => [f, join(pkgDir('tesseract.js-core'), f)],

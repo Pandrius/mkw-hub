@@ -3,7 +3,15 @@
 // se empareja con el nombre conocido que más se le parece. Todo son funciones puras (con tests).
 
 /** Una línea de texto reconocida, con su posición vertical en la imagen */
-export type OcrLine = { text: string; y: number; confidence: number }
+export type OcrLine = {
+  text: string
+  y: number
+  confidence: number
+  /** Caja de la fila (solo si el OCR la da): extremos horizontales y altura, para mirar el color del fondo */
+  x0?: number
+  x1?: number
+  height?: number
+}
 
 export type OcrPlayer = { key: string; name: string }
 
@@ -20,7 +28,7 @@ export type OcrMatch = {
 export type OcrRaceResult = { matches: OcrMatch[]; unmatched: string[] }
 
 /** Trozo de texto suelto que devuelve el OCR, con su caja */
-export type OcrFragment = { text: string; x: number; y: number; height: number; confidence: number }
+export type OcrFragment = { text: string; x: number; y: number; height: number; confidence: number; /** Extremo derecho del trozo */ x1?: number }
 
 /**
  * Junta los trozos que están a la misma altura en una fila, de izquierda a derecha
@@ -42,6 +50,8 @@ export function groupRows(fragments: OcrFragment[]): OcrLine[] {
     text: [...row].sort((a, b) => a.x - b.x).map((f) => f.text.trim()).join(' '),
     y: row.reduce((s, x) => s + x.y, 0) / row.length,
     confidence: Math.min(...row.map((f) => f.confidence)),
+    // La caja solo se da si todos los trozos la traen
+    ...(row.every((f) => f.x1 !== undefined) ? { x0: Math.min(...row.map((f) => f.x)), x1: Math.max(...row.map((f) => f.x1!)), height: Math.max(...row.map((f) => f.height)) } : {}),
   }))
 }
 

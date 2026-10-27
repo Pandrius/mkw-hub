@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import CaptureTablePanel from '../components/CaptureTablePanel'
 import PlayerInput from '../components/PlayerInput'
 import { SearchBox } from '../components/SearchBox'
 import { PageHeader, Plate } from '../components/ui'
 import WarDesignPanel from '../components/WarDesignPanel'
 import { useWarDesign } from '../components/useWarDesign'
 import { useI18n } from '../i18n'
+import { applyCapture } from '../lib/captureTable'
 import { copyText } from '../lib/clipboard'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { rankTeams } from '../lib/search'
@@ -51,6 +53,7 @@ export default function FreeTable() {
   const [linkDesign, setLinkDesign] = useState<WarDesign | null>(() => (shared?.design ? parseDesign({ preset: shared.design.preset, colors: shared.design.colors, photo: null }) : null))
   const design = linkDesign ?? stored ?? DEFAULT_DESIGN
   const [designOpen, setDesignOpen] = useState(false)
+  const [captureOpen, setCaptureOpen] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ key: string; url: string } | null>(null)
   const [failed, setFailed] = useState(false)
@@ -238,10 +241,24 @@ export default function FreeTable() {
 
       <div className="flex flex-wrap items-center gap-3">
         <input className="field max-w-xl flex-1" value={war.title} maxLength={60} onChange={(e) => setWar((w) => ({ ...w, title: e.target.value }))} placeholder={t('free.tableName')} aria-label={t('free.tableName')} />
+        <button type="button" className="btn-line text-sm" onClick={() => setCaptureOpen((o) => !o)} aria-expanded={captureOpen}>
+          📷 {t('cap.open')}
+        </button>
         <button type="button" className="min-h-11 text-sm text-muted hover:text-kart-red" onClick={clear}>
           {t('free.clear')}
         </button>
       </div>
+
+      {captureOpen && (
+        <CaptureTablePanel
+          tags={[war.home.tag, war.away.tag]}
+          onClose={() => setCaptureOpen(false)}
+          onApply={(rows) => {
+            setWar((w) => applyCapture(w, rows))
+            setCaptureOpen(false)
+          }}
+        />
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {teamEditor('home')}
