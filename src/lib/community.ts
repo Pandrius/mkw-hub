@@ -1,9 +1,10 @@
-import type { AchievementBoard } from './communityBoard'
-import { periodStart } from './communityBoard'
-import { CROWN_PERIODS, type CrownPeriod, type Crowns } from './crowns'
-import type { RecordHistory, RecordId, Records } from './records'
-import type { TeamTrackEntry } from './teamTrackBoard'
-import type { TrackBoards } from './trackBoard'
+// Este módulo lo importa también el servidor (api/): los imports que se ejecutan llevan la extensión .js
+import type { AchievementBoard } from './communityBoard.js'
+import { periodStart } from './communityBoard.js'
+import { CROWN_PERIODS, type CrownPeriod, type Crowns } from './crowns.js'
+import type { RecordHistory, RecordId, Records } from './records.js'
+import type { TeamTrackEntry } from './teamTrackBoard.js'
+import type { TrackBoards } from './trackBoard.js'
 
 export type CommunityPlayer = { username: string; avatar_url: string | null; country_code: string | null }
 

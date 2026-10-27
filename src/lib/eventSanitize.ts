@@ -1,6 +1,6 @@
 import type { EventDetail } from './events'
-import { parsePenalties } from './penalties'
-import { parseSubstitutions } from './substitutions'
+import { parsePenalties } from './penalties.js'
+import { parseSubstitutions } from './substitutions.js'
 
 /** Los campos libres (jsonb / text[]) se descartan si no tienen la forma esperada, para no romper la página */
 export function sanitizeEventDetail(detail: EventDetail): EventDetail {
