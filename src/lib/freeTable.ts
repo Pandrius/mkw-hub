@@ -64,6 +64,12 @@ export function medalOf(points: number, data: Pick<TableData, 'home' | 'away'>):
   return rank < 3 && all.length > 1 ? rank : null
 }
 
+/** Puesto de un jugador en la sala (de los dos equipos juntos): 1 el que más puntos ha hecho; los empates comparten puesto. null si solo hay uno */
+export function placeOf(points: number, data: Pick<TableData, 'home' | 'away'>): number | null {
+  const all = [...data.home.players, ...data.away.players]
+  return all.length > 1 ? all.filter((p) => p.points > points).length + 1 : null
+}
+
 /** Tabla en texto plano para pegar en un chat */
 export function tableText(data: TableData): string {
   const team = (t: TableTeam) => [`${t.tag}${t.name ? ` (${t.name})` : ''} — ${t.total}`, ...t.players.map((p, i) => `${i + 1}. ${p.name} — ${p.points}`)].join('\n')

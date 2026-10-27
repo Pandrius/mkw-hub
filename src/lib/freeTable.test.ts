@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, medalOf, parsePoints, tableText, type FreeTeam, type FreeWar } from './freeTable'
+import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, medalOf, parsePoints, placeOf, tableText, type FreeTeam, type FreeWar } from './freeTable'
 
 const team = (tag: string, players: [string, string][], name = ''): FreeTeam => ({ tag, name, players: players.map(([n, p], id) => ({ id, name: n, points: p })) })
 const war = (home: FreeTeam, away: FreeTeam, title = ''): FreeWar => ({ title, home, away })
@@ -87,5 +87,18 @@ describe('enlace compartible', () => {
     expect(decodeWar(btoa('{"v":1}'))).toBeNull()
     expect(decodeWar(btoa('{"v":2,"h":5}'))).toBeNull()
     expect(decodeWar('a'.repeat(7000))).toBeNull()
+  })
+})
+
+describe('placeOf', () => {
+  const player = (points: number) => ({ name: 'x', points })
+  const t = { home: { tag: 'A', name: '', total: 0, players: [player(90), player(70), player(70)] }, away: { tag: 'B', name: '', total: 0, players: [player(80), player(-5)] } }
+
+  it('el puesto en la sala cuenta a los dos equipos juntos y los empates lo comparten', () => {
+    expect([90, 80, 70, 70, -5].map((p) => placeOf(p, t))).toEqual([1, 2, 3, 3, 5])
+  })
+
+  it('con un solo jugador no hay puesto que enseñar', () => {
+    expect(placeOf(10, { home: { tag: 'A', name: '', total: 10, players: [player(10)] }, away: { tag: 'B', name: '', total: 0, players: [] } })).toBeNull()
   })
 })

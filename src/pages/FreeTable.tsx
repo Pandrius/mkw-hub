@@ -8,6 +8,7 @@ import WarDesignPanel from '../components/WarDesignPanel'
 import { useWarDesign } from '../components/useWarDesign'
 import { useI18n } from '../i18n'
 import { applyCapture } from '../lib/captureTable'
+import { ordinal } from '../lib/ordinal'
 import { copyText } from '../lib/clipboard'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { rankTeams } from '../lib/search'
@@ -84,7 +85,7 @@ export default function FreeTable() {
     }
   }, [war, initial])
 
-  const labels = useMemo(() => ({ player: t('event.player'), points: t('event.points'), war: 'WAR' }), [t])
+  const labels = useMemo(() => ({ player: t('event.player'), points: t('event.points'), war: 'WAR', place: (n: number) => ordinal(n, lang) }), [t, lang])
   const designKey = useMemo(() => JSON.stringify(design), [design])
   const key = JSON.stringify({ data, labels }) + designKey
 

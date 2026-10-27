@@ -4,7 +4,7 @@
  * tablas: «versus» (pantalla de combate partida en diagonal) y «arcade» (recreativa con líneas de barrido).
  * Sin diferencia por carrera ni medias: en una tabla libre no se saben.
  */
-import { medalOf, type TableData, type TableTeam } from './freeTable'
+import { medalOf, placeOf, type TableData, type TableTeam } from './freeTable'
 import { coverRect, luminance, medalColor, mixColors, PRESET_STYLE, readable, resolvePalette, type Palette, type PresetStyle, type WarDesign } from './warDesign'
 import { fitText } from './warImage'
 import { skinBackground, skinBar, skinGrain, skinPanel, moltenPaint, type Skin } from './tableSkins'
@@ -368,7 +368,7 @@ function teamHeads(env: Env, data: TableData, y: number) {
 
 // ───────────────────────── Jugadores ─────────────────────────
 
-function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean, x: number, y: number, rows: number, labels: { player: string; points: string }) {
+function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean, x: number, y: number, rows: number, labels: { player: string; points: string; place?: (n: number) => string }) {
   const { ctx, C, style, display, light } = env
   const color = sideColor(env, home)
   const h = HEAD_H + rows * ROW_H + 6
@@ -420,7 +420,10 @@ function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean,
     const base = ry + ROW_H / 2 + 8
     const medal = medalOf(p.points, data)
     const medalPaint = medal === null ? null : medalColor(medal, light)
-    fitted(env, p.name, x + 24, base, COL_W - 24 - 130, 600, 22, SANS, medalPaint ?? C.ink, 'left', 16)
+    // Puesto en la sala a la derecha del nombre, en una columna fija junto a los puntos
+    const place = labels.place ? placeOf(p.points, data) : null
+    fitted(env, p.name, x + 24, base, COL_W - 24 - (place === null ? 130 : 190), 600, 22, SANS, medalPaint ?? C.ink, 'left', 16)
+    if (place !== null) text(env, labels.place!(place), x + COL_W - 118, base, `700 19px ${display}`, medalPaint ?? C.muted, 'right')
     text(env, String(p.points), x + COL_W - 22, base + 2, style === 'arcade' ? `700 26px ${MONO}` : `800 30px ${display}`, p.points < 0 ? C.red : (medalPaint ?? C.ink), 'right')
   })
 
@@ -431,7 +434,7 @@ function playersTable(env: Env, data: TableData, team: TableTeam, home: boolean,
 
 // ───────────────────────── Imagen completa ─────────────────────────
 
-export type TableLabels = { player: string; points: string; war: string }
+export type TableLabels = { player: string; points: string; war: string; /** Cómo se escribe el puesto en la sala (1º, 1st…); sin él no se enseña */ place?: (n: number) => string }
 
 function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement | null, labels: TableLabels): HTMLCanvasElement {
   const C = resolvePalette(design)
@@ -510,7 +513,7 @@ function drawTable(data: TableData, design: WarDesign, photo: HTMLImageElement |
 
 /** Dibuja la tabla y la exporta a PNG: espera a las fuentes y carga la foto de fondo si hay */
 export async function renderTableImage(data: TableData, design: WarDesign, labels: TableLabels): Promise<Blob> {
-  const sample = [data.title, data.home.tag, data.home.name, data.away.tag, data.away.name, ...data.home.players.map((p) => p.name), ...data.away.players.map((p) => p.name), ...Object.values(labels), '0123456789±+-–·…—'].join('')
+  const sample = [data.title, data.home.tag, data.home.name, data.away.tag, data.away.name, ...data.home.players.map((p) => p.name), ...data.away.players.map((p) => p.name), labels.player, labels.points, labels.war, ...Array.from({ length: 24 }, (_, i) => labels.place?.(i + 1) ?? ''), '0123456789±+-–·…—'].join('')
   const [photo] = await Promise.all([loadPhoto(design.photo?.dataUrl), waitForFonts(sample, PRESET_STYLE[design.preset] === 'elegant')])
   return canvasToPng(drawTable(data, design, photo, labels))
 }
