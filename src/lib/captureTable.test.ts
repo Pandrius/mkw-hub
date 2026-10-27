@@ -49,15 +49,56 @@ describe('parseCaptureLines', () => {
     expect(rows.map((r) => r.name)).toEqual(['Ana', 'Beto'])
   })
 
-  it('reparte los equipos por el color de la fila', () => {
+  it('reparte los equipos por el tag de cada jugador y saca el tag de cada equipo', () => {
+    const r = parseCaptureLines([line('1 [NEB] Ana 88', 10), line('2 [RKL] Beto 85', 20), line('3 [NEB] Carla 80', 30), line('4 [RKL] Dani 75', 40)])
+    expect(r.sidesFrom).toBe('tag')
+    expect(r.tags).toEqual({ home: 'NEB', away: 'RKL' })
+    expect(r.rows.map((x) => [x.name, x.side])).toEqual([['Ana', 'home'], ['Beto', 'away'], ['Carla', 'home'], ['Dani', 'away']])
+  })
+
+  it('el tag sin corchetes que repiten los de un equipo también vale', () => {
+    const r = parseCaptureLines([line('1 NEB Ana 88', 10), line('2 RKL Beto 85', 20), line('3 NEB Carla 80', 30), line('4 RKL Dani 75', 40)])
+    expect(r.tags).toEqual({ home: 'NEB', away: 'RKL' })
+    expect(r.rows.map((x) => x.name)).toEqual(['Ana', 'Beto', 'Carla', 'Dani'])
+  })
+
+  it('sin tags escritos, el equipo 1 es el del jugador que va arriba en la captura', () => {
+    const r = parseCaptureLines([line('1 [RKL] Ana 88', 10), line('2 [NEB] Beto 85', 20), line('3 [NEB] Carla 80', 30), line('4 [RKL] Dani 75', 40), line('5 [NEB] Eva 70', 50)])
+    expect(r.tags).toEqual({ home: 'RKL', away: 'NEB' })
+  })
+
+  it('el equipo 1 es el del tag escrito en el editor', () => {
+    const r = parseCaptureLines([line('1 [NEB] Ana 88', 10), line('2 [RKL] Beto 85', 20), line('3 [NEB] Carla 80', 30), line('4 [RKL] Dani 75', 40), line('5 [RKL] Eva 70', 50)], ['RKL', 'NEB'])
+    expect(r.tags).toEqual({ home: 'RKL', away: 'NEB' })
+    expect(r.rows.filter((x) => x.side === 'home').map((x) => x.name)).toEqual(['Beto', 'Dani', 'Eva'])
+  })
+
+  it('un solo equipo con tag: los demás son el rival', () => {
+    const r = parseCaptureLines([line('1 [NEB] Ana 88', 10), line('2 Beto 85', 20), line('3 [NEB] Carla 80', 30), line('4 Dani 75', 40)])
+    expect(r.tags).toEqual({ home: 'NEB', away: '' })
+    expect(r.rows.map((x) => [x.name, x.side])).toEqual([['Ana', 'home'], ['Beto', 'away'], ['Carla', 'home'], ['Dani', 'away']])
+  })
+
+  it('con tags de dos equipos, quien no lleva tag va por el color o, si no, donde faltan jugadores', () => {
+    const r = parseCaptureLines([line('1 [NEB] Ana 88', 10, RED), line('2 [RKL] Beto 85', 20, BLUE), line('3 [NEB] Carla 80', 30, RED), line('4 [RKL] Dani 75', 40, BLUE), line('5 Eva 70', 50, BLUE), line('6 Fran 60', 60, RED)])
+    expect(r.rows.find((x) => x.name === 'Eva')?.side).toBe('away')
+    expect(r.rows.find((x) => x.name === 'Fran')?.side).toBe('home')
+  })
+
+  it('un tag que lleva un solo jugador no hace un equipo', () => {
+    expect(parseCaptureLines([line('1 [NEB] Ana 88', 10), line('2 Beto 85', 20)]).sidesFrom).toBe('none')
+  })
+
+  it('sin tags, reparte los equipos por el color de la fila', () => {
     const reading = parseCaptureLines([line('1 Ana 88', 10, RED), line('2 Beto 85', 20, BLUE), line('3 Carla 80', 30, RED), line('4 Dani 75', 40, BLUE)])
-    expect(reading.sidesFromColor).toBe(true)
+    expect(reading.sidesFrom).toBe('color')
+    expect(reading.tags).toEqual({ home: '', away: '' })
     expect(reading.rows.map((r) => [r.name, r.side])).toEqual([['Ana', 'home'], ['Beto', 'away'], ['Carla', 'home'], ['Dani', 'away']])
   })
 
-  it('si no se distinguen los colores, todas van al primer equipo para elegir a mano', () => {
+  it('si no hay tags ni colores, todas van al primer equipo para elegir a mano', () => {
     const reading = parseCaptureLines([line('1 Ana 88', 10, RED), line('2 Beto 85', 20, [120, 120, 120])])
-    expect(reading.sidesFromColor).toBe(false)
+    expect(reading.sidesFrom).toBe('none')
     expect(reading.rows.every((r) => r.side === 'home')).toBe(true)
   })
 
@@ -65,11 +106,6 @@ describe('parseCaptureLines', () => {
     const { rows } = parseCaptureLines([line('1 Ana 88', 10), line('Team 480', 20)])
     expect(rows.map((r) => [r.name, r.include])).toEqual([['Ana', true], ['Team', false]])
     expect(MAX_PLAYER_POINTS).toBe(200)
-  })
-
-  it('quita el tag sin corchetes que repiten los de un mismo equipo', () => {
-    const reading = parseCaptureLines([line('1 NEB Ana 88', 10, RED), line('2 NEB Beto 85', 20, RED), line('3 Carla 80', 30, BLUE), line('4 Dani 75', 40, BLUE)])
-    expect(reading.rows.map((r) => r.name)).toEqual(['Ana', 'Beto', 'Carla', 'Dani'])
   })
 })
 
@@ -85,7 +121,7 @@ describe('bestReading, swapSides y applyCapture', () => {
     expect(swapSides(b.rows).map((r) => r.side)).toEqual(['away', 'away'])
   })
 
-  it('pasa a la tabla solo las filas marcadas, en su equipo, sin tocar tags ni nombres de equipo', () => {
+  it('pasa a la tabla solo las filas marcadas, en su equipo, sin tocar tags ni nombres de equipo si no hay tags nuevos', () => {
     const war = emptyWar()
     war.home.tag = 'NEB'
     const rows = [...b.rows.map((r) => ({ ...r })), { id: 99, name: 'Total', points: '480', side: 'away' as const, include: false, raw: '' }]
@@ -94,5 +130,16 @@ describe('bestReading, swapSides y applyCapture', () => {
     expect(out.home.tag).toBe('NEB')
     expect(out.home.players.map((p) => [p.name, p.points])).toEqual([['Ana', '88']])
     expect(out.away.players.map((p) => [p.name, p.points])).toEqual([['Beto', '85']])
+  })
+
+  it('con tags nuevos los pone a los equipos y suelta el equipo de la web elegido antes si el tag cambia', () => {
+    const war = emptyWar()
+    war.home = { ...war.home, tag: 'OLD', name: 'Viejo', teamId: 7 }
+    war.away.tag = 'RKL'
+    war.away.name = 'Rival'
+    const out = applyCapture(war, b.rows, { home: 'NEB', away: 'rkl' })
+    expect(out.home).toMatchObject({ tag: 'NEB', name: '', teamId: null })
+    // Mismo tag con otra grafía: el equipo no cambia
+    expect(out.away).toMatchObject({ tag: 'rkl', name: 'Rival' })
   })
 })

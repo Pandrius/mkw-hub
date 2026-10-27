@@ -64,6 +64,20 @@ export function medalOf(points: number, data: Pick<TableData, 'home' | 'away'>):
   return rank < 3 && all.length > 1 ? rank : null
 }
 
+/**
+ * Si el tag de un equipo es el de un solo equipo de la web, lo elige (con su nombre y su id, como el buscador); si el tag es de varios
+ * (sub-equipos) o de ninguno, se deja como está.
+ */
+export function matchKnownTeams(war: FreeWar, teams: { id: number; tag: string; name: string }[]): FreeWar {
+  const match = (team: FreeTeam): FreeTeam => {
+    const tag = team.tag.trim().toLowerCase()
+    if (team.teamId || tag === '') return team
+    const found = teams.filter((t) => t.tag.trim().toLowerCase() === tag)
+    return found.length === 1 ? { ...team, tag: found[0].tag, name: found[0].name, teamId: found[0].id } : team
+  }
+  return { ...war, home: match(war.home), away: match(war.away) }
+}
+
 /** Puesto de un jugador en la sala (de los dos equipos juntos): 1 el que más puntos ha hecho; los empates comparten puesto. null si solo hay uno */
 export function placeOf(points: number, data: Pick<TableData, 'home' | 'away'>): number | null {
   const all = [...data.home.players, ...data.away.players]

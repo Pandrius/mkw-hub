@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, medalOf, parsePoints, placeOf, tableText, type FreeTeam, type FreeWar } from './freeTable'
+import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, matchKnownTeams, medalOf, parsePoints, placeOf, tableText, type FreeTeam, type FreeWar } from './freeTable'
 
 const team = (tag: string, players: [string, string][], name = ''): FreeTeam => ({ tag, name, players: players.map(([n, p], id) => ({ id, name: n, points: p })) })
 const war = (home: FreeTeam, away: FreeTeam, title = ''): FreeWar => ({ title, home, away })
@@ -100,5 +100,31 @@ describe('placeOf', () => {
 
   it('con un solo jugador no hay puesto que enseñar', () => {
     expect(placeOf(10, { home: { tag: 'A', name: '', total: 10, players: [player(10)] }, away: { tag: 'B', name: '', total: 0, players: [] } })).toBeNull()
+  })
+})
+
+describe('matchKnownTeams', () => {
+  const teams = [{ id: 1, tag: 'NEB', name: 'Nebulosa' }, { id: 2, tag: 'RKL', name: 'Rival A' }, { id: 3, tag: 'RKL', name: 'Rival B' }]
+
+  it('elige el equipo de la web cuando el tag es de uno solo', () => {
+    const war = emptyWar()
+    war.home.tag = 'neb'
+    const out = matchKnownTeams(war, teams)
+    expect(out.home).toMatchObject({ tag: 'NEB', name: 'Nebulosa', teamId: 1 })
+  })
+
+  it('si el tag es de varios equipos o de ninguno, lo deja como está', () => {
+    const war = emptyWar()
+    war.home.tag = 'RKL'
+    war.away.tag = 'XYZ'
+    const out = matchKnownTeams(war, teams)
+    expect(out.home.teamId).toBeUndefined()
+    expect(out.away.name).toBe('')
+  })
+
+  it('no toca un equipo ya elegido', () => {
+    const war = emptyWar()
+    war.home = { ...war.home, tag: 'NEB', name: 'Mi nombre', teamId: 9 }
+    expect(matchKnownTeams(war, teams).home.name).toBe('Mi nombre')
   })
 })

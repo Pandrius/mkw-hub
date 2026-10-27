@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanPlayerName, MAX_NAME_LENGTH, stripSharedTag } from './playerName'
+import { cleanPlayerName, extractTag, MAX_NAME_LENGTH, splitSharedTags } from './playerName'
 
 describe('cleanPlayerName', () => {
   it('deja intactos los nombres normales, con acentos y números', () => {
@@ -73,19 +73,57 @@ describe('cleanPlayerName', () => {
   })
 })
 
-describe('stripSharedTag', () => {
-  it('quita el tag sin corchetes que repiten varios del mismo equipo', () => {
-    expect(stripSharedTag(['NEB Ana', 'NEB Beto', 'NEB Carla', 'Dani'])).toEqual(['Ana', 'Beto', 'Carla', 'Dani'])
-    expect(stripSharedTag(['Ana NEB', 'Beto NEB'])).toEqual(['Ana', 'Beto'])
+describe('extractTag', () => {
+  it('saca el tag entre corchetes, paréntesis o llaves, en cualquier lado', () => {
+    expect(extractTag('[NEB] Peckmat')).toBe('NEB')
+    expect(extractTag('Peckmat [NEB]')).toBe('NEB')
+    expect(extractTag('(RKL)Ana')).toBe('RKL')
+    expect(extractTag('【ηβ】たろう')).toBe('ηβ')
+    expect(extractTag('{X} Beto')).toBe('X')
   })
 
-  it('no toca nombres que solo comparten una palabra larga o no llegan a la mitad', () => {
-    expect(stripSharedTag(['Super Ana', 'Super Beto'])).toEqual(['Super Ana', 'Super Beto'])
-    expect(stripSharedTag(['NEB Ana', 'Beto', 'Carla', 'Dani'])).toEqual(['NEB Ana', 'Beto', 'Carla', 'Dani'])
-    expect(stripSharedTag(['Ana'])).toEqual(['Ana'])
+  it('saca el tag cuando el OCR se come un corchete o lo separa con una barra', () => {
+    expect(extractTag('NEB] Peckmat')).toBe('NEB')
+    expect(extractTag('Peckmat [NEB')).toBe('NEB')
+    expect(extractTag('NEB | Peckmat')).toBe('NEB')
+    expect(extractTag('Peckmat | NEB')).toBe('NEB')
+  })
+
+  it('reconoce los tags ya conocidos pegados al nombre, sin confundir palabras más largas', () => {
+    expect(extractTag('NEB Peckmat', ['NEB'])).toBe('NEB')
+    expect(extractTag('Peckmat neb', ['NEB'])).toBe('NEB')
+    expect(extractTag('Nebula', ['NEB'])).toBeNull()
+  })
+
+  it('un nombre sin tag no tiene tag', () => {
+    expect(extractTag('Peckmat')).toBeNull()
+    expect(extractTag('Rayito1005')).toBeNull()
+  })
+
+  it('ignora lo que no parece un tag (demasiado largo)', () => {
+    expect(extractTag('[Nombre larguísimo] Ana')).toBeNull()
+  })
+})
+
+describe('splitSharedTags', () => {
+  it('saca el tag sin corchetes que repiten varios nombres, hasta dos equipos', () => {
+    const out = splitSharedTags(['NEB Ana', 'RKL Beto', 'NEB Carla', 'RKL Dani', 'Eva'])
+    expect(out.tags).toEqual(['NEB', 'RKL', 'NEB', 'RKL', null])
+    expect(out.names).toEqual(['Ana', 'Beto', 'Carla', 'Dani', 'Eva'])
+  })
+
+  it('también cuando el tag va al final', () => {
+    const out = splitSharedTags(['Ana NEB', 'Beto NEB'])
+    expect(out.tags).toEqual(['NEB', 'NEB'])
+    expect(out.names).toEqual(['Ana', 'Beto'])
+  })
+
+  it('una palabra repetida larga o que solo sale una vez no es un tag', () => {
+    expect(splitSharedTags(['Super Ana', 'Super Beto']).tags).toEqual([null, null])
+    expect(splitSharedTags(['NEB Ana', 'Beto', 'Carla']).tags).toEqual([null, null, null])
   })
 
   it('un nombre que es solo el tag no se queda vacío', () => {
-    expect(stripSharedTag(['NEB', 'NEB Beto', 'NEB Ana'])).toEqual(['NEB', 'Beto', 'Ana'])
+    expect(splitSharedTags(['NEB', 'NEB Beto', 'NEB Ana']).names).toEqual(['NEB', 'Beto', 'Ana'])
   })
 })

@@ -6,10 +6,10 @@ import { readCaptureLines } from '../lib/ocrImage'
 
 /**
  * Tabla de war a partir de una captura de la pantalla de resultados. Se lee en el navegador (sin subir nada a ningún servidor): salen
- * filas con nombre y puntos, ya sin tag ni símbolos raros, y el equipo de cada una según el color de su fila. Antes de pasarlas a la
- * tabla se pueden editar todas: nombre, puntos, equipo, o quitar y añadir filas.
+ * los jugadores con sus puntos, sin tag ni símbolos raros, y el equipo de cada uno se saca del tag de su nombre (o, si no lo hay, del
+ * color de su fila). Si se sabe el equipo de cada uno, la tabla se rellena directamente; si no, se enseñan las filas para elegirlo.
  */
-export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: string[]; onApply: (rows: CaptureRow[]) => void; onClose: () => void }) {
+export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: string[]; onApply: (rows: CaptureRow[], tags: { home: string; away: string }) => void; onClose: () => void }) {
   const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -19,7 +19,7 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(false)
   const [rows, setRows] = useState<CaptureRow[] | null>(null)
-  const [sidesFromColor, setSidesFromColor] = useState(false)
+  const [detected, setDetected] = useState({ home: '', away: '' })
 
   useEffect(
     () => () => {
@@ -36,8 +36,14 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
       try {
         const { normal, inverted } = await readCaptureLines(image, scripts, setProgress)
         const reading = bestReading([parseCaptureLines(normal, tags), parseCaptureLines(inverted, tags)])
+        // Con el equipo de cada jugador claro (por el tag o el color), la tabla se rellena sin más pasos
+        if (reading.sidesFrom !== 'none' && reading.rows.some((r) => r.include && r.name.trim())) {
+          setRows(null)
+          onApply(reading.rows, reading.tags)
+          return
+        }
         setRows(reading.rows)
-        setSidesFromColor(reading.sidesFromColor)
+        setDetected(reading.tags)
       } catch {
         setRows(null)
         setError(true)
@@ -45,7 +51,7 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
         setBusy(false)
       }
     },
-    [tags],
+    [tags, onApply],
   )
 
   const choose = useCallback(
@@ -119,7 +125,7 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
       {rows !== null && !busy && (
         <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
           <div className="space-y-3">
-            <p className="text-xs text-muted">{rows.length === 0 ? t('cap.none') : sidesFromColor ? t('cap.sidesColor') : t('cap.sidesManual')}</p>
+            <p className="text-xs text-muted">{rows.length === 0 ? t('cap.none') : t('cap.sidesManual')}</p>
             {rows.length > 0 && (
               <>
                 <div className="grid grid-cols-[2rem_7.5rem_1fr_5.5rem] gap-2 font-display text-xs font-extrabold tracking-wider text-kart-yellow uppercase">
@@ -152,7 +158,7 @@ export default function CaptureTablePanel({ tags, onApply, onClose }: { tags: st
                   {t('cap.swap')}
                 </button>
               )}
-              <button type="button" className="btn-yellow text-base" disabled={chosen === 0} onClick={() => onApply(rows)}>
+              <button type="button" className="btn-yellow text-base" disabled={chosen === 0} onClick={() => onApply(rows, detected)}>
                 {t('cap.apply')} ({chosen})
               </button>
             </div>

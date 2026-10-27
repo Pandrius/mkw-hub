@@ -12,7 +12,7 @@ import { ordinal } from '../lib/ordinal'
 import { copyText } from '../lib/clipboard'
 import { getAllTeams, type TeamWithMembers } from '../lib/compare'
 import { rankTeams } from '../lib/search'
-import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, MAX_SHARE_LENGTH, newPlayerId, tableText, type FreePlayer, type FreeTeam, type FreeWar } from '../lib/freeTable'
+import { buildTable, decodeWar, emptyWar, encodeWar, hasContent, lorenziFreeText, matchKnownTeams, MAX_SHARE_LENGTH, newPlayerId, tableText, type FreePlayer, type FreeTeam, type FreeWar } from '../lib/freeTable'
 import { renderTableImage, tableFileName, MIN_TABLE_DIM } from '../lib/tableImageDraw'
 import { DEFAULT_DESIGN, parseDesign, type WarDesign } from '../lib/warDesign'
 import { lorenziEditorUrl } from '../lib/warTable'
@@ -126,9 +126,9 @@ export default function FreeTable() {
   const addPlayer = (side: Side) => setWar((w) => ({ ...w, [side]: { ...w[side], players: [...w[side].players, { id: newPlayerId(), name: '', points: '' }] } }))
   const removePlayer = (side: Side, id: number) => setWar((w) => ({ ...w, [side]: { ...w[side], players: w[side].players.filter((p) => p.id !== id) } }))
 
-  const flash = (msg: string) => {
+  const flash = (msg: string, ms = 2500) => {
     setNote(msg)
-    setTimeout(() => setNote(null), 2500)
+    setTimeout(() => setNote(null), ms)
   }
   const blob = async () => renderTableImage(data, design, labels)
 
@@ -242,6 +242,9 @@ export default function FreeTable() {
 
       <div className="flex flex-wrap items-center gap-3">
         <input className="field max-w-xl flex-1" value={war.title} maxLength={60} onChange={(e) => setWar((w) => ({ ...w, title: e.target.value }))} placeholder={t('free.tableName')} aria-label={t('free.tableName')} />
+        <button type="button" className="btn-line text-sm" onClick={() => setWar((w) => ({ ...w, home: w.away, away: w.home }))}>
+          ⇄ {t('free.swap')}
+        </button>
         <button type="button" className="btn-line text-sm" onClick={() => setCaptureOpen((o) => !o)} aria-expanded={captureOpen}>
           📷 {t('cap.open')}
         </button>
@@ -254,9 +257,14 @@ export default function FreeTable() {
         <CaptureTablePanel
           tags={[war.home.tag, war.away.tag]}
           onClose={() => setCaptureOpen(false)}
-          onApply={(rows) => {
-            setWar((w) => applyCapture(w, rows))
+          onApply={(rows, tags) => {
+            // Los tags de los nombres pasan a ser los de los equipos y, si son de un equipo de la web, se elige con su nombre
+            setWar((w) => matchKnownTeams(applyCapture(w, rows, tags), teams))
             setCaptureOpen(false)
+            // Las filas que no se pasan (puntos que no son de un jugador, como el total de un equipo) se avisan, no se descartan en silencio
+            const skipped = rows.filter((r) => !r.include && r.name.trim() !== '').map((r) => `${r.name} (${r.points})`)
+            const used = rows.filter((r) => r.include && r.name.trim() !== '').length
+            flash(skipped.length > 0 ? `${t('cap.done', { n: used })} ${t('cap.skipped', { names: skipped.join(', ') })}` : t('cap.done', { n: used }), skipped.length > 0 ? 12000 : 4000)
           }}
         />
       )}
