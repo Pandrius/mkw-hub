@@ -135,3 +135,27 @@ export function computeTeamOverview(wars: TeamWar[]): TeamOverview | null {
     series,
   }
 }
+
+/** Las wars de un equipo en un mes natural (según la fecha de la war, UTC) */
+export type TeamMonth = { month: string; wars: number; wins: number; winRate: number; avgDiff: number }
+
+/** Evolución del equipo mes a mes, de más antiguo a más reciente — función pura */
+export function teamTrend(series: WarSummary[]): TeamMonth[] {
+  const byMonth = new Map<string, WarSummary[]>()
+  for (const w of series) byMonth.set(w.date.slice(0, 7), [...(byMonth.get(w.date.slice(0, 7)) ?? []), w])
+  return [...byMonth.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, ws]) => {
+      const wins = ws.filter((w) => w.result === 'W').length
+      return { month, wars: ws.length, wins, winRate: pct(wins, ws.length), avgDiff: round1(mean(ws.map((w) => w.diff))) }
+    })
+}
+
+/** Jugadores que más han mejorado y que más han bajado en sus últimas carreras (puntos por carrera frente a antes) */
+export function playerMovers<T extends { formDelta: number | null }>(players: T[], size = 3): { up: T[]; down: T[] } {
+  const withDelta = players.filter((p): p is T & { formDelta: number } => p.formDelta !== null && p.formDelta !== 0)
+  return {
+    up: withDelta.filter((p) => p.formDelta > 0).sort((a, b) => b.formDelta - a.formDelta).slice(0, size),
+    down: withDelta.filter((p) => p.formDelta < 0).sort((a, b) => a.formDelta - b.formDelta).slice(0, size),
+  }
+}

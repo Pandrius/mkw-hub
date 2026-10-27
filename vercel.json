@@ -70,6 +70,9 @@
     "api/og.ts": {
       "maxDuration": 30
     },
+    "api/community.ts": {
+      "maxDuration": 30
+    },
     "api/lounge.ts": {
       "maxDuration": 30
     }

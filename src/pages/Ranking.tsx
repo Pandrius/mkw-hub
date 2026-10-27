@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { AchievementsRanking, HallOfFame } from '../components/CommunityBoards'
 import { Th } from '../components/StatBlocks'
 import { useNum } from '../components/statFormat'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
@@ -11,7 +12,7 @@ import { supabase } from '../lib/supabase'
 /** Carreras verificadas mínimas para aparecer en el ranking de la web */
 const MIN_RACES = 50
 
-type Tab = 'verified' | 'lounge'
+type Tab = 'verified' | 'lounge' | 'achievements' | 'records'
 type Kind = 'all' | 'war' | 'lounge'
 
 type VerifiedRow = {
@@ -57,10 +58,13 @@ export default function Ranking() {
           tabs={[
             { id: 'verified' as Tab, label: t('rk.tabVerified') },
             { id: 'lounge' as Tab, label: t('rk.tabLounge') },
+            { id: 'achievements' as Tab, label: t('rk.tabAchievements') },
+            { id: 'records' as Tab, label: t('rk.tabRecords') },
           ]}
           value={tab}
           onChange={setTab}
         />
+        {(tab === 'verified' || tab === 'lounge') && (
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted">{t('rk.country')}</span>
           <select value={effectiveCountry} onChange={(e) => setCountry(e.target.value)} className="field w-56">
@@ -72,8 +76,12 @@ export default function Ranking() {
             ))}
           </select>
         </label>
+        )}
       </div>
-      {tab === 'verified' ? <VerifiedRanking country={effectiveCountry} /> : <LoungeRanking country={effectiveCountry} />}
+      {tab === 'verified' && <VerifiedRanking country={effectiveCountry} />}
+      {tab === 'lounge' && <LoungeRanking country={effectiveCountry} />}
+      {tab === 'achievements' && <AchievementsRanking />}
+      {tab === 'records' && <HallOfFame />}
     </>
   )
 }

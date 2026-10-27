@@ -3,13 +3,18 @@ import { Link } from 'react-router'
 import { getTrack, getTrackPlateBackground, getTrackTextColor } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { TeamWithMembers } from '../lib/compare'
-import { buildPickPlan, type PickRow, type PickSource } from '../lib/picks'
+import { buildPickPlan, lineupEdges, type PickRow, type PickSource } from '../lib/picks'
 import { rankTeams } from '../lib/search'
-import { computeTeamStats, getTeamWars, rivalKeyOf, type TeamStats, type TeamWar } from '../lib/teamStats'
+import { computeTeamPlayerStats, computeTeamStats, getTeamWars, rivalKeyOf, type TeamStats, type TeamWar } from '../lib/teamStats'
 import { SearchBox } from './SearchBox'
 import { EmptyState, Plate } from './ui'
 
 type Rival = { key: string; id: number | null; tag: string; name: string }
+
+/** Jugadores de la alineación (una war es 6v6) */
+const LINEUP_SIZE = 6
+/** Carreras mínimas de un jugador para ofrecerlo en la alineación */
+const MIN_LINEUP_RACES = 6
 
 const signed = (n: number) => (n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1))
 
@@ -30,6 +35,9 @@ export function RivalPreview({
   const [rival, setRival] = useState<Rival | null>(played[0] ?? null)
   const [search, setSearch] = useState('')
   const [rivalWars, setRivalWars] = useState<{ key: string; wars: TeamWar[] } | null>(null)
+  const [lineup, setLineup] = useState<string[]>([])
+  const candidates = useMemo(() => computeTeamPlayerStats(wars).filter((p) => p.races >= MIN_LINEUP_RACES).sort((a, b) => b.races - a.races), [wars])
+  const toggleLineup = (key: string) => setLineup((l) => (l.includes(key) ? l.filter((k) => k !== key) : l.length < LINEUP_SIZE ? [...l, key] : l))
 
   // Wars del rival registradas en la web (si es un equipo de MKC y tiene alguna)
   const rivalId = rival?.id ?? null
@@ -54,8 +62,8 @@ export function RivalPreview({
     const h2hWars = wars.filter((w) => rivalKeyOf(w) === rival.key)
     const h2h = h2hWars.length ? computeTeamStats(teamId, h2hWars).tracks : null
     const theirs = theirWars?.length ? computeTeamStats(rival.id!, theirWars).tracks : null
-    return buildPickPlan(stats.tracks, theirs, h2h)
-  }, [rival, wars, teamId, stats.tracks, theirWars])
+    return buildPickPlan(stats.tracks, theirs, h2h, 5, lineup.length ? lineupEdges(wars, lineup) : null)
+  }, [rival, wars, teamId, stats.tracks, theirWars, lineup])
 
   const record = stats.rivals.find((r) => r.opponentKey === rival?.key)
 
@@ -101,6 +109,28 @@ export function RivalPreview({
           wrapperClassName="relative w-full sm:w-64"
         />
       </div>
+
+      {candidates.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">
+            {t('preview.lineup')} <span className="font-mono text-xs font-normal text-muted">{lineup.length}/{LINEUP_SIZE}</span>
+          </p>
+          <p className="max-w-2xl text-xs text-muted">{t('preview.lineupHint')}</p>
+          <div className="flex flex-wrap gap-2">
+            {candidates.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                aria-pressed={lineup.includes(p.key)}
+                onClick={() => toggleLineup(p.key)}
+                className={`border px-2.5 py-1 text-sm font-semibold ${lineup.includes(p.key) ? 'border-kart-yellow bg-kart-yellow text-bg' : 'border-line bg-surface hover:border-kart-yellow'}`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!rival ? (
         <EmptyState title={t('preview.pickRival')} />
@@ -186,6 +216,11 @@ function PickList({ title, rows, color }: { title: string; rows: PickRow[]; colo
                   <Source label={t('preview.ours')} src={row.ours} />
                   <Source label={t('preview.theirs')} src={row.theirs} />
                   <Source label={t('preview.h2h')} src={row.h2h} />
+                  {row.lineup !== null && (
+                    <span>
+                      {t('preview.lineupShort')} <span className={row.lineup > 0 ? 'text-kart-green' : row.lineup < 0 ? 'text-kart-red' : ''}>{signed(row.lineup)}</span>
+                    </span>
+                  )}
                 </div>
               </li>
             )

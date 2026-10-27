@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { RivalPreview } from '../components/RivalPreview'
-import { HeadToHead, TeamOverviewPanel, TeamPlayersTable, TeamTracksTable } from '../components/TeamAnalyticsView'
+import { HeadToHead, TeamOverviewPanel, TeamPlayersTable, TeamTracksTable, TeamTrendPanel } from '../components/TeamAnalyticsView'
 import { EmptyState, Flag, Plate, Tabs } from '../components/ui'
 import { TeamLogo } from '../components/TeamLogo'
 import { useI18n, type Lang } from '../i18n'
@@ -200,7 +200,15 @@ export default function TeamDetail() {
       />
 
       {/* Contenido según pestaña */}
-      {tab === 'overview' && (overview && stats ? <TeamOverviewPanel o={overview} form={form} stats={stats} /> : <EmptyState title={t('teamStats.noWars')} />)}
+      {tab === 'overview' &&
+        (overview && stats ? (
+          <div className="space-y-6">
+            <TeamOverviewPanel o={overview} form={form} stats={stats} />
+            <TeamTrendPanel o={overview} players={playerStats} />
+          </div>
+        ) : (
+          <EmptyState title={t('teamStats.noWars')} />
+        ))}
 
       {tab === 'tracks' && <TeamTracksTable tracks={stats?.tracks ?? []} />}
 

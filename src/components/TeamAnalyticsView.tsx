@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { PHASES } from '../lib/statMath'
-import { CLOSE_MARGIN, computeTeamOverview, HALFTIME_RACE, type TeamOverview, type WarSummary } from '../lib/teamAnalytics'
+import { CLOSE_MARGIN, computeTeamOverview, HALFTIME_RACE, playerMovers, teamTrend, type TeamOverview, type WarSummary } from '../lib/teamAnalytics'
 import type { TeamForm } from '../lib/teamForm'
 import {
   computeTeamPlayerStats,
@@ -202,6 +202,66 @@ export function TeamOverviewPanel({ o, form, stats }: { o: TeamOverview; form: T
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+/** Evolución del equipo mes a mes y jugadores que más han mejorado o bajado en sus últimas carreras */
+export function TeamTrendPanel({ o, players }: { o: TeamOverview; players: TeamPlayerStats[] }) {
+  const { t } = useI18n()
+  const months = useMemo(() => teamTrend(o.series), [o.series])
+  const movers = useMemo(() => playerMovers(players), [players])
+  if (months.length < 2 && movers.up.length + movers.down.length === 0) return null
+
+  return (
+    <section className="panel p-5">
+      <SectionTitle title={t('an.team.trend')} hint={t('an.team.trendHint')} />
+      {months.length >= 2 && (
+        <>
+          <DiffBars
+            ariaLabel={t('an.team.trend')}
+            items={months.map((m) => ({
+              key: m.month,
+              value: m.avgDiff,
+              tip: (
+                <>
+                  <b>{m.month}</b> · {t('an.team.trendLine', { wars: m.wars, wins: m.wins, wr: m.winRate })} (<Signed value={m.avgDiff} />)
+                </>
+              ),
+            }))}
+          />
+          <div className="mt-1 flex justify-between font-mono text-[11px] text-muted">
+            <span>{months[0].month}</span>
+            <span>{months[months.length - 1].month}</span>
+          </div>
+        </>
+      )}
+      {movers.up.length + movers.down.length > 0 && (
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <MoversList title={t('an.team.moversUp')} rows={movers.up} />
+          <MoversList title={t('an.team.moversDown')} rows={movers.down} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+function MoversList({ title, rows }: { title: string; rows: TeamPlayerStats[] }) {
+  const { t } = useI18n()
+  if (rows.length === 0) return null
+  return (
+    <div>
+      <h4 className="font-display text-sm font-bold text-muted uppercase">{title}</h4>
+      <ul className="mt-2 space-y-1">
+        {rows.map((p) => (
+          <li key={p.key} className="flex items-center justify-between gap-3 text-sm">
+            <span className="truncate font-semibold">{p.name}</span>
+            <span className="font-mono text-xs" title={t('an.team.moversHint', { n: PLAYER_RECENT_RACES })}>
+              <Signed value={p.formDelta ?? 0} digits={2} /> {t('an.team.ptsRace')}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
