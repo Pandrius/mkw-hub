@@ -10,10 +10,6 @@ import { Plate } from './ui'
 import { CROWN_TITLE_IDS, featuredName, featuredTier, titleHow, titleName } from './showcaseNames'
 import { medalKindOf, TIER_COLOR } from './tiers'
 
-/** Acabado del marco de «Dueño de …»: oro, o el color de las letras de la placa más claro y con reflejo */
-export type OwnerFrame = 'gold' | 'ink'
-export const OWNER_FRAME: OwnerFrame = 'gold'
-
 /** Títulos con aspecto propio (ver .title-chip en index.css); «Leyenda absoluta» tiene el suyo aparte */
 const UNIQUE_TITLES = new Set([
   ...ACHIEVEMENT_TITLES.map((t) => t.id).filter((id) => id !== 'grandMaster' && !id.startsWith('warRank')),
@@ -29,7 +25,7 @@ const UNIQUE_TITLES = new Set([
  * Un título como se ve en el perfil. «Dueño de …» lleva la placa de la pista (mismo color y letras que su abreviatura; Rainbow Road,
  * con el multicolor animado), los de rango del Lounge, el material y color de su rango (bronce, plata, oro…), «Leyenda absoluta» tiene las letras multicolor que cambian y el resto, el amarillo de la web.
  */
-export function TitleChip({ def, size = 'md', frame = OWNER_FRAME }: { def: Pick<TitleDef, 'id' | 'param'>; size?: 'sm' | 'md'; /** Acabado del marco de «Dueño de …» */ frame?: OwnerFrame }) {
+export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'param'>; size?: 'sm' | 'md' }) {
   const { t } = useI18n()
   const name = titleName(def, t)
   const pad = size === 'md' ? { padding: '6px 12px', fontSize: '1rem' } : { padding: '3px 8px', fontSize: '0.8rem' }
@@ -49,7 +45,7 @@ export function TitleChip({ def, size = 'md', frame = OWNER_FRAME }: { def: Pick
     // «Dueño de …» (el primero de todo el tiempo) es más exclusivo que el semanal: lleva un marco pegado a la placa, con reflejo
     if (!def.id.startsWith('owner:')) return plate
     return (
-      <span className="owner-frame" data-frame={frame} style={{ ['--frame-ink' as string]: rainbow ? '#16121f' : getTrackTextColor(track) }}>
+      <span className="owner-frame">
         <span className="owner-frame__body">{plate}</span>
       </span>
     )

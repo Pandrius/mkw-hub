@@ -666,7 +666,7 @@ input[data-position]::-webkit-inner-spin-button {
 
 /* «Dueño de …»: el primero de la pista en todo el tiempo. Un marco metálico pegado a la placa, con su misma forma inclinada, un
    reflejo que lo recorre; el título semanal es la misma placa sin marco.
-   Dos acabados para elegir (data-frame): «gold», oro; «ink», el color de las letras de la placa pero más claro y con reflejo. */
+   Dorado metálico. */
 .owner-frame {
   position: relative;
   display: inline-block;
@@ -679,17 +679,7 @@ input[data-position]::-webkit-inner-spin-button {
   background-size: 220px 100%;
   animation: owner-shine 3.4s linear infinite;
   animation-delay: var(--shine-delay, 0s);
-}
-.owner-frame[data-frame='gold'] .owner-frame__body {
   background-image: linear-gradient(105deg, #8a6500 0, #d9a520 22%, #ffe27a 38%, #fffbe0 46%, #ffe27a 54%, #d9a520 70%, #8a6500 88%, #8a6500 100%);
-}
-.owner-frame[data-frame='ink'] {
-  --ink-lo: color-mix(in srgb, var(--frame-ink) 78%, #000);
-  --ink-mid: color-mix(in srgb, var(--frame-ink) 62%, #fff);
-  --ink-hi: color-mix(in srgb, var(--frame-ink) 18%, #fff);
-}
-.owner-frame[data-frame='ink'] .owner-frame__body {
-  background-image: linear-gradient(105deg, var(--ink-lo) 0, var(--ink-mid) 22%, var(--ink-hi) 46%, var(--ink-mid) 62%, var(--ink-lo) 88%, var(--ink-lo) 100%);
 }
 @keyframes owner-shine {
   to {
