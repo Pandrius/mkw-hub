@@ -9,6 +9,8 @@ import { PERIODS, type BoardKey, type Period } from '../lib/communityBoard'
 import { REDEMPTION_FROM } from '../lib/achievements'
 import { CROWN_PERIODS, type CrownPeriod } from '../lib/crowns'
 import { RECORD_IDS, standingIn, type RecordEntry, type RecordId } from '../lib/records'
+import { getPlayerTimeline } from '../lib/timeline'
+import { TEAM_MIN_RACES } from '../lib/teamTrackBoard'
 import { ALL_MIN_RACES, WEEK_MIN_RACES } from '../lib/trackBoard'
 import { CrownBadge } from './CrownBadge'
 import { TitleChip } from './Showcase'
@@ -184,46 +186,136 @@ export function AchievementsRanking() {
   )
 }
 
-/** Los mejores de cada pista (todo el tiempo y esta semana): el primero lleva «Dueño de …» o el título semanal */
+/** Placa de una pista con su color y sus letras */
+function TrackPlate({ id }: { id: string }) {
+  const tr = getTrack(id)
+  return (
+    <Plate color={getTrackPlateBackground(tr)} textColor={getTrackTextColor(tr)}>
+      {tr?.abbr ?? id}
+    </Plate>
+  )
+}
+
+/** Cuadrícula «quién manda en cada pista»: una casilla por pista con su primero (se elige tocándola) */
+function LeadersGrid({ tracks, current, onPick }: { tracks: { id: string; leader: string; value: string }[]; current: string; onPick: (id: string) => void }) {
+  const { t } = useI18n()
+  if (tracks.length === 0) return null
+  return (
+    <section>
+      <h3 className="font-display text-lg font-bold">{t('tk.who')}</h3>
+      <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+        {tracks.map((tr) => (
+          <li key={tr.id}>
+            <button type="button" onClick={() => onPick(tr.id)} className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-sm ${tr.id === current ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}>
+              <TrackPlate id={tr.id} />
+              <span className="min-w-0 flex-1 truncate font-semibold">{tr.leader}</span>
+              <span className="font-mono text-[11px] text-muted">{tr.value}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/**
+ * Pistas que nadie ha reclamado todavía: nadie ha llegado al mínimo de carreras verificadas en ellas. Si has iniciado sesión, enseña
+ * cuántas llevas tú en cada una. En cuanto todas tienen primero, la sección desaparece.
+ */
+function UnclaimedTracks({ unclaimed, mine }: { unclaimed: string[]; mine: Record<string, number> | null }) {
+  const { t } = useI18n()
+  if (unclaimed.length === 0) return null
+  const sorted = [...unclaimed].sort((a, b) => (mine?.[b] ?? 0) - (mine?.[a] ?? 0))
+  return (
+    <section className="panel p-4">
+      <h3 className="font-display text-lg font-bold">{t('tk.unclaimed', { n: unclaimed.length })}</h3>
+      <p className="mt-1 max-w-3xl text-xs text-muted">{t('tk.unclaimedHint', { min: ALL_MIN_RACES })}</p>
+      <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+        {sorted.map((id) => (
+          <li key={id} className="flex items-center gap-2 border border-dashed border-line px-2.5 py-1.5 text-sm">
+            <TrackPlate id={id} />
+            <span className="min-w-0 flex-1 truncate">{getTrack(id)?.name}</span>
+            {mine && (
+              <span className="font-mono text-[11px] text-muted" title={t('tk.yourRaces')}>
+                <span className={mine[id] ? 'font-bold text-ink' : ''}>{mine[id] ?? 0}</span>/{ALL_MIN_RACES}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Los mejores de cada pista: jugadores (todo el tiempo y esta semana, con «Dueño de …» y el título semanal) y equipos según sus wars */
 export function TrackRanking() {
   const { t } = useI18n()
   const num = useNum()
+  const { profile } = useAuth()
   const data = useCommunity()
+  const [mode, setMode] = useState<'players' | 'teams'>('players')
   const [period, setPeriod] = useState<'all' | 'week'>('all')
   const [picked, setPicked] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  // Carreras verificadas propias en cada pista, para ver cuánto falta en las que nadie ha reclamado
+  const [mine, setMine] = useState<Record<string, number> | null>(null)
+  const profileId = profile?.id
+
+  useEffect(() => {
+    if (!profileId) return
+    let cancelled = false
+    getPlayerTimeline(profileId).then(
+      (timeline) => {
+        if (cancelled) return
+        const counts: Record<string, number> = {}
+        for (const r of timeline) if (r.verified && !r.section) counts[r.trackId] = (counts[r.trackId] ?? 0) + 1
+        setMine(counts)
+      },
+      () => {},
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [profileId])
 
   if (data === undefined) return <p className="text-muted">{t('common.loading')}</p>
   if (data === null) return <p className="text-kart-red">{t('common.loadError')}</p>
 
+  const teams = mode === 'teams'
   const boards = data.trackBoards[period]
+  const teamBoards = data.teamTrackBoards
   // Por defecto, la primera pista que ya tiene clasificación
-  const trackId = picked ?? TRACKS.find((tr) => boards[tr.id])?.id ?? TRACKS[0].id
+  const has = (id: string) => (teams ? !!teamBoards[id] : !!boards[id])
+  const trackId = picked ?? TRACKS.find((tr) => has(tr.id))?.id ?? TRACKS[0].id
+  const boardId = `${mode}:${period}:${trackId}`
   const entries = boards[trackId] ?? []
-  const boardId = `${period}:${trackId}`
-  const rows = expanded === boardId ? entries : entries.slice(0, PREVIEW_ROWS)
-  const led = TRACKS.filter((tr) => boards[tr.id])
-  const titleId = `${period === 'all' ? 'owner' : 'weekly'}:${trackId}`
-  const plate = (id: string) => {
-    const tr = getTrack(id)
-    return (
-      <Plate color={getTrackPlateBackground(tr)} textColor={getTrackTextColor(tr)}>
-        {tr?.abbr ?? id}
-      </Plate>
-    )
-  }
+  const teamEntries = teamBoards[trackId] ?? []
+  const minRaces = period === 'all' ? ALL_MIN_RACES : WEEK_MIN_RACES
+  const unclaimed = TRACKS.filter((tr) => !data.trackBoards.all[tr.id]).map((tr) => tr.id)
+  const open = expanded === boardId
+  const toggle = () => setExpanded(open ? null : boardId)
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <Tabs
           tabs={[
-            { id: 'all' as const, label: t('cb.period.all') },
-            { id: 'week' as const, label: t('cb.period.week') },
+            { id: 'players' as const, label: t('tk.modePlayers') },
+            { id: 'teams' as const, label: t('tk.modeTeams') },
           ]}
-          value={period}
-          onChange={setPeriod}
+          value={mode}
+          onChange={setMode}
         />
+        {!teams && (
+          <Tabs
+            tabs={[
+              { id: 'all' as const, label: t('cb.period.all') },
+              { id: 'week' as const, label: t('cb.period.week') },
+            ]}
+            value={period}
+            onChange={setPeriod}
+          />
+        )}
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted">{t('tk.track')}</span>
           <select value={trackId} onChange={(e) => setPicked(e.target.value)} className="field w-64">
@@ -235,17 +327,57 @@ export function TrackRanking() {
           </select>
         </label>
       </div>
-      <p className="max-w-3xl text-xs text-muted">{t(period === 'all' ? 'tk.hintAll' : 'tk.hintWeek', { n: period === 'all' ? ALL_MIN_RACES : WEEK_MIN_RACES })}</p>
+      <p className="max-w-3xl text-xs text-muted">
+        {teams ? t('tk.teamHint', { n: TEAM_MIN_RACES }) : t(period === 'all' ? 'tk.hintAll' : 'tk.hintWeek', { n: minRaces })}
+      </p>
 
-      {entries.length === 0 ? (
-        <EmptyState title={t('tk.empty')}>{t(period === 'all' ? 'tk.emptyAll' : 'tk.emptyWeek', { n: period === 'all' ? ALL_MIN_RACES : WEEK_MIN_RACES })}</EmptyState>
+      {teams ? (
+        teamEntries.length === 0 ? (
+          <EmptyState title={t('tk.teamEmpty')}>{t('tk.teamEmptyText', { n: TEAM_MIN_RACES })}</EmptyState>
+        ) : (
+          <div className="panel overflow-x-auto">
+            <div className="flex flex-wrap items-center gap-3 border-b border-line/60 px-3 py-3">
+              <TrackPlate id={trackId} />
+              <span className="font-display text-lg font-bold">{getTrack(trackId)?.name}</span>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-bg font-display text-xs text-kart-yellow">
+                <tr>
+                  <Th right={false}>#</Th>
+                  <Th right={false}>{t('tk.team')}</Th>
+                  <Th hint={t('tk.diffAdjHint')}>{t('tk.diffAdj')}</Th>
+                  <Th>{t('tk.diffAvg')}</Th>
+                  <Th>{t('an.col.races')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {(open ? teamEntries : teamEntries.slice(0, PREVIEW_ROWS)).map((e, i) => (
+                  <tr key={e.teamId} className="border-t border-line/60">
+                    <td className="px-3 py-2 font-mono text-muted">{i + 1}</td>
+                    <td className="px-3 py-2">
+                      <Link to={`/equipos/${e.teamId}`} className="flex items-center gap-2 font-semibold hover:text-kart-yellow">
+                        <Plate>{e.tag}</Plate>
+                        <span className="truncate">{e.name}</span>
+                      </Link>
+                    </td>
+                    <td className={`px-3 py-2 text-right font-mono font-bold ${e.adj >= 0 ? 'text-kart-green' : 'text-kart-red'}`}>{e.adj > 0 ? '+' : ''}{num(e.adj, 2)}</td>
+                    <td className="px-3 py-2 text-right font-mono">{e.avg > 0 ? '+' : ''}{num(e.avg, 2)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-muted">{e.races}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : entries.length === 0 ? (
+        <EmptyState title={t('tk.empty')}>{t(period === 'all' ? 'tk.emptyAll' : 'tk.emptyWeek', { n: minRaces })}</EmptyState>
       ) : (
         <div className="panel overflow-x-auto">
           <div className="flex flex-wrap items-center gap-3 border-b border-line/60 px-3 py-3">
-            {plate(trackId)}
+            <TrackPlate id={trackId} />
             <span className="font-display text-lg font-bold">{getTrack(trackId)?.name}</span>
             <span className="ml-auto">
-              <TitleChip def={{ id: titleId, param: trackId }} size="sm" />
+              <TitleChip def={{ id: `${period === 'all' ? 'owner' : 'weekly'}:${trackId}`, param: trackId }} size="sm" />
             </span>
           </div>
           <table className="w-full text-sm">
@@ -259,7 +391,7 @@ export function TrackRanking() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((e, i) => (
+              {(open ? entries : entries.slice(0, PREVIEW_ROWS)).map((e, i) => (
                 <tr key={e.profileId} className="border-t border-line/60">
                   <td className="px-3 py-2 font-mono text-muted">{i + 1}</td>
                   <td className="px-3 py-2">
@@ -274,25 +406,19 @@ export function TrackRanking() {
           </table>
         </div>
       )}
+      <ShowAll total={teams ? teamEntries.length : entries.length} shown={PREVIEW_ROWS} open={open} onToggle={toggle} />
 
-      <ShowAll total={entries.length} shown={PREVIEW_ROWS} open={expanded === boardId} onToggle={() => setExpanded(expanded === boardId ? null : boardId)} />
+      <LeadersGrid
+        current={trackId}
+        onPick={setPicked}
+        tracks={TRACKS.filter((tr) => has(tr.id)).map((tr) =>
+          teams
+            ? { id: tr.id, leader: teamBoards[tr.id][0].tag, value: `${teamBoards[tr.id][0].adj > 0 ? '+' : ''}${num(teamBoards[tr.id][0].adj, 1)}` }
+            : { id: tr.id, leader: data.players[boards[tr.id][0].profileId]?.username ?? '?', value: num(boards[tr.id][0].adj, 1) },
+        )}
+      />
 
-      {led.length > 0 && (
-        <section>
-          <h3 className="font-display text-lg font-bold">{t('tk.who')}</h3>
-          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            {led.map((tr) => (
-              <li key={tr.id}>
-                <button type="button" onClick={() => setPicked(tr.id)} className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-sm ${tr.id === trackId ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}>
-                  {plate(tr.id)}
-                  <span className="min-w-0 flex-1 truncate font-semibold">{data.players[boards[tr.id][0].profileId]?.username ?? '?'}</span>
-                  <span className="font-mono text-[11px] text-muted">{num(boards[tr.id][0].adj, 1)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {!teams && period === 'all' && <UnclaimedTracks unclaimed={unclaimed} mine={profileId ? mine : null} />}
     </div>
   )
 }

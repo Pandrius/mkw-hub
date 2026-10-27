@@ -1,10 +1,33 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { EmptyState, PageHeader, Plate } from '../components/ui'
+import { getTrack } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
 import { listNotices, markNoticesRead, type Notice } from '../lib/notices'
+
+type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string
+const RANKING_KINDS: Notice['kind'][] = ['record_lost', 'throne_lost', 'crown_won', 'track_won', 'track_lost']
+
+/** Texto de un aviso de ranking y la pestaña del ranking a la que lleva */
+function rankingNotice(n: Notice, t: Translate): { text: string; tab: string } {
+  const who = n.actor?.username ?? '?'
+  const track = getTrack(n.data?.track ?? '')
+  const title = t(n.data?.period === 'week' ? 'title.weekly.name' : 'title.owner.name', { track: track?.abbr ?? track?.name ?? n.data?.track ?? '' })
+  switch (n.kind) {
+    case 'throne_lost':
+      return { text: t('notices.throneLost', { who }), tab: 'achievements' }
+    case 'crown_won':
+      return { text: t('notices.crownWon', { crown: t(`crown.${n.data?.period ?? 'day'}.name` as MessageKey) }), tab: 'achievements' }
+    case 'track_won':
+      return { text: t('notices.trackWon', { title }), tab: 'tracks' }
+    case 'track_lost':
+      return { text: t('notices.trackLost', { who, title }), tab: 'tracks' }
+    default:
+      return { text: t('notices.recordLost', { who, record: t(`hof.${n.data?.record ?? 'bestEvent'}` as MessageKey), value: n.data?.value ?? 0 }), tab: 'records' }
+  }
+}
 
 /** Avisos: wars en las que te han apuntado, con la opción de subirlas también desde tu lado */
 export default function Notices() {
@@ -50,20 +73,16 @@ export default function Notices() {
       {!!notices?.length && (
         <ul className="panel divide-y divide-line/60">
           {notices.map((n) =>
-            n.kind === 'record_lost' || n.kind === 'throne_lost' ? (
+            RANKING_KINDS.includes(n.kind) ? (
               <li key={n.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 text-sm">
                     {!n.read_at && <span className="bg-kart-yellow px-1.5 py-0.5 font-mono text-[10px] font-bold text-bg uppercase">{t('notices.new')}</span>}
-                    <span>
-                      {n.kind === 'throne_lost'
-                        ? t('notices.throneLost', { who: n.actor?.username ?? '?' })
-                        : t('notices.recordLost', { who: n.actor?.username ?? '?', record: t(`hof.${n.data?.record ?? 'bestEvent'}` as MessageKey), value: n.data?.value ?? 0 })}
-                    </span>
+                    <span>{rankingNotice(n, t).text}</span>
                   </p>
                   <p className="mt-1 font-mono text-xs text-muted">{new Date(n.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}</p>
                 </div>
-                <Link to={`/ranking?tab=${n.kind === 'throne_lost' ? 'achievements' : 'records'}`} className="btn-line text-sm">
+                <Link to={`/ranking?tab=${rankingNotice(n, t).tab}`} className="btn-line text-sm">
                   {t('notices.seeRanking')}
                 </Link>
               </li>

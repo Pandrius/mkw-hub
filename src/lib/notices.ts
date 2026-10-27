@@ -3,12 +3,12 @@ import { supabase } from './supabase'
 /** Aviso de que alguien te ha apuntado en una war que acaba de subir */
 export type Notice = {
   id: number
-  /** war_posted: te han apuntado en una war · war_proof: hay una captura de una war por revisar (revisores) · record_lost / throne_lost: te han quitado un récord o el trono (el actor es quien lo tiene ahora) */
-  kind: 'war_posted' | 'war_proof' | 'record_lost' | 'throne_lost'
+  /** war_posted: te han apuntado en una war · war_proof: hay una captura de una war por revisar (revisores) · record_lost / throne_lost / track_lost: te han quitado un récord, el trono o una pista (el actor es quien lo tiene ahora) · crown_won / track_won: has ganado una corona o una pista */
+  kind: 'war_posted' | 'war_proof' | 'record_lost' | 'throne_lost' | 'crown_won' | 'track_won' | 'track_lost'
   /** Nulo en los avisos de récords y trono */
   event_id: string | null
-  /** record_lost: qué récord y con qué marca */
-  data: { record?: string; value?: number } | null
+  /** Avisos de ranking: qué récord y con qué marca, qué corona o pista y de qué periodo ('all' | 'week' | 'day') */
+  data: { record?: string; value?: number; period?: string; track?: string } | null
   /** Estás apuntado en el lado rival y puedes subir la war desde tu lado */
   can_upload: boolean
   created_at: string

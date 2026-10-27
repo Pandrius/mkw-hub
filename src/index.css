@@ -664,29 +664,63 @@ input[data-position]::-webkit-inner-spin-button {
   }
 }
 
-/* «Dueño de …»: el primero de la pista en todo el tiempo. Doble marco dorado alrededor de la placa de la pista, con una estrella
-   en la esquina; el título semanal es la misma placa sin marco. */
+/* «Dueño de …»: el primero de la pista en todo el tiempo. Un marco metálico pegado a la placa, con su misma forma inclinada, un
+   reflejo que lo recorre y una estrella a cada lado; el título semanal es la misma placa sin marco.
+   Dos acabados para elegir (data-frame): «gold», oro; «ink», el color de las letras de la placa pero más claro y con reflejo. */
 .owner-frame {
   position: relative;
   display: inline-block;
-  margin: 4px;
-  box-shadow:
-    0 0 0 2px #141414,
-    0 0 0 4px #ffd34d,
-    0 0 0 6px #141414;
+  --star-bg: #ffd34d;
 }
-.owner-frame::after {
-  content: '★';
+.owner-frame__body {
+  display: inline-block;
+  padding: 3px;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  background-repeat: repeat-x;
+  background-size: 220px 100%;
+  animation: owner-shine 3.4s linear infinite;
+  animation-delay: var(--shine-delay, 0s);
+}
+.owner-frame[data-frame='gold'] .owner-frame__body {
+  background-image: linear-gradient(105deg, #8a6500 0, #d9a520 22%, #ffe27a 38%, #fffbe0 46%, #ffe27a 54%, #d9a520 70%, #8a6500 88%, #8a6500 100%);
+}
+.owner-frame[data-frame='ink'] {
+  --ink-lo: color-mix(in srgb, var(--frame-ink) 78%, #000);
+  --ink-mid: color-mix(in srgb, var(--frame-ink) 62%, #fff);
+  --ink-hi: color-mix(in srgb, var(--frame-ink) 18%, #fff);
+  --star-bg: var(--ink-mid);
+}
+.owner-frame[data-frame='ink'] .owner-frame__body {
+  background-image: linear-gradient(105deg, var(--ink-lo) 0, var(--ink-mid) 22%, var(--ink-hi) 46%, var(--ink-mid) 62%, var(--ink-lo) 88%, var(--ink-lo) 100%);
+}
+@keyframes owner-shine {
+  to {
+    background-position-x: 220px;
+  }
+}
+.owner-frame__star {
   position: absolute;
-  top: -11px;
-  right: -11px;
+  top: 50%;
   display: grid;
   place-items: center;
   width: 16px;
   height: 16px;
+  transform: translateY(-50%);
   font-size: 10px;
   line-height: 1;
   color: #141414;
-  background: #ffd34d;
+  background: var(--star-bg);
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  pointer-events: none;
+}
+.owner-frame__star--l {
+  left: -8px;
+}
+.owner-frame__star--r {
+  right: -8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .owner-frame__body {
+    animation: none;
+  }
 }
