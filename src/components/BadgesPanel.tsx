@@ -4,11 +4,12 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { achievementTotals, BIG_EVENT_POINTS, LEGEND_EVENT_POINTS, missingTracks, REDEMPTION_FROM, type Achievement } from '../lib/achievements'
 import { CROWN_PERIODS, type CrownFacts, type CrownPeriod } from '../lib/crowns'
+import { CROWN_TITLES } from '../lib/titles'
 import type { TimedResult } from '../lib/form'
 import { EVENT_TIERS, RACE_TIERS, type BadgeSet } from '../lib/badges'
 import { topPercentIn, type AchievementStats } from '../lib/achievementStats'
-import { CrownBadge, type CrownState } from './CrownBadge'
 import { EpicCard, GrandCard, MedalCard } from './Medal'
+import { TitleChip } from './Showcase'
 import { SectionTitle, TrackName } from './StatBlocks'
 import { medalKindOf, TIER_COLOR, tierLabel } from './tiers'
 
@@ -38,25 +39,27 @@ function MissingTracks({ ids, label }: { ids: string[]; label: string }) {
   )
 }
 
-/** Una corona de la comunidad: la casilla de pole (iluminada si la llevas ahora, fantasma si la has llevado alguna vez) y las veces */
+/** Una corona de la comunidad: solo da títulos (no insignias), uno por llevarla ahora y otro por haberla llevado, con las veces */
 function CrownCard({ period, now, count }: { period: CrownPeriod; now: boolean; count: number }) {
   const { t } = useI18n()
-  const state: CrownState = now ? 'now' : count > 0 ? 'ever' : 'none'
+  const titles = CROWN_TITLES[period]
   return (
-    <div className="panel flex gap-4 p-4" style={now ? { borderColor: period === 'all' ? '#ffd34d' : 'var(--color-kart-yellow)' } : undefined}>
-      <CrownBadge period={period} state={state} count={count} size={64} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h4 className="font-display text-xl leading-[1.05] font-black">{t(`crown.${period}.name` as MessageKey)}</h4>
-          <span className="mt-0.5 shrink-0 font-mono text-[11px] font-bold uppercase" style={{ color: now ? 'var(--color-kart-yellow)' : 'var(--color-muted)' }}>
-            {now ? t('crown.now') : count > 0 ? t('crown.before') : t('badge.locked')}
-          </span>
-        </div>
-        <p className="mt-1 text-xs leading-snug text-muted">{t(`crown.${period}.desc` as MessageKey)}</p>
-        <p className="mt-2.5 font-mono text-[11px] text-muted">
-          <span className="font-bold text-ink">{count}</span> {t(period === 'all' ? 'crown.reigns' : 'crown.wonTimes')}
-        </p>
+    <div className="panel p-4" style={now ? { borderColor: period === 'all' ? '#ffd34d' : 'var(--color-kart-yellow)' } : undefined}>
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="font-display text-xl leading-[1.05] font-black">{t(`crown.${period}.name` as MessageKey)}</h4>
+        <span className="mt-0.5 shrink-0 font-mono text-[11px] font-bold uppercase" style={{ color: now ? 'var(--color-kart-yellow)' : 'var(--color-muted)' }}>
+          {now ? t('crown.now') : count > 0 ? t('crown.before') : t('badge.locked')}
+        </span>
       </div>
+      <p className="mt-1 text-xs leading-snug text-muted">{t(`crown.${period}.desc` as MessageKey)}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {now && <TitleChip def={{ id: titles.now }} size="sm" />}
+        {count > 0 && <TitleChip def={{ id: titles.ever, param: String(count) }} size="sm" />}
+        {!now && count === 0 && <span className="font-mono text-[11px] text-muted">{t('crown.noTitles')}</span>}
+      </div>
+      <p className="mt-2.5 font-mono text-[11px] text-muted">
+        <span className="font-bold text-ink">{count}</span> {t(period === 'all' ? 'crown.reigns' : 'crown.wonTimes')}
+      </p>
     </div>
   )
 }

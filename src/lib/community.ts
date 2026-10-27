@@ -1,6 +1,7 @@
 import type { Crowns } from './crowns'
 import type { AchievementBoard } from './communityBoard'
 import type { RecordHistory, RecordId, Records } from './records'
+import type { TrackBoards } from './trackBoard'
 
 export type CommunityPlayer = { username: string; avatar_url: string | null; country_code: string | null }
 
@@ -16,6 +17,8 @@ export type Community = {
   records: Records
   history: RecordHistory
   crowns: Crowns
+  /** Mejores de cada pista, de todo el tiempo y de la semana */
+  trackBoards: TrackBoards
 }
 
 export async function getCommunity(): Promise<Community | null> {

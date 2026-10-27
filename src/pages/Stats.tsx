@@ -16,7 +16,7 @@ import { useAuth, type Profile } from '../lib/auth'
 import { entityKey, teamsOf, type Entity } from '../lib/compare'
 import { achievementTotals, computeAchievements, demoAchievements } from '../lib/achievements'
 import { getAchievementStats, type AchievementStats } from '../lib/achievementStats'
-import { getOwnedTracks } from '../lib/trackOwners'
+import { tracksLedBy } from '../lib/trackBoard'
 import { copyText } from '../lib/clipboard'
 import { headToHead } from '../lib/headToHead'
 import { computeBadges } from '../lib/badges'
@@ -164,7 +164,7 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
   const [filter, setFilter] = useState<StatsFilter>('all')
   const [verifyFilter, setVerifyFilter] = useState<VerifyFilter>('all')
   const [lounge, setLounge] = useState<LoungeData | null>(null)
-  const [ownedTrackIds, setOwnedTrackIds] = useState<string[]>([])
+  const [ledTracks, setLedTracks] = useState<{ owned: string[]; weekly: string[] }>({ owned: [], weekly: [] })
   const [achStats, setAchStats] = useState<AchievementStats | null>(null)
   const [crowns, setCrowns] = useState<CrownFacts | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -186,7 +186,6 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
     Promise.all([
       supabase!.from('profiles').select('username, avatar_url, country_code, featured_badges, title_id, bolt_style').eq('id', profileId).maybeSingle(),
       getLoungeData(profileId),
-      getOwnedTracks(profileId).catch(() => [] as string[]),
       getAchievementStats(),
       getCommunity(),
       teamsOf(profileId),
@@ -195,11 +194,11 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
       vsId ? supabase!.from('profiles').select('username, avatar_url, country_code').eq('id', vsId).maybeSingle() : Promise.resolve(null),
       vsId ? getPlayerTimeline(vsId) : Promise.resolve(null),
     ]).then(
-      ([prof, loungeData, owned, aStats, community, tms, tl, events, vsProf, vsTl]) => {
+      ([prof, loungeData, aStats, community, tms, tl, events, vsProf, vsTl]) => {
         if (cancelled) return
         setOwner(prof.data)
         setLounge(loungeData)
-        setOwnedTrackIds(owned)
+        setLedTracks(tracksLedBy(community?.trackBoards, profileId))
         setAchStats(aStats)
         setCrowns(community ? crownFactsOf(community.crowns, profileId) : null)
         setShowcase({ badges: prof.data?.featured_badges ?? [], title: prof.data?.title_id ?? null, bolts: isBoltStyle(prof.data?.bolt_style) ? prof.data.bolt_style : DEFAULT_BOLT_STYLE })
@@ -265,11 +264,11 @@ function PlayerStats({ profileId, isMe, meId, vsId, demo, openEditor }: { profil
     return { total: all.size, verified: new Set(verifiedTimeline.map((r) => r.eventId)).size }
   }, [timeline, verifiedTimeline])
   const titleCtx = useMemo(
-    () => ({ achievements, badges, ownedTracks: ownedTrackIds, lounge: loungeFactsOf(lounge?.account ?? null, lounge?.changes ?? []), crowns }),
-    [achievements, badges, ownedTrackIds, lounge, crowns],
+    () => ({ achievements, badges, ownedTracks: ledTracks.owned, weeklyTracks: ledTracks.weekly, lounge: loungeFactsOf(lounge?.account ?? null, lounge?.changes ?? []), crowns }),
+    [achievements, badges, ledTracks, lounge, crowns],
   )
   const totals = useMemo(() => achievementTotals(achievements), [achievements])
-  const ownedFeatures = useMemo(() => featurable(achievements, badges, crowns), [achievements, badges, crowns])
+  const ownedFeatures = useMemo(() => featurable(achievements, badges), [achievements, badges])
 
   if (error) return <p className="text-kart-red">{t('common.loadError')}</p>
   if (!timeline) return <p className="text-muted">{t('common.loading')}</p>

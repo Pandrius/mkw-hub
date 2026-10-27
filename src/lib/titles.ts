@@ -5,7 +5,7 @@
  */
 import type { Achievement, AchievementId, Glyph } from './achievements.js'
 import type { BadgeSet, Tier } from './badges.js'
-import { CROWN_PERIODS, type CrownFacts, type CrownPeriod } from './crowns.js'
+import type { CrownFacts, CrownPeriod } from './crowns.js'
 import { topPercent } from './lounge.js'
 
 export const MAX_FEATURED = 3
@@ -21,8 +21,10 @@ export type LoungeFacts = {
 export type TitleContext = {
   achievements: Achievement[]
   badges: BadgeSet
-  /** Pistas dominadas (ver ownedTracks) */
+  /** Pistas en las que es el primero de la clasificación de todo el tiempo: «Dueño de …» (ver trackBoard.ts) */
   ownedTracks: string[]
+  /** Pistas en las que es el primero de la clasificación de esta semana */
+  weeklyTracks?: string[]
   lounge: LoungeFacts | null
   /** Coronas de la comunidad (pole del día, de la semana y trono); sin indicarlas, no hay insignias ni títulos de corona */
   crowns?: CrownFacts | null
@@ -33,32 +35,16 @@ export type TitleContext = {
 /** `ach:<logro>`, `badge:races|events|explorer` o `track:<pista>` */
 export type FeaturedId = string
 
-export type Featurable = { id: FeaturedId; glyph: Glyph; tier: Tier; /** Veces conseguida (insignias «alguna vez» de corona) */ count?: number }
-
-/** `crown:<periodo>Now` (la llevas ahora) o `crown:<periodo>Ever` (la has llevado alguna vez, con las veces) */
-export const crownBadgeId = (period: CrownPeriod, when: 'Now' | 'Ever') => `crown:${period}${when}`
-
-/** Insignias de corona que tiene un jugador: solo las que cumple */
-export function crownFeaturables(c: CrownFacts): Featurable[] {
-  return CROWN_PERIODS.flatMap((p): Featurable[] => {
-    const now = c[`${p}Now` as const]
-    const count = c[`${p}Count` as const]
-    return [
-      ...(now ? [{ id: crownBadgeId(p, 'Now'), glyph: 'crown' as Glyph, tier: 4 as Tier }] : []),
-      ...(count > 0 ? [{ id: crownBadgeId(p, 'Ever'), glyph: 'crown' as Glyph, tier: 3 as Tier, count }] : []),
-    ]
-  })
-}
+export type Featurable = { id: FeaturedId; glyph: Glyph; tier: Tier }
 
 /** Todas las insignias y logros con al menos un nivel (las únicas que se pueden destacar) */
-export function featurable(achievements: Achievement[], badges: BadgeSet, crowns?: CrownFacts | null): Featurable[] {
+export function featurable(achievements: Achievement[], badges: BadgeSet): Featurable[] {
   return [
     ...achievements.map((a): Featurable => ({ id: `ach:${a.id}`, glyph: a.glyph, tier: a.tier })),
     { id: 'badge:races', glyph: 'bars', tier: badges.races.tier } satisfies Featurable,
     { id: 'badge:events', glyph: 'flag', tier: badges.events.tier } satisfies Featurable,
     { id: 'badge:explorer', glyph: 'ring', tier: badges.explorer.tier } satisfies Featurable,
     ...badges.tracks.map((b): Featurable => ({ id: `track:${b.trackId}`, glyph: 'ring', tier: b.tier })),
-    ...(crowns ? crownFeaturables(crowns) : []),
   ].filter((f) => f.tier > 0)
 }
 
@@ -82,6 +68,16 @@ export function validateFeatured(ids: unknown, owned: Featurable[]): FeaturedId[
 }
 
 // ───────────────────────── Títulos ─────────────────────────
+
+/**
+ * Títulos de las coronas de la comunidad. Aparecer en un ranking es difícil, así que solo dan títulos (nunca insignias): uno por
+ * llevar la corona ahora y otro por haberla llevado alguna vez (este lleva las veces).
+ */
+export const CROWN_TITLES: Record<CrownPeriod, { now: string; ever: string }> = {
+  day: { now: 'poleDay', ever: 'poleDayEver' },
+  week: { now: 'poleWeek', ever: 'poleWeekEver' },
+  all: { now: 'kingNow', ever: 'kingEver' },
+}
 
 export type TitleDef = {
   id: string
@@ -141,13 +137,17 @@ export function titleCatalog(ctx: TitleContext): TitleDef[] {
     { id: 'globetrotter', group: 'achievement', earned: ctx.badges.explorer.tier >= 4 },
   )
   for (const trackId of ctx.ownedTracks) list.push({ id: `owner:${trackId}`, param: trackId, group: 'track', earned: true })
+  for (const trackId of ctx.weeklyTracks ?? []) list.push({ id: `weekly:${trackId}`, param: trackId, group: 'track', earned: true })
 
   const lounge = ctx.lounge
   for (const p of TOP_PERCENTS) list.push({ id: `top:${p}`, param: String(p), group: 'lounge', earned: !!lounge && lounge.topPercent !== null && lounge.topPercent <= p })
   for (const r of LOUNGE_RANKS) list.push({ id: `rank:${r.key}`, param: r.key, group: 'lounge', earned: !!lounge && lounge.peakMmr !== null && lounge.peakMmr >= r.min })
   list.push({ id: 'sqPlayer', group: 'lounge', earned: !!lounge && lounge.sqTables >= SQ_TABLES })
-  // Trono de la comunidad: el título de quien está en lo más alto ahora y el de quien ha estado alguna vez
-  list.push({ id: 'kingNow', group: 'crown', earned: !!ctx.crowns?.allNow }, { id: 'kingEver', group: 'crown', earned: (ctx.crowns?.allCount ?? 0) > 0 })
+  // Coronas de la comunidad: el de quien la lleva ahora y el de quien la ha llevado alguna vez (con las veces)
+  for (const [period, ids] of Object.entries(CROWN_TITLES) as [CrownPeriod, { now: string; ever: string }][]) {
+    const count = ctx.crowns?.[`${period}Count` as const] ?? 0
+    list.push({ id: ids.now, group: 'crown', earned: !!ctx.crowns?.[`${period}Now` as const] }, { id: ids.ever, param: String(count), group: 'crown', earned: count > 0 })
+  }
   return list
 }
 

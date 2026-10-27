@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { AchievementsRanking, HallOfFame } from '../components/CommunityBoards'
+import { AchievementsRanking, HallOfFame, TrackRanking } from '../components/CommunityBoards'
 import { Th } from '../components/StatBlocks'
 import { useNum } from '../components/statFormat'
 import { EmptyState, Flag, PageHeader, Tabs } from '../components/ui'
@@ -12,8 +12,8 @@ import { supabase } from '../lib/supabase'
 /** Carreras verificadas mínimas para aparecer en el ranking de la web */
 const MIN_RACES = 50
 
-type Tab = 'verified' | 'lounge' | 'achievements' | 'records'
-const TABS: Tab[] = ['verified', 'lounge', 'achievements', 'records']
+type Tab = 'verified' | 'lounge' | 'tracks' | 'achievements' | 'records'
+const TABS: Tab[] = ['verified', 'lounge', 'tracks', 'achievements', 'records']
 type Kind = 'all' | 'war' | 'lounge'
 
 type VerifiedRow = {
@@ -62,6 +62,7 @@ export default function Ranking() {
           tabs={[
             { id: 'verified' as Tab, label: t('rk.tabVerified') },
             { id: 'lounge' as Tab, label: t('rk.tabLounge') },
+            { id: 'tracks' as Tab, label: t('rk.tabTracks') },
             { id: 'achievements' as Tab, label: t('rk.tabAchievements') },
             { id: 'records' as Tab, label: t('rk.tabRecords') },
           ]}
@@ -84,6 +85,7 @@ export default function Ranking() {
       </div>
       {tab === 'verified' && <VerifiedRanking country={effectiveCountry} />}
       {tab === 'lounge' && <LoungeRanking country={effectiveCountry} />}
+      {tab === 'tracks' && <TrackRanking />}
       {tab === 'achievements' && <AchievementsRanking />}
       {tab === 'records' && <HallOfFame />}
     </>

@@ -8,6 +8,7 @@ import { computeAchievements } from './achievements.js'
 import { computeBadges } from './badges.js'
 import { loadCommunity } from './communityServer.js'
 import { crownFactsOf, type CrownFacts } from './crowns.js'
+import { tracksLedBy } from './trackBoard.js'
 import { fetchTimeline } from './timelineQuery.js'
 import { featurable, loungeFactsOf, type Featurable, type TitleContext } from './titles.js'
 
@@ -17,21 +18,21 @@ export async function loadTitleContext(admin: SupabaseClient, profileId: string)
   const achievements = computeAchievements(timeline, TRACKS.length)
   const badges = computeBadges(timeline, TRACKS.length)
 
-  // Las coronas salen de la instantánea de la comunidad; si no está disponible, no se ofrecen insignias ni títulos de corona
+  // Las coronas y las pistas que lidera salen de la instantánea de la comunidad; si no está disponible, no se ofrecen esos títulos
   let crowns: CrownFacts | null = null
+  let led = { owned: [] as string[], weekly: [] as string[] }
   try {
-    crowns = crownFactsOf((await loadCommunity(admin)).crowns, profileId)
+    const community = await loadCommunity(admin)
+    crowns = crownFactsOf(community.crowns, profileId)
+    led = tracksLedBy(community.trackBoards, profileId)
   } catch (err) {
-    console.error('showcase crowns', err)
+    console.error('showcase community', err)
   }
 
-  const [acc, ch, owners] = await Promise.all([
+  const [acc, ch] = await Promise.all([
     admin.from('lounge_players').select('overall_rank, total_players').eq('profile_id', profileId).maybeSingle(),
     admin.from('lounge_changes').select('reason, tier, new_mmr').eq('profile_id', profileId).limit(5000),
-    admin.rpc('track_owners'),
   ])
-  if (owners.error) throw new Error(owners.error.message)
-  const ownedTrackIds = ((owners.data ?? []) as { profile_id: string; track_id: string }[]).filter((o) => o.profile_id === profileId).map((o) => o.track_id)
   if (acc.error) throw new Error(acc.error.message)
   if (ch.error) throw new Error(ch.error.message)
   const rows = (ch.data ?? []) as { reason: string; tier: string | null; new_mmr: number }[]
@@ -40,5 +41,5 @@ export async function loadTitleContext(admin: SupabaseClient, profileId: string)
     rows.map((r) => ({ reason: r.reason, tier: r.tier, newMmr: r.new_mmr })),
   )
 
-  return { ctx: { achievements, badges, ownedTracks: ownedTrackIds, lounge, crowns }, owned: featurable(achievements, badges, crowns) }
+  return { ctx: { achievements, badges, ownedTracks: led.owned, weeklyTracks: led.weekly, lounge, crowns }, owned: featurable(achievements, badges) }
 }

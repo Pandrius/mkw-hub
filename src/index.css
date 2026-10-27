@@ -591,44 +591,102 @@ input[data-position]::-webkit-inner-spin-button {
   }
 }
 
-/* Títulos del trono. «Rey del asfalto»: placa inclinada de asfalto con el piano rojo y blanco de las curvas como marco y el
-   texto en oro con un reflejo. «Antiguo rey»: la misma placa en fantasma, a trazos y sin relleno (la casilla de pole de antes). */
+/* Títulos de las coronas de la comunidad, con el lenguaje de la parrilla de salida: placa inclinada de asfalto y, según la corona,
+   el marco de piano rojo y blanco de las curvas.
+   - «Rey del asfalto» (trono): marco de piano completo, texto dorado y un reflejo.
+   - «Pole de la semana»: pianos solo arriba y abajo, texto blanco.
+   - «Pole del día»: marco amarillo de casilla de salida.
+   - Las versiones «alguna vez» (con las veces) son la placa fantasma: a trazos, sin relleno y en cursiva. */
 .crown-title {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   display: inline-block;
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  --kerb: repeating-linear-gradient(-45deg, #e8112d 0 5px, #f4f4f0 5px 10px);
 }
-.crown-title[data-crown='now'] {
+.crown-title[data-crown='kingNow'] {
   color: #ffd34d;
   border: 3px solid transparent;
   background:
     linear-gradient(#141414, #141414) padding-box,
-    repeating-linear-gradient(-45deg, #e8112d 0 5px, #f4f4f0 5px 10px) border-box;
+    var(--kerb) border-box;
   text-shadow: 0 1px 0 #000;
 }
-.crown-title[data-crown='now']::after {
+.crown-title[data-crown='poleWeek'] {
+  color: #f4f4f0;
+  background:
+    var(--kerb) top / 100% 4px no-repeat,
+    var(--kerb) bottom / 100% 4px no-repeat,
+    #141414;
+  text-shadow: 0 1px 0 #000;
+}
+.crown-title[data-crown='poleDay'] {
+  color: #ffd500;
+  background: #141414;
+  box-shadow: inset 0 0 0 2px #ffd500;
+  text-shadow: 0 1px 0 #000;
+}
+.crown-title[data-crown='kingNow']::after,
+.crown-title[data-crown='poleWeek']::after,
+.crown-title[data-crown='poleDay']::after {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
   width: 35%;
-  background: linear-gradient(90deg, transparent, rgba(255, 226, 122, 0.7), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 122, 0.6), transparent);
   animation: chip-sweep 3.6s ease-in-out infinite;
   pointer-events: none;
   z-index: -1;
 }
-.crown-title[data-crown='ever'] {
-  color: #d9b84a;
-  border: 2px dashed #8a7430;
+.crown-title[data-crown='kingEver'],
+.crown-title[data-crown='poleWeekEver'],
+.crown-title[data-crown='poleDayEver'] {
+  border: 2px dashed var(--ghost, #8a7430);
+  color: var(--ghost-ink, #d9b84a);
   background: rgba(20, 20, 20, 0.45);
   font-style: italic;
+}
+.crown-title[data-crown='poleWeekEver'] {
+  --ghost: #8d8d88;
+  --ghost-ink: #d8d8d2;
+}
+.crown-title[data-crown='poleDayEver'] {
+  --ghost: #8f7a00;
+  --ghost-ink: #e6c200;
 }
 @media (prefers-reduced-motion: reduce) {
   .crown-title::after {
     animation: none;
     display: none;
   }
+}
+
+/* «Dueño de …»: el primero de la pista en todo el tiempo. Doble marco dorado alrededor de la placa de la pista, con una estrella
+   en la esquina; el título semanal es la misma placa sin marco. */
+.owner-frame {
+  position: relative;
+  display: inline-block;
+  margin: 4px;
+  box-shadow:
+    0 0 0 2px #141414,
+    0 0 0 4px #ffd34d,
+    0 0 0 6px #141414;
+}
+.owner-frame::after {
+  content: '★';
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  color: #141414;
+  background: #ffd34d;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }

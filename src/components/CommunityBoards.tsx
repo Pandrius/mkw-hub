@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { getTrack, getTrackPlateBackground, getTrackTextColor, TRACKS } from '../data/tracks'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import { useAuth } from '../lib/auth'
@@ -8,10 +9,12 @@ import { PERIODS, type BoardKey, type Period } from '../lib/communityBoard'
 import { REDEMPTION_FROM } from '../lib/achievements'
 import { CROWN_PERIODS, type CrownPeriod } from '../lib/crowns'
 import { RECORD_IDS, standingIn, type RecordEntry, type RecordId } from '../lib/records'
+import { ALL_MIN_RACES, WEEK_MIN_RACES } from '../lib/trackBoard'
 import { CrownBadge } from './CrownBadge'
+import { TitleChip } from './Showcase'
 import { Th } from './StatBlocks'
 import { useNum } from './statFormat'
-import { EmptyState, Flag, Tabs } from './ui'
+import { EmptyState, Flag, Plate, Tabs } from './ui'
 
 /** Orden de los logros en el selector (el general va el primero) */
 const BOARD_KEYS: BoardKey[] = [
@@ -156,6 +159,114 @@ export function AchievementsRanking() {
         </div>
       )}
       <p className="font-mono text-[11px] text-muted">{t('cb.updated', { time: new Date(data.generatedAt).toLocaleString() })}</p>
+    </div>
+  )
+}
+
+/** Los mejores de cada pista (todo el tiempo y esta semana): el primero lleva «Dueño de …» o el título semanal */
+export function TrackRanking() {
+  const { t } = useI18n()
+  const num = useNum()
+  const data = useCommunity()
+  const [period, setPeriod] = useState<'all' | 'week'>('all')
+  const [picked, setPicked] = useState<string | null>(null)
+
+  if (data === undefined) return <p className="text-muted">{t('common.loading')}</p>
+  if (data === null) return <p className="text-kart-red">{t('common.loadError')}</p>
+
+  const boards = data.trackBoards[period]
+  // Por defecto, la primera pista que ya tiene clasificación
+  const trackId = picked ?? TRACKS.find((tr) => boards[tr.id])?.id ?? TRACKS[0].id
+  const entries = boards[trackId] ?? []
+  const led = TRACKS.filter((tr) => boards[tr.id])
+  const titleId = `${period === 'all' ? 'owner' : 'weekly'}:${trackId}`
+  const plate = (id: string) => {
+    const tr = getTrack(id)
+    return (
+      <Plate color={getTrackPlateBackground(tr)} textColor={getTrackTextColor(tr)}>
+        {tr?.abbr ?? id}
+      </Plate>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs
+          tabs={[
+            { id: 'all' as const, label: t('cb.period.all') },
+            { id: 'week' as const, label: t('cb.period.week') },
+          ]}
+          value={period}
+          onChange={setPeriod}
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted">{t('tk.track')}</span>
+          <select value={trackId} onChange={(e) => setPicked(e.target.value)} className="field w-64">
+            {TRACKS.map((tr) => (
+              <option key={tr.id} value={tr.id}>
+                {tr.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="max-w-3xl text-xs text-muted">{t(period === 'all' ? 'tk.hintAll' : 'tk.hintWeek', { n: period === 'all' ? ALL_MIN_RACES : WEEK_MIN_RACES })}</p>
+
+      {entries.length === 0 ? (
+        <EmptyState title={t('tk.empty')}>{t(period === 'all' ? 'tk.emptyAll' : 'tk.emptyWeek', { n: period === 'all' ? ALL_MIN_RACES : WEEK_MIN_RACES })}</EmptyState>
+      ) : (
+        <div className="panel overflow-x-auto">
+          <div className="flex flex-wrap items-center gap-3 border-b border-line/60 px-3 py-3">
+            {plate(trackId)}
+            <span className="font-display text-lg font-bold">{getTrack(trackId)?.name}</span>
+            <span className="ml-auto">
+              <TitleChip def={{ id: titleId, param: trackId }} size="sm" />
+            </span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-bg font-display text-xs text-kart-yellow">
+              <tr>
+                <Th right={false}>#</Th>
+                <Th right={false}>{t('rk.player')}</Th>
+                <Th hint={t('tk.adjHint')}>{t('tk.adj')}</Th>
+                <Th>{t('rk.pts')}</Th>
+                <Th>{t('an.col.races')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((e, i) => (
+                <tr key={e.profileId} className="border-t border-line/60">
+                  <td className="px-3 py-2 font-mono text-muted">{i + 1}</td>
+                  <td className="px-3 py-2">
+                    <PlayerCell id={e.profileId} data={data} />
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono font-bold text-kart-yellow">{num(e.adj, 2)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{num(e.avg, 2)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-muted">{e.races}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {led.length > 0 && (
+        <section>
+          <h3 className="font-display text-lg font-bold">{t('tk.who')}</h3>
+          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {led.map((tr) => (
+              <li key={tr.id}>
+                <button type="button" onClick={() => setPicked(tr.id)} className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-sm ${tr.id === trackId ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}>
+                  {plate(tr.id)}
+                  <span className="min-w-0 flex-1 truncate font-semibold">{data.players[boards[tr.id][0].profileId]?.username ?? '?'}</span>
+                  <span className="font-mono text-[11px] text-muted">{num(boards[tr.id][0].adj, 1)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

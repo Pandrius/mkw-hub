@@ -10,6 +10,7 @@ import { buildCrowns } from './crowns.js'
 import type { TimedResult } from './form.js'
 import { buildRecords } from './records.js'
 import { fetchTimeline } from './timelineQuery.js'
+import { buildTrackBoards } from './trackBoard.js'
 
 /** Jugadores cuyas carreras se piden a la vez */
 const BATCH = 6
@@ -32,11 +33,13 @@ export async function computeCommunity(admin: SupabaseClient, now = new Date()):
   const board = buildBoard(players, TRACKS.length, now)
   const { records, history } = buildRecords(players)
   const crowns = buildCrowns(players, TRACKS.length)
+  const trackBoards = buildTrackBoards(players, now)
 
   // Solo los datos públicos de quienes salen en alguna lista
   const shown = new Set<string>()
   for (const list of Object.values(board)) for (const entries of Object.values(list)) for (const e of entries ?? []) shown.add(e.profileId)
   for (const entries of [...Object.values(records), ...Object.values(history)]) for (const e of entries) shown.add(e.profileId)
+  for (const boards of [trackBoards.all, trackBoards.week]) for (const entries of Object.values(boards)) for (const e of entries) shown.add(e.profileId)
   for (const c of Object.values(crowns)) {
     if (c.holder) shown.add(c.holder)
     for (const id of Object.keys(c.counts)) shown.add(id)
@@ -48,10 +51,13 @@ export async function computeCommunity(admin: SupabaseClient, now = new Date()):
   const byId: Record<string, CommunityPlayer> = {}
   for (const p of (profiles ?? []) as (CommunityPlayer & { id: string })[]) byId[p.id] = { username: p.username, avatar_url: p.avatar_url, country_code: p.country_code }
 
-  return { ok: true, generatedAt: now.toISOString(), players: byId, board, records, history, crowns }
+  return { ok: true, generatedAt: now.toISOString(), players: byId, board, records, history, crowns, trackBoards }
 }
 
-const isCommunity = (v: unknown): v is Community => !!v && typeof v === 'object' && 'records' in v && 'crowns' in v && 'history' in v && 'board' in v
+/** Una instantánea guardada con lo que hace falta para detectar relevos (puede ser de una versión anterior sin todos los campos) */
+const isSnapshot = (v: unknown): v is Pick<Community, 'records' | 'crowns'> => !!v && typeof v === 'object' && 'records' in v && 'crowns' in v
+/** Y la que tiene todos los campos de la versión actual, para servirla tal cual */
+const isCurrent = (v: unknown): v is Community => isSnapshot(v) && 'history' in v && 'board' in v && 'trackBoards' in v
 
 /** Avisa a quien ha perdido un récord o el trono (un aviso por relevo: si dos servidores a la vez lo intentan, solo entra uno) */
 async function notifyTurnovers(admin: SupabaseClient, list: Turnover[]): Promise<void> {
@@ -74,8 +80,9 @@ async function notifyTurnovers(admin: SupabaseClient, list: Turnover[]): Promise
 export async function loadCommunity(admin: SupabaseClient, options: { force?: boolean; maxAgeMs?: number } = {}): Promise<Community> {
   const { force = false, maxAgeMs = SNAPSHOT_MAX_AGE_MS } = options
   const saved = await admin.from('community_snapshots').select('payload, updated_at').eq('id', SNAPSHOT_ID).maybeSingle()
-  const prev = isCommunity(saved.data?.payload) ? saved.data.payload : null
-  if (prev && !force && Date.now() - Date.parse(saved.data!.updated_at as string) < maxAgeMs) return prev
+  const payload = saved.data?.payload
+  const prev = isSnapshot(payload) ? payload : null
+  if (isCurrent(payload) && !force && Date.now() - Date.parse(saved.data!.updated_at as string) < maxAgeMs) return payload
 
   const next = await computeCommunity(admin)
   const { error } = await admin.from('community_snapshots').upsert({ id: SNAPSHOT_ID, payload: next, updated_at: new Date().toISOString() })

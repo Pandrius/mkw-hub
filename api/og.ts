@@ -81,6 +81,9 @@ function titleLabel(id: string, t: ReturnType<typeof translator>): string {
   const [kind, param = ''] = id.split(':')
   const track = () => getTrack(param)?.abbr ?? getTrack(param)?.name ?? param
   if (kind === 'owner') return t('title.owner.name', { track: track() })
+  if (kind === 'weekly') return t('title.weekly.name', { track: track() })
+  // Las veces de los títulos «alguna vez» de las coronas no se dibujan en la imagen
+  if (/^(poleDay|poleWeek|king)Ever$/.test(id)) return t(`title.${id}.name` as MessageKey).replace(/\s*×\s*$/, '')
   if (kind === 'rank') return t(`rank.${param}` as MessageKey)
   if (kind === 'top') return t('title.top.name', { pct: param })
   return t(`title.${id}.name` as MessageKey)

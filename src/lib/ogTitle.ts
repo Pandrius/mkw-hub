@@ -49,17 +49,25 @@ const UNIQUE: Record<string, TitleSpec> = {
   'top:5': { image: 'linear-gradient(135deg, #7a1fb5, #e12bd0 50%, #7a1fb5)', ink: '#ffffff', edge: { width: 1, color: '#3d0a63' } },
   'top:1': { bg: '#0b0b0b', ink: '#ffd34d', edge: { width: 2, color: '#f1c232' } },
   grandMaster: { bg: '#141414', ink: '#fff1a8', edge: { width: 2, color: '#3b3b38' } },
+  // Coronas de la comunidad: placa de asfalto con el piano (rojo) o el amarillo de la casilla como marco; las «alguna vez», apagadas
+  kingNow: { bg: '#141414', ink: '#ffd34d', edge: { width: 3, color: '#e8112d' } },
+  poleWeek: { bg: '#141414', ink: '#f4f4f0', edge: { width: 3, color: '#e8112d' } },
+  poleDay: { bg: '#141414', ink: '#ffd500', edge: { width: 2, color: '#ffd500' } },
+  kingEver: { bg: '#262320', ink: '#d9b84a', edge: { width: 1, color: '#8a7430' } },
+  poleWeekEver: { bg: '#262626', ink: '#d8d8d2', edge: { width: 1, color: '#8d8d88' } },
+  poleDayEver: { bg: '#262400', ink: '#e6c200', edge: { width: 1, color: '#8f7a00' } },
 }
 
-/** Cómo se ve un título (`id` como se guarda: `owner:<pista>`, `rank:gold`, `top:5`, `warRank3`, `veteran`…) */
+/** Cómo se ve un título (`id` como se guarda: `owner:<pista>`, `weekly:<pista>`, `rank:gold`, `top:5`, `warRank3`, `veteran`…) */
 export function titleSpec(id: string): TitleSpec {
   const [kind, param = ''] = id.split(':')
-  if (kind === 'owner') {
-    // Placa de la pista: su color y sus letras; Rainbow Road, el multicolor
+  if (kind === 'owner' || kind === 'weekly') {
+    // Placa de la pista: su color y sus letras; Rainbow Road, el multicolor. «Dueño de …» (todo el tiempo) lleva además el filete dorado
     const track = getTrack(param)
     const plate = getTrackPlateBackground(track)
-    if (track?.abbr === 'RR') return { image: MULTI, ink: '#16121f' }
-    return { bg: plate ?? '#ffd500', ink: getTrackTextColor(track) }
+    const edge = kind === 'owner' ? { edge: { width: 3, color: '#ffd34d' } } : {}
+    if (track?.abbr === 'RR') return { image: MULTI, ink: '#16121f', ...edge }
+    return { bg: plate ?? '#ffd500', ink: getTrackTextColor(track), ...edge }
   }
   if (kind === 'rank') return RANKS[param] ?? { bg: '#ffd500', ink: '#141414' }
   if (id.startsWith('warRank')) {

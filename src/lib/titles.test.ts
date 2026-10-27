@@ -98,29 +98,47 @@ describe('rayos de los escudos especiales', () => {
   })
 })
 
-describe('coronas', () => {
+describe('coronas de la comunidad', () => {
   const none = { dayNow: false, weekNow: false, allNow: false, dayCount: 0, weekCount: 0, allCount: 0 }
+  const earned = (crowns: typeof none) =>
+    titleCatalog({ ...ctxFor([]), crowns })
+      .filter((t) => t.group === 'crown' && t.earned)
+      .map((t) => t.id)
+      .sort()
 
-  it('sin coronas no hay insignias ni títulos de corona', () => {
-    expect(featurable([], computeBadges([], 40), none).some((f) => f.id.startsWith('crown:'))).toBe(false)
-    expect(titleCatalog({ ...ctxFor([]), crowns: none }).filter((t) => t.group === 'crown' && t.earned)).toEqual([])
+  it('sin coronas no hay títulos de corona', () => {
+    expect(earned(none)).toEqual([])
+    expect(titleCatalog(ctxFor([])).filter((t) => t.group === 'crown' && t.earned)).toEqual([])
   })
 
-  it('«ahora» y «alguna vez» son insignias distintas, y la segunda lleva las veces', () => {
-    const crowns = { ...none, weekNow: true, weekCount: 3, dayCount: 2 }
-    const owned = featurable([], computeBadges([], 40), crowns).filter((f) => f.id.startsWith('crown:'))
-    expect(owned.map((f) => f.id).sort()).toEqual(['crown:dayEver', 'crown:weekEver', 'crown:weekNow'])
-    expect(owned.find((f) => f.id === 'crown:weekEver')?.count).toBe(3)
-    expect(validateFeatured(['crown:weekNow'], owned)).toEqual(['crown:weekNow'])
-    expect(validateFeatured(['crown:dayNow'], owned)).toBeNull()
+  it('«ahora» y «alguna vez» son títulos distintos, y el segundo lleva las veces', () => {
+    expect(earned({ ...none, weekNow: true, weekCount: 3, dayCount: 2 })).toEqual(['poleDayEver', 'poleWeek', 'poleWeekEver'])
+    const catalog = titleCatalog({ ...ctxFor([]), crowns: { ...none, dayCount: 2 } })
+    expect(catalog.find((t) => t.id === 'poleDayEver')).toMatchObject({ earned: true, param: '2' })
   })
 
-  it('el título del trono: uno para quien reina y otro para quien ha reinado alguna vez', () => {
-    const former = titleCatalog({ ...ctxFor([]), crowns: { ...none, allCount: 2 } })
-    expect(former.find((t) => t.id === 'kingEver')?.earned).toBe(true)
-    expect(former.find((t) => t.id === 'kingNow')?.earned).toBe(false)
+  it('los títulos del trono: uno para quien reina y otro para quien ha reinado', () => {
+    expect(earned({ ...none, allCount: 2 })).toEqual(['kingEver'])
     const king = { ...ctxFor([]), crowns: { ...none, allNow: true, allCount: 1 } }
     expect(validateTitle('kingNow', king)).toBe('kingNow')
     expect(validateTitle('kingNow', { ...king, crowns: none })).toBeUndefined()
+  })
+
+  it('aparecer en un ranking solo da títulos: ninguna insignia destacable es de corona', () => {
+    expect(featurable([], computeBadges([], 40)).some((f) => f.id.startsWith('crown:'))).toBe(false)
+  })
+})
+
+describe('títulos por pista', () => {
+  it('«Dueño de …» (todo el tiempo) y el semanal salen de las pistas que se lidera', () => {
+    const catalog = titleCatalog({ ...ctxFor([], null, ['lc']), weeklyTracks: ['rr'] })
+    expect(catalog.find((t) => t.id === 'owner:lc')).toMatchObject({ earned: true, param: 'lc', group: 'track' })
+    expect(catalog.find((t) => t.id === 'weekly:rr')).toMatchObject({ earned: true, param: 'rr', group: 'track' })
+    expect(titleCatalog(ctxFor([])).some((t) => t.id.startsWith('weekly:'))).toBe(false)
+  })
+
+  it('se puede elegir el título semanal solo si se lidera la pista', () => {
+    expect(validateTitle('weekly:rr', { ...ctxFor([]), weeklyTracks: ['rr'] })).toBe('weekly:rr')
+    expect(validateTitle('weekly:rr', ctxFor([]))).toBeUndefined()
   })
 })

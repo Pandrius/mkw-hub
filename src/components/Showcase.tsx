@@ -4,12 +4,10 @@ import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/es'
 import type { Tier } from '../lib/badges'
 import { supabase } from '../lib/supabase'
-import type { CrownPeriod } from '../lib/crowns'
 import { ACHIEVEMENT_TITLES, BOLT_STYLES, canPickBolts, MAX_FEATURED, titleCatalog, type BoltStyle, type Featurable, type TitleContext, type TitleDef } from '../lib/titles'
-import { CrownBadge } from './CrownBadge'
 import { MedalIcon } from './Medal'
 import { Plate } from './ui'
-import { featuredName, featuredTier, titleHow, titleName } from './showcaseNames'
+import { CROWN_TITLE_IDS, featuredName, featuredTier, titleHow, titleName } from './showcaseNames'
 import { medalKindOf, TIER_COLOR } from './tiers'
 
 /** Títulos con aspecto propio (ver .title-chip en index.css); «Leyenda absoluta» tiene el suyo aparte */
@@ -23,15 +21,6 @@ const UNIQUE_TITLES = new Set([
   'sqPlayer',
 ])
 
-/** Icono de una insignia destacada: la casilla de pole para las coronas y la medalla para el resto */
-export function FeaturedIcon({ f, size }: { f: Featurable; size: number }) {
-  if (f.id.startsWith('crown:')) {
-    const period = f.id.slice('crown:'.length).replace(/(Now|Ever)$/, '') as CrownPeriod
-    return <CrownBadge period={period} state={f.id.endsWith('Now') ? 'now' : 'ever'} count={f.count} size={size + 4} />
-  }
-  return <MedalIcon glyph={f.glyph} tier={f.tier} size={size} kind={medalKindOf(f.id)} levels={Math.max(4, f.tier)} />
-}
-
 /**
  * Un título como se ve en el perfil. «Dueño de …» lleva la placa de la pista (mismo color y letras que su abreviatura; Rainbow Road,
  * con el multicolor animado), los de rango del Lounge, el material y color de su rango (bronce, plata, oro…), «Leyenda absoluta» tiene las letras multicolor que cambian y el resto, el amarillo de la web.
@@ -40,10 +29,10 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
   const { t } = useI18n()
   const name = titleName(def, t)
   const pad = size === 'md' ? { padding: '6px 12px', fontSize: '1rem' } : { padding: '3px 8px', fontSize: '0.8rem' }
-  if (def.id.startsWith('owner:')) {
+  if (def.id.startsWith('owner:') || def.id.startsWith('weekly:')) {
     const track = getTrack(def.param ?? '')
     const rainbow = track?.abbr === 'RR'
-    return (
+    const plate = (
       <Plate
         color={rainbow ? undefined : getTrackPlateBackground(track)}
         textColor={rainbow ? '#16121f' : getTrackTextColor(track)}
@@ -53,6 +42,8 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
         {name}
       </Plate>
     )
+    // «Dueño de …» (el primero de todo el tiempo) es más exclusivo que el semanal: lleva un doble marco dorado
+    return def.id.startsWith('owner:') ? <span className="owner-frame">{plate}</span> : plate
   }
   if (def.id.startsWith('rank:')) {
     return (
@@ -79,9 +70,9 @@ export function TitleChip({ def, size = 'md' }: { def: Pick<TitleDef, 'id' | 'pa
       </span>
     )
   }
-  if (def.id === 'kingNow' || def.id === 'kingEver') {
+  if (CROWN_TITLE_IDS.has(def.id)) {
     return (
-      <span data-crown={def.id === 'kingNow' ? 'now' : 'ever'} className="crown-title font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={{ ...pad, paddingLeft: size === 'md' ? 18 : 14, paddingRight: size === 'md' ? 18 : 14 }}>
+      <span data-crown={def.id} className="crown-title font-display font-extrabold tracking-wide whitespace-nowrap uppercase" style={{ ...pad, paddingLeft: size === 'md' ? 18 : 14, paddingRight: size === 'md' ? 18 : 14 }}>
         {name}
       </span>
     )
@@ -124,8 +115,8 @@ export function ProfileShowcase({ featuredIds, titleId, owned, ctx }: { featured
         </span>
       )}
       {medals.map((m) => (
-        <span key={m.id} title={`${featuredName(m.id, t, m.tier)} · ${featuredTier(m.id, m.tier, t, m.count).label}`}>
-          <FeaturedIcon f={m} size={30} />
+        <span key={m.id} title={`${featuredName(m.id, t, m.tier)} · ${featuredTier(m.id, m.tier, t).label}`}>
+          <MedalIcon glyph={m.glyph} tier={m.tier} size={30} kind={medalKindOf(m.id)} levels={Math.max(4, m.tier)} />
         </span>
       ))}
     </div>
@@ -217,11 +208,11 @@ export function ShowcaseEditor({
                     disabled={!on && badges.length >= MAX_FEATURED}
                     className={`flex w-full items-center gap-3 border-2 px-3 py-2 text-left disabled:opacity-40 ${on ? 'border-kart-yellow bg-surface-2' : 'border-line hover:border-muted'}`}
                   >
-                    <FeaturedIcon f={f} size={32} />
+                    <MedalIcon glyph={f.glyph} tier={f.tier as Tier} size={32} kind={medalKindOf(f.id)} levels={Math.max(4, f.tier)} />
                     <span className="min-w-0">
                       <span className="block text-sm leading-tight font-semibold break-words">{featuredName(f.id, t, f.tier)}</span>
                       {(() => {
-                        const lv = featuredTier(f.id, f.tier, t, f.count)
+                        const lv = featuredTier(f.id, f.tier, t)
                         return (
                           <span className={`font-mono text-[11px] ${lv.multi ? 'title-multi font-bold' : ''}`} style={lv.multi ? undefined : { color: lv.color }}>
                             {lv.label}
